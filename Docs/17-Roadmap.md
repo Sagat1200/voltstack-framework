@@ -1,0 +1,1048 @@
+# VoltStack Roadmap
+
+## Introducción
+
+Este documento define la evolución planificada de VoltStack desde su núcleo inicial hasta convertirse en un framework SPA reactivo moderno impulsado por PHP.
+
+El roadmap está diseñado bajo una estrategia progresiva:
+
+```txt
+Core Stability
+↓
+Reactive Runtime
+↓
+SPA Experience
+↓
+Persistent Runtime Optimization
+↓
+Enterprise Features
+↓
+Distributed Runtime Future
+```
+
+VoltStack busca evolucionar cuidadosamente evitando:
+
+- complejidad innecesaria
+- acoplamiento excesivo
+- crecimiento descontrolado
+- pérdida de rendimiento
+- fragmentación arquitectónica
+
+---
+
+## Filosofía del Roadmap
+
+### 1. Runtime First
+
+La arquitectura reactiva y persistente es prioridad.
+
+---
+
+### 2. Stable Foundations
+
+La infraestructura base debe ser sólida antes de escalar funcionalidades.
+
+---
+
+### 3. Performance Native
+
+Cada fase debe mantener foco en rendimiento.
+
+---
+
+### 4. PHP Developer Experience
+
+La experiencia del desarrollador PHP es prioridad.
+
+---
+
+### 5. Incremental Evolution
+
+VoltStack debe evolucionar por capas bien definidas.
+
+---
+
+## Visión General
+
+### Objetivo Final
+
+Construir un framework PHP moderno capaz de ofrecer:
+
+- SPA reactiva
+- rendering incremental
+- runtime persistente
+- frontend runtime nativo
+- experiencia similar a frameworks SPA modernos
+- productividad estilo Laravel + Livewire
+- rendimiento optimizado para FrankenPHP
+
+---
+
+## Fases del Roadmap
+
+```txt
+Phase 1 → Foundation Core
+Phase 2 → Reactive Runtime
+Phase 3 → SPA Runtime
+Phase 4 → Persistent Runtime Optimization
+Phase 5 → Enterprise Features
+Phase 6 → Advanced Reactive Features
+Phase 7 → Distributed Runtime Future
+```
+
+---
+
+## Phase 1 — Foundation Core
+
+### Objetivo
+
+Construir el núcleo estable del framework.
+
+---
+
+## Prioridad
+
+CRÍTICA
+
+---
+
+## Estado esperado
+
+```txt
+MVP foundation
+```
+
+---
+
+## Componentes Principales
+
+---
+
+## Quantum Core
+
+### Módulos iniciales
+
+```txt
+Container
+Config
+Http
+HttpKernel
+Routing
+View
+Events
+Support
+Bootstrap
+```
+
+---
+
+## Platform Core
+
+### Objetivos
+
+- Application lifecycle
+- runtime manager
+- environment management
+- module loading
+
+---
+
+## Facades
+
+### Objetivos
+
+API elegante tipo Laravel.
+
+---
+
+## Runtime Base
+
+### Objetivos
+
+Infraestructura inicial para:
+
+- hydration
+- rendering
+- snapshots
+- protocol runtime
+
+---
+
+## CLI Tooling
+
+### Objetivos
+
+```bash
+volt new
+volt serve
+volt make:component
+volt make:page
+```
+
+---
+
+## Objetivos Técnicos
+
+- estructura modular
+- contracts base
+- service providers
+- routing system
+- request lifecycle
+- basic views
+
+---
+
+## Deliverables
+
+```txt
+Foundation MVP
+```
+
+---
+
+## Phase 2 — Reactive Runtime
+
+### Objetivo
+
+Construir el runtime reactivo principal.
+
+---
+
+## Prioridad
+
+MUY ALTA
+
+---
+
+## Estado esperado
+
+```txt
+Live reactive components
+```
+
+---
+
+## Features principales
+
+---
+
+## Component System
+
+### Implementar
+
+- component lifecycle
+- reactive properties
+- nested components
+- component registry
+
+---
+
+## Hydration System
+
+### Implementar
+
+- snapshots
+- hydration
+- dehydration
+- dirty detection
+
+---
+
+## State System
+
+### Implementar
+
+- local state
+- shared state
+- protected state
+- computed properties
+
+---
+
+## Event System
+
+### Implementar
+
+- component events
+- runtime events
+- browser events
+
+---
+
+## Render Pipeline
+
+### Implementar
+
+- partial rendering
+- fragment rendering
+- effect generation
+
+---
+
+## Deliverables
+
+```txt
+Reactive runtime alpha
+```
+
+---
+
+## Phase 3 — SPA Runtime
+
+### Objetivo
+
+Construir experiencia SPA completa.
+
+---
+
+## Prioridad
+
+MUY ALTA
+
+---
+
+## Estado esperado
+
+```txt
+Reactive SPA experience
+```
+
+---
+
+## Frontend Runtime
+
+### Implementar
+
+- component discovery
+- DOM patching
+- directives
+- navigation runtime
+- state sync
+
+---
+
+## Volt Protocol
+
+### Implementar
+
+- protocol transport
+- payload serialization
+- effect transport
+- snapshot synchronization
+
+---
+
+## SPA Navigation
+
+### Implementar
+
+- client navigation
+- preserve state
+- transitions
+- prefetch básico
+
+---
+
+## Frontend Directives
+
+### Implementar
+
+```txt
+volt:click
+volt:model
+volt:submit
+volt:show
+volt:navigate
+```
+
+---
+
+## Effects System
+
+### Implementar
+
+```txt
+text.update
+html.replace
+navigate
+toast
+modal
+```
+
+---
+
+## Deliverables
+
+```txt
+SPA runtime beta
+```
+
+---
+
+## Phase 4 — Persistent Runtime Optimization
+
+### Objetivo
+
+Optimización profunda para runtimes persistentes.
+
+---
+
+## Prioridad
+
+CRÍTICA
+
+---
+
+## Estado esperado
+
+```txt
+FrankenPHP optimized runtime
+```
+
+---
+
+## FrankenPHP Integration
+
+### Implementar
+
+- persistent workers
+- scoped services
+- runtime reset
+- worker lifecycle
+
+---
+
+## Reflection Cache
+
+### Implementar
+
+- metadata persistence
+- reflection reuse
+- serializer reuse
+
+---
+
+## Runtime Memory Management
+
+### Implementar
+
+- memory monitoring
+- worker recycling
+- stale cleanup
+
+---
+
+## Performance Layer
+
+### Implementar
+
+- fragment cache
+- render cache
+- serializer optimization
+
+---
+
+## Runtime Drivers
+
+### Implementar
+
+```txt
+FrankenPhpDriver
+FpmDriver
+```
+
+---
+
+## Deliverables
+
+```txt
+Persistent runtime stable
+```
+
+---
+
+## Phase 5 — Enterprise Features
+
+### Objetivo
+
+Expandir VoltStack hacia aplicaciones empresariales.
+
+---
+
+## Prioridad
+
+ALTA
+
+---
+
+## Estado esperado
+
+```txt
+Enterprise-ready framework
+```
+
+---
+
+## Features
+
+---
+
+## Auth System
+
+### Implementar
+
+- session auth
+- SPA auth
+- reactive auth
+- policies
+- gates
+
+---
+
+## Queue System
+
+### Implementar
+
+- jobs
+- delayed jobs
+- failed jobs
+
+---
+
+## Cache System
+
+### Implementar
+
+- Redis
+- runtime cache
+- fragment cache
+
+---
+
+## Database Layer
+
+### Implementar
+
+- ORM
+- query builder
+- transactions
+
+---
+
+## Validation System
+
+### Implementar
+
+- reactive validation
+- async validation futuro
+
+---
+
+## Security Layer
+
+### Implementar
+
+- CSRF
+- protocol validation
+- protected properties
+- payload signing
+
+---
+
+## Deliverables
+
+```txt
+Enterprise edition foundation
+```
+
+---
+
+## Phase 6 — Advanced Reactive Features
+
+### Objetivo
+
+Agregar capacidades reactivas avanzadas.
+
+---
+
+## Prioridad
+
+MEDIA
+
+---
+
+## Estado esperado
+
+```txt
+Advanced reactive runtime
+```
+
+---
+
+## Signals System
+
+### Implementar
+
+```php
+$count = signal(0);
+```
+
+---
+
+## Watchers
+
+### Implementar
+
+- reactive watchers
+- dependency tracking
+
+---
+
+## Async Actions
+
+### Implementar
+
+```php
+#[Async]
+```
+
+---
+
+## Streaming Rendering
+
+### Implementar
+
+- incremental rendering
+- streaming fragments
+
+---
+
+## Lazy Hydration
+
+### Implementar
+
+- deferred hydration
+- progressive hydration
+
+---
+
+## Optimistic UI
+
+### Implementar
+
+- frontend optimistic updates
+- state reconciliation
+
+---
+
+## Deliverables
+
+```txt
+Advanced runtime preview
+```
+
+---
+
+## Phase 7 — Distributed Runtime Future
+
+### Objetivo
+
+Explorar runtime distribuido.
+
+---
+
+## Prioridad
+
+FUTURA
+
+---
+
+## Estado esperado
+
+```txt
+Distributed Volt Runtime
+```
+
+---
+
+## Features Futuras
+
+---
+
+## WebSocket Runtime
+
+### Implementar
+
+- persistent connections
+- realtime events
+- streaming updates
+
+---
+
+## Distributed State
+
+### Implementar
+
+- multi-worker synchronization
+- shared runtime state
+
+---
+
+## Edge Runtime
+
+### Implementar
+
+- edge rendering
+- edge hydration
+
+---
+
+## Runtime Clustering
+
+### Implementar
+
+- worker clusters
+- distributed events
+
+---
+
+## Binary Volt Protocol
+
+### Implementar
+
+- compressed payloads
+- binary serialization
+
+---
+
+## Deliverables
+
+```txt
+Distributed runtime research
+```
+
+---
+
+## MVP Scope
+
+### Objetivo realista inicial
+
+VoltStack v1 MVP debe incluir:
+
+---
+
+## Core
+
+```txt
+Container
+Config
+Http
+Routing
+Views
+```
+
+---
+
+## Reactive Runtime
+
+```txt
+Components
+Hydration
+State
+Events
+Partial rendering
+```
+
+---
+
+## SPA Runtime
+
+```txt
+Frontend runtime
+Volt Protocol
+Navigation
+Effects
+```
+
+---
+
+## Runtime
+
+```txt
+FrankenPHP integration
+Scoped services
+Reflection cache
+```
+
+---
+
+## Developer Experience
+
+```txt
+CLI
+Generators
+Error pages
+Debug mode
+```
+
+---
+
+## Recommended Development Order
+
+### Orden recomendado de implementación
+
+---
+
+## Step 1
+
+```txt
+Foundation Core
+```
+
+---
+
+## Step 2
+
+```txt
+Container + Config + Bootstrap
+```
+
+---
+
+## Step 3
+
+```txt
+HTTP + Routing + Views
+```
+
+---
+
+## Step 4
+
+```txt
+Component System
+```
+
+---
+
+## Step 5
+
+```txt
+Hydration System
+```
+
+---
+
+## Step 6
+
+```txt
+Volt Protocol
+```
+
+---
+
+## Step 7
+
+```txt
+Frontend Runtime
+```
+
+---
+
+## Step 8
+
+```txt
+Render Pipeline
+```
+
+---
+
+## Step 9
+
+```txt
+SPA Navigation
+```
+
+---
+
+## Step 10
+
+```txt
+FrankenPHP Runtime Optimization
+```
+
+---
+
+## Step 11
+
+```txt
+Security Layer
+```
+
+---
+
+## Step 12
+
+```txt
+Performance Layer
+```
+
+---
+
+## Internal Milestones
+
+---
+
+## Alpha
+
+### Objetivo
+
+Reactive components funcionando.
+
+---
+
+## Beta
+
+### Objetivo
+
+SPA completa funcional.
+
+---
+
+## RC
+
+### Objetivo
+
+FrankenPHP optimized stable runtime.
+
+---
+
+## Stable v1
+
+### Objetivo
+
+Framework listo para producción.
+
+---
+
+## Long-Term Vision
+
+VoltStack busca evolucionar hacia:
+
+- runtime PHP reactivo moderno
+- SPA-first PHP framework
+- cloud-ready framework
+- distributed runtime future
+- realtime PHP applications
+- streaming UI architecture
+
+---
+
+## Technical Priorities
+
+Las prioridades técnicas más importantes son:
+
+---
+
+## 1. Runtime Stability
+
+---
+
+## 2. Hydration Reliability
+
+---
+
+## 3. Performance
+
+---
+
+## 4. Security
+
+---
+
+## 5. Developer Experience
+
+---
+
+## 6. Runtime Persistence Safety
+
+---
+
+## Anti-Goals
+
+VoltStack NO busca:
+
+- reemplazar completamente React
+- convertirse en framework JS-first
+- depender de Node.js runtime
+- requerir frontend complejo
+- sacrificar simplicidad PHP
+
+---
+
+## Ecosystem Goals
+
+Objetivos futuros:
+
+- package ecosystem
+- VoltStack Cloud
+- official UI components
+- realtime runtime
+- desktop runtime
+- mobile renderer
+
+---
+
+## Team Scaling Goals
+
+La arquitectura debe permitir:
+
+- contributors
+- package ecosystem
+- module isolation
+- independent subsystem evolution
+
+---
+
+## Future Research Areas
+
+### Concurrent Rendering
+
+### Binary Protocol
+
+### Runtime Fibers
+
+### Streaming UI
+
+### Distributed Runtime
+
+### Edge Rendering
+
+---
+
+## Success Criteria
+
+VoltStack será exitoso si logra:
+
+- experiencia SPA moderna
+- rendimiento alto
+- DX elegante para PHP
+- runtime persistente estable
+- arquitectura modular
+- bajo costo cognitivo
+- adopción natural por comunidad PHP
+
+---
+
+## Conclusión
+
+El roadmap de VoltStack define una evolución progresiva hacia un framework PHP reactivo moderno optimizado para runtimes persistentes y aplicaciones SPA de nueva generación.
+
+La prioridad principal debe mantenerse siempre en:
+
+- estabilidad arquitectónica
+- rendimiento
+- simplicidad para desarrolladores PHP
+- seguridad
+- experiencia reactiva fluida
+- integración profunda con FrankenPHP

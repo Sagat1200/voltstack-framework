@@ -1,0 +1,43 @@
+{
+    "name": "voltstack/framework",
+    "description": "The High Performance & Reactive Framework for PHP",
+    "license": "MIT",
+    "keywords": [
+        "voltstack",
+        "framework",
+        "php"
+    ],
+    "authors": [
+        {
+            "name": "Francisco J. Morales",
+            "email": "francisco.morales@voltstack.net"
+        }
+    ],
+    "homepage": "https://voltstack.net",
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "VoltStack\\Framework\\": "src/Platform",
+            "VoltStack\\Facade\\": "src/Facades",
+            "VoltStack\\Helper\\": "src/Helper",
+            "Quantum\\": "src/Quantum",
+            "VoltStack\\Support\\": "src/Support",
+            "VoltStack\\Testing\\": "src/Testing"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "VoltStack\\Test\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.0-dev"
+        }
+    }
+   }
