@@ -7,8 +7,11 @@ namespace VoltStack\Framework;
 use Quantum\Config\ConfigRepository;
 use Quantum\Container\Container;
 use Quantum\Container\Contracts\ContainerInterface;
+use Quantum\Http\ResponseFactory;
 use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\Router;
+use Quantum\View\PhpViewEngine;
+use Quantum\View\ViewFactory;
 
 class Application extends Container
 {
@@ -49,15 +52,42 @@ class Application extends Container
         return $this->joinPath($this->basePath('config'), $path);
     }
 
+    public function resourcePath(string $path = ''): string
+    {
+        return $this->joinPath($this->basePath('resources'), $path);
+    }
+
+    public function viewPath(string $path = ''): string
+    {
+        return $this->joinPath($this->resourcePath('views'), $path);
+    }
+
     public function registerBaseBindings(): void
     {
         $this->instance(self::class, $this);
         $this->instance(Container::class, $this);
         $this->instance(ContainerInterface::class, $this);
         $this->instance('path.base', $this->basePath);
+        $this->instance('path.resources', $this->resourcePath());
+        $this->instance('path.views', $this->viewPath());
 
         if (! isset($this->instances[ConfigRepository::class])) {
             $this->instance(ConfigRepository::class, new ConfigRepository());
+        }
+
+        if (! isset($this->bindings[PhpViewEngine::class])) {
+            $this->singleton(PhpViewEngine::class);
+        }
+
+        if (! isset($this->bindings[ViewFactory::class])) {
+            $this->singleton(ViewFactory::class, fn (Application $app) => new ViewFactory(
+                $app->make(PhpViewEngine::class),
+                [$app->viewPath()],
+            ));
+        }
+
+        if (! isset($this->bindings[ResponseFactory::class])) {
+            $this->singleton(ResponseFactory::class);
         }
 
         if (! isset($this->bindings[Router::class])) {

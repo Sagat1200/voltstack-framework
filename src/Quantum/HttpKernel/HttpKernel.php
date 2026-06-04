@@ -10,6 +10,7 @@ use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\Exceptions\RouteNotFoundException;
 use Quantum\Routing\Router;
+use Quantum\View\View;
 use Throwable;
 use VoltStack\Framework\Application;
 
@@ -69,6 +70,10 @@ class HttpKernel
 
         if (is_array($response)) {
             return new JsonResponse($response);
+        }
+
+        if ($response instanceof View) {
+            return new Response($response->render());
         }
 
         if (is_string($response) || is_numeric($response)) {
