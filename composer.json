@@ -26,9 +26,13 @@
             "VoltStack\\Facade\\": "src/Facades",
             "VoltStack\\Helper\\": "src/Helper",
             "Quantum\\": "src/Quantum",
+            "VoltStack\\Runtime\\": "src/Runtime",
             "VoltStack\\Support\\": "src/Support",
             "VoltStack\\Testing\\": "src/Testing"
-        }
+        },
+        "files": [
+            "src/Helper/helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -40,4 +44,4 @@
             "dev-main": "1.0-dev"
         }
     }
-   }
+}

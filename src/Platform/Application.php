@@ -1,0 +1,126 @@
+<?php
+
+declare(strict_types=1);
+
+namespace VoltStack\Framework;
+
+use Quantum\Config\ConfigRepository;
+use Quantum\Container\Container;
+use Quantum\Container\Contracts\ContainerInterface;
+
+class Application extends Container
+{
+    protected static ?self $instance = null;
+
+    /**
+     * @var array<class-string<ServiceProvider>, ServiceProvider>
+     */
+    protected array $providers = [];
+
+    protected bool $booted = false;
+
+    public function __construct(protected string $basePath)
+    {
+        $this->basePath = rtrim($basePath, '\\/');
+
+        static::setInstance($this);
+        $this->registerBaseBindings();
+    }
+
+    public static function setInstance(self $app): void
+    {
+        static::$instance = $app;
+    }
+
+    public static function getInstance(): ?self
+    {
+        return static::$instance;
+    }
+
+    public function basePath(string $path = ''): string
+    {
+        return $this->joinPath($this->basePath, $path);
+    }
+
+    public function configPath(string $path = ''): string
+    {
+        return $this->joinPath($this->basePath('config'), $path);
+    }
+
+    public function registerBaseBindings(): void
+    {
+        $this->instance(self::class, $this);
+        $this->instance(Container::class, $this);
+        $this->instance(ContainerInterface::class, $this);
+
+        if (! isset($this->instances[ConfigRepository::class])) {
+            $this->instance(ConfigRepository::class, new ConfigRepository());
+        }
+    }
+
+    public function config(?string $key = null, mixed $default = null): mixed
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->make(ConfigRepository::class);
+
+        return $config->get($key, $default);
+    }
+
+    public function register(ServiceProvider|string $provider): ServiceProvider
+    {
+        if (is_string($provider)) {
+            /** @var ServiceProvider $provider */
+            $provider = $this->make($provider);
+        }
+
+        $className = $provider::class;
+
+        if (isset($this->providers[$className])) {
+            return $this->providers[$className];
+        }
+
+        $provider->register();
+        $this->providers[$className] = $provider;
+
+        if ($this->booted) {
+            $provider->boot();
+        }
+
+        return $provider;
+    }
+
+    public function boot(): void
+    {
+        if ($this->booted) {
+            return;
+        }
+
+        foreach ($this->providers as $provider) {
+            $provider->boot();
+        }
+
+        $this->booted = true;
+    }
+
+    public function isBooted(): bool
+    {
+        return $this->booted;
+    }
+
+    /**
+     * @return array<class-string<ServiceProvider>, ServiceProvider>
+     */
+    public function getProviders(): array
+    {
+        return $this->providers;
+    }
+
+    protected function joinPath(string $basePath, string $path = ''): string
+    {
+        if ($path === '') {
+            return $basePath;
+        }
+
+        return $basePath . DIRECTORY_SEPARATOR . ltrim($path, '\\/');
+    }
+}
