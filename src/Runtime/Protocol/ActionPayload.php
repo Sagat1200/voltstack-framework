@@ -11,14 +11,15 @@ final class ActionPayload
 {
     /**
      * @param array<string, mixed> $params
+     * @param array<string, mixed> $updates
      */
     public function __construct(
         private readonly string $component,
         private readonly string $action,
         private readonly Snapshot $snapshot,
         private readonly array $params = [],
-    ) {
-    }
+        private readonly array $updates = [],
+    ) {}
 
     public function component(): string
     {
@@ -44,6 +45,14 @@ final class ActionPayload
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function updates(): array
+    {
+        return $this->updates;
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     public static function fromArray(array $payload): self
@@ -57,6 +66,7 @@ final class ActionPayload
             (string) $payload['action'],
             Snapshot::fromArray($payload['snapshot']),
             is_array($payload['params'] ?? null) ? $payload['params'] : [],
+            is_array($payload['updates'] ?? null) ? $payload['updates'] : [],
         );
     }
 }

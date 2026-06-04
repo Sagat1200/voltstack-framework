@@ -164,10 +164,11 @@ final class Request
 
     public function header(string $key, mixed $default = null): mixed
     {
+        $upperKey = strtoupper(str_replace('-', '_', $key));
         $normalized = 'HTTP_' . strtoupper(str_replace('-', '_', $key));
 
-        if ($key === 'CONTENT_TYPE' || $key === 'CONTENT_LENGTH') {
-            return $this->server[$key] ?? $default;
+        if ($upperKey === 'CONTENT_TYPE' || $upperKey === 'CONTENT_LENGTH') {
+            return $this->server[$upperKey] ?? $default;
         }
 
         return $this->server[$normalized] ?? $default;
@@ -181,6 +182,23 @@ final class Request
     public function content(): ?string
     {
         return $this->content;
+    }
+
+    public function isJson(): bool
+    {
+        $contentType = strtoupper((string) $this->header('Content-Type', ''));
+
+        return str_contains($contentType, 'APPLICATION/JSON');
+    }
+
+    public function expectsJson(): bool
+    {
+        $accept = strtoupper((string) $this->header('Accept', ''));
+        $requestedWith = strtoupper((string) $this->header('X-Requested-With', ''));
+
+        return $this->isJson()
+            || str_contains($accept, 'APPLICATION/JSON')
+            || in_array($requestedWith, ['XMLHTTPREQUEST', 'VOLTSTACK'], true);
     }
 
     /**

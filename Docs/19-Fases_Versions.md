@@ -6,6 +6,41 @@ Este documento define las fases oficiales de desarrollo de VoltStack y las versi
 
 Su propósito es convertir la visión arquitectónica en un plan progresivo, medible y publicable, evitando saltos desordenados entre ideas, implementaciones parciales y releases sin utilidad real.
 
+Tambien registra el estado de avance de cada linea para mantener alineadas la documentacion, la implementacion y las demos reales del framework.
+
+---
+
+## Estado De Avance Actual
+
+```txt
+0.1.x -> completada
+0.2.x -> completada
+0.3.x -> completada
+0.4.x -> completada
+0.5.x -> completada
+0.6.x -> completada
+0.7.x -> completada
+0.8.x -> completada
+0.9.x -> completada como release candidate tecnico
+1.0.0 -> pendiente de consolidacion final
+```
+
+### Cierre operativo de 0.9.x
+
+- contratos publicos basicos del framework definidos
+- manejo centralizado de excepciones HTML y JSON implementado
+- validacion, CSRF y auth base ya integrados
+- runtime reactivo minimo validado con `volt-click`, `volt-model` y `volt-submit`
+- `app-skeleton` integrado con bootstrap, rutas, controller HTML y pagina reactiva
+- pruebas del framework en verde y smoke checks reales del skeleton validados
+
+### Enfoque inmediato para 1.0.0
+
+- consolidar el alcance oficial de la release estable
+- reforzar documentacion de APIs publicas y limitaciones
+- mantener estabilidad del flujo end-to-end sobre `app-skeleton`
+- mover features no esenciales a fases posteriores
+
 ---
 
 ## Objetivo Principal

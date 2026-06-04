@@ -4,6 +4,50 @@
 
 Este documento define la evolución planificada de VoltStack desde su núcleo inicial hasta convertirse en un framework SPA reactivo moderno impulsado por PHP.
 
+Tambien registra el estado operativo actual del proyecto para que el roadmap no funcione solo como vision, sino como referencia de entrega real.
+
+---
+
+## Estado Actual
+
+### Linea actual
+
+```txt
+0.9.x - release candidate tecnico completado
+```
+
+### Capacidades ya verificadas
+
+- bootstrap real de aplicacion
+- container con `bind`, `singleton`, `instance` y `scoped`
+- request/response HTTP
+- `HttpKernel` con middleware pipeline
+- routing funcional para controllers y paginas
+- controllers, actions y vistas PHP
+- componentes reactivos con hydration/dehydration
+- snapshots firmados con checksum
+- endpoint reactivo `/_volt/action`
+- runtime frontend minimo con `volt-click`, `volt-model` y `volt-submit`
+- `RuntimeContext` y `ScopeManager` para aislamiento por request
+- validacion backend-first
+- CSRF estable
+- auth base por request
+- manejo centralizado de errores HTML y JSON
+- integracion real con `app-skeleton`
+
+### Evidencia de cierre de 0.9.x
+
+```txt
+Framework tests: OK (30 tests, 84 assertions)
+App skeleton checks:
+- GET /         -> 200
+- GET /counter  -> 200
+```
+
+### Interpretacion
+
+VoltStack ya no se encuentra solo en fase conceptual. La linea `0.9.x` deja un core ejecutable, con demo real de aplicacion consumidora y contratos publicos basicos listos para estabilizacion.
+
 El roadmap está diseñado bajo una estrategia progresiva:
 
 ```txt
@@ -88,6 +132,40 @@ Phase 4 → Persistent Runtime Optimization
 Phase 5 → Enterprise Features
 Phase 6 → Advanced Reactive Features
 Phase 7 → Distributed Runtime Future
+```
+
+---
+
+## Objetivo Inmediato
+
+### Siguiente hito recomendado
+
+```txt
+1.0.0 - stable production release
+```
+
+### Trabajo restante minimo para 1.0.0
+
+- alinear documentacion publica con las APIs realmente expuestas
+- congelar contratos publicos del kernel, excepciones y runtime reactivo
+- reforzar pruebas end-to-end del `app-skeleton`
+- cerrar paginas y respuestas de error para uso general
+- documentar limitaciones y APIs experimentales del runtime frontend
+- definir alcance oficial de `1.0.0` y mover lo no esencial a roadmap posterior
+
+### Trabajo que no debe bloquear 1.0.0
+
+- CLI completo
+- navegacion SPA avanzada
+- cache distribuido
+- ORM
+- queue system
+- runtime distribuido
+
+### Salida esperada de 1.0.0
+
+```txt
+Core estable + HTTP estable + vistas estables + componentes reactivos base estables + integracion real de aplicacion
 ```
 
 ---

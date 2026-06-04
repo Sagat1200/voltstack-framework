@@ -108,6 +108,43 @@ final class ReactiveProtocolTest extends TestCase
 
         self::assertSame('CSRF token mismatch.', $payload['error']['message']);
     }
+
+    public function test_it_applies_model_updates_and_form_params_before_running_the_action(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveFormComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveFormComponent::class,
+                'action' => 'save',
+                'params' => [
+                    'note' => 'saved-from-submit',
+                    '_token' => 'ignored-token-field',
+                ],
+                'updates' => [
+                    'title' => 'VoltStack Title',
+                ],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('VoltStack Title', $payload['snapshot']['state']['title']);
+        self::assertSame('saved-from-submit', $payload['snapshot']['state']['savedNote']);
+        self::assertStringContainsString('value="VoltStack Title"', $payload['html']);
+        self::assertStringContainsString('Saved: saved-from-submit', $payload['html']);
+    }
 }
 
 final class TestReactiveCounter extends Component
@@ -129,6 +166,34 @@ final class TestReactiveCounter extends Component
         return sprintf(
             '<button type="button" volt-click="increment">Count: %d</button>',
             $this->count,
+        );
+    }
+}
+
+final class TestReactiveFormComponent extends Component
+{
+    public string $title = '';
+
+    public string $savedNote = '';
+
+    public function save(string $note = ''): void
+    {
+        $this->validate([
+            'title' => $this->title,
+        ], [
+            'title' => ['required', 'string', 'min:3'],
+        ]);
+
+        $this->savedNote = $note;
+    }
+
+    public function render(): string
+    {
+        return sprintf(
+            '<form volt-submit="save">%s<input type="text" volt-model="title" value="%s"><button type="submit">Save</button><span>Saved: %s</span></form>',
+            csrf_field(),
+            e($this->title),
+            e($this->savedNote),
         );
     }
 }

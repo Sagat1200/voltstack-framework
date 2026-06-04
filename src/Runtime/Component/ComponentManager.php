@@ -95,11 +95,13 @@ final class ComponentManager
             ENT_QUOTES | ENT_SUBSTITUTE,
             'UTF-8',
         );
+        $csrf = htmlspecialchars($this->app->make(\Quantum\Security\CsrfTokenManager::class)->token(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         return sprintf(
-            '<div data-volt-root="true" data-volt-component="%s" data-volt-endpoint="%s" data-volt-snapshot="%s">%s</div>',
+            '<div data-volt-root="true" data-volt-component="%s" data-volt-endpoint="%s" data-volt-csrf="%s" data-volt-snapshot="%s">%s</div>',
             htmlspecialchars($component::class, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             htmlspecialchars((string) $this->app->config('runtime.endpoint', '/_volt/action'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+            $csrf,
             $encodedSnapshot,
             $this->render($component),
         );
@@ -143,6 +145,26 @@ final class ComponentManager
         }
 
         return $method->invokeArgs($component, $arguments);
+    }
+
+    /**
+     * @param array<string, mixed> $updates
+     */
+    public function applyUpdates(Component $component, array $updates): void
+    {
+        foreach ($updates as $property => $value) {
+            if (! property_exists($component, $property)) {
+                continue;
+            }
+
+            $reflection = new \ReflectionProperty($component, $property);
+
+            if (! $reflection->isPublic() || $reflection->isStatic()) {
+                continue;
+            }
+
+            $reflection->setValue($component, $value);
+        }
     }
 
     /**

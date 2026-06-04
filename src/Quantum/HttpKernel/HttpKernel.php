@@ -8,16 +8,17 @@ use Quantum\Http\JsonResponse;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
-use Quantum\Routing\Exceptions\RouteNotFoundException;
 use Quantum\Routing\Router;
 use Quantum\View\View;
 use Throwable;
 use VoltStack\Framework\Application;
+use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
+use VoltStack\Framework\Contracts\Kernel as KernelContract;
 use VoltStack\Runtime\Component\Component;
 use VoltStack\Runtime\Component\ComponentManager;
 use VoltStack\Runtime\Context\ScopeManager;
 
-class HttpKernel
+class HttpKernel implements KernelContract
 {
     /**
      * @var array<int, class-string<MiddlewareInterface>|callable|MiddlewareInterface>
@@ -49,6 +50,7 @@ class HttpKernel
 
     public function handle(Request $request): Response
     {
+        $this->app->boot();
         $scope = $this->app->make(ScopeManager::class);
         $scope->begin($request);
 
@@ -61,10 +63,8 @@ class HttpKernel
             );
 
             return $this->toResponse($response);
-        } catch (RouteNotFoundException) {
-            return new Response('Not Found', 404);
         } catch (Throwable $exception) {
-            throw $exception;
+            return $this->app->make(ExceptionHandlerContract::class)->render($request, $exception);
         } finally {
             $scope->end();
         }

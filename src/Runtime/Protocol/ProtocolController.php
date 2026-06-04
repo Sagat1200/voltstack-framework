@@ -31,6 +31,8 @@ final class ProtocolController extends Controller
                 'component' => ['required', 'string'],
                 'action' => ['required', 'string'],
                 'snapshot' => ['required', 'array'],
+                'params' => ['array'],
+                'updates' => ['array'],
             ]);
 
             $payload = ActionPayload::fromArray($request->request());
@@ -40,6 +42,7 @@ final class ProtocolController extends Controller
                 $request,
             );
 
+            $this->components->applyUpdates($component, $payload->updates());
             $this->components->callAction($component, $payload->action(), $payload->params(), $request);
 
             $snapshot = $this->components->dehydrate($component, [

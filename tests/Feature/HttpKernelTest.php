@@ -26,7 +26,7 @@ final class HttpKernelTest extends TestCase
     public function test_it_dispatches_a_closure_route_and_returns_a_response(): void
     {
         $router = $this->app->make(Router::class);
-        $router->get('/', fn () => 'VoltStack Home');
+        $router->get('/', fn() => 'VoltStack Home');
 
         $kernel = $this->app->make(HttpKernel::class);
         $response = $kernel->handle(Request::create('/'));
@@ -51,7 +51,7 @@ final class HttpKernelTest extends TestCase
     public function test_it_runs_middlewares_around_the_route_dispatcher(): void
     {
         $router = $this->app->make(Router::class);
-        $router->get('/middleware', fn () => new Response('ok'));
+        $router->get('/middleware', fn() => new Response('ok'));
 
         $kernel = $this->app->make(HttpKernel::class);
         $kernel->setMiddlewares([TestHeaderMiddleware::class]);
@@ -67,7 +67,8 @@ final class HttpKernelTest extends TestCase
         $response = $kernel->handle(Request::create('/missing'));
 
         self::assertSame(404, $response->statusCode());
-        self::assertSame('Not Found', $response->content());
+        self::assertStringContainsString('Page Not Found', $response->content());
+        self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
     }
 }
 

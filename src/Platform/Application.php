@@ -17,6 +17,9 @@ use Quantum\Security\CsrfTokenManager;
 use Quantum\Validation\Validator;
 use Quantum\View\PhpViewEngine;
 use Quantum\View\ViewFactory;
+use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
+use VoltStack\Framework\Contracts\Kernel as KernelContract;
+use VoltStack\Framework\Exceptions\ExceptionHandler;
 use VoltStack\Runtime\Component\ComponentManager;
 use VoltStack\Runtime\Context\RuntimeContext;
 use VoltStack\Runtime\Context\ScopeManager;
@@ -170,6 +173,14 @@ class Application extends Container
             $this->singleton(ScopeManager::class, fn (Application $app) => new ScopeManager($app));
         }
 
+        if (! isset($this->bindings[ExceptionHandler::class])) {
+            $this->singleton(ExceptionHandler::class);
+        }
+
+        if (! isset($this->bindings[ExceptionHandlerContract::class])) {
+            $this->singleton(ExceptionHandlerContract::class, fn (Application $app) => $app->make(ExceptionHandler::class));
+        }
+
         if (! isset($this->bindings[Router::class])) {
             $this->singleton(Router::class, function (Application $app): Router {
                 $router = new Router($app);
@@ -184,6 +195,10 @@ class Application extends Container
                 $app,
                 $app->make(Router::class),
             ));
+        }
+
+        if (! isset($this->bindings[KernelContract::class])) {
+            $this->singleton(KernelContract::class, fn (Application $app) => $app->make(HttpKernel::class));
         }
     }
 
