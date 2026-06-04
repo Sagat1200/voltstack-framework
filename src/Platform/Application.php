@@ -7,6 +7,8 @@ namespace VoltStack\Framework;
 use Quantum\Config\ConfigRepository;
 use Quantum\Container\Container;
 use Quantum\Container\Contracts\ContainerInterface;
+use Quantum\HttpKernel\HttpKernel;
+use Quantum\Routing\Router;
 
 class Application extends Container
 {
@@ -52,9 +54,21 @@ class Application extends Container
         $this->instance(self::class, $this);
         $this->instance(Container::class, $this);
         $this->instance(ContainerInterface::class, $this);
+        $this->instance('path.base', $this->basePath);
 
         if (! isset($this->instances[ConfigRepository::class])) {
             $this->instance(ConfigRepository::class, new ConfigRepository());
+        }
+
+        if (! isset($this->bindings[Router::class])) {
+            $this->singleton(Router::class, fn (Application $app) => new Router($app));
+        }
+
+        if (! isset($this->bindings[HttpKernel::class])) {
+            $this->singleton(HttpKernel::class, fn (Application $app) => new HttpKernel(
+                $app,
+                $app->make(Router::class),
+            ));
         }
     }
 

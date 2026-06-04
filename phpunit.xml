@@ -2,6 +2,7 @@
 <phpunit
     bootstrap="vendor/autoload.php"
     cacheDirectory=".phpunit.cache"
+    cacheResult="false"
     colors="true"
     failOnRisky="true"
     failOnWarning="true"

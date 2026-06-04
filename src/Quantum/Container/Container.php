@@ -19,7 +19,7 @@ class Container implements ContainerInterface
     protected array $bindings = [];
 
     /**
-     * @var array<string, object>
+     * @var array<string, mixed>
      */
     protected array $instances = [];
 
