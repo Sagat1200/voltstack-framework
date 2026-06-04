@@ -21,8 +21,7 @@ final class ComponentManager
         private readonly Application $app,
         private readonly Hydrator $hydrator,
         private readonly Dehydrator $dehydrator,
-    ) {
-    }
+    ) {}
 
     public function make(string|Component $component): Component
     {
@@ -86,6 +85,64 @@ final class ComponentManager
         }
 
         throw new RuntimeException('Components must render a string or a view instance.');
+    }
+
+    public function renderRoot(Component $component, ?Snapshot $snapshot = null): string
+    {
+        $snapshot ??= $this->dehydrate($component);
+        $encodedSnapshot = htmlspecialchars(
+            json_encode($snapshot->toArray(), JSON_THROW_ON_ERROR),
+            ENT_QUOTES | ENT_SUBSTITUTE,
+            'UTF-8',
+        );
+
+        return sprintf(
+            '<div data-volt-root="true" data-volt-component="%s" data-volt-endpoint="%s" data-volt-snapshot="%s">%s</div>',
+            htmlspecialchars($component::class, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+            htmlspecialchars((string) $this->app->config('runtime.endpoint', '/_volt/action'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+            $encodedSnapshot,
+            $this->render($component),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    public function callAction(
+        Component $component,
+        string $action,
+        array $parameters = [],
+        ?Request $request = null,
+    ): mixed {
+        if ($request !== null) {
+            $component->setRequest($request);
+        }
+
+        if ($action === '' || str_starts_with($action, '__')) {
+            throw new RuntimeException('Invalid component action.');
+        }
+
+        if (! method_exists($component, $action)) {
+            throw new RuntimeException(sprintf('Component action [%s] does not exist.', $action));
+        }
+
+        $method = new ReflectionMethod($component, $action);
+
+        if (! $method->isPublic()) {
+            throw new RuntimeException(sprintf('Component action [%s] is not public.', $action));
+        }
+
+        if (in_array($action, ['render', 'setRequest', 'request'], true)) {
+            throw new RuntimeException(sprintf('Component action [%s] is reserved.', $action));
+        }
+
+        $arguments = [];
+
+        foreach ($method->getParameters() as $parameter) {
+            $arguments[] = $this->resolveParameter($request, $parameter, $parameters);
+        }
+
+        return $method->invokeArgs($component, $arguments);
     }
 
     /**

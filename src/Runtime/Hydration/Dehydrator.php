@@ -6,14 +6,12 @@ namespace VoltStack\Runtime\Hydration;
 
 use ReflectionObject;
 use ReflectionProperty;
-use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Component;
+use VoltStack\Runtime\Protocol\Checksum;
 
 final class Dehydrator
 {
-    public function __construct(private readonly Application $app)
-    {
-    }
+    public function __construct(private readonly Checksum $checksum) {}
 
     public function dehydrate(Component $component, array $meta = []): Snapshot
     {
@@ -42,23 +40,6 @@ final class Dehydrator
      */
     public function checksum(string $component, array $state, array $meta = []): string
     {
-        $payload = json_encode([
-            'component' => $component,
-            'state' => $state,
-            'meta' => $meta,
-        ], JSON_THROW_ON_ERROR);
-
-        return hash_hmac('sha256', $payload, $this->secret());
-    }
-
-    private function secret(): string
-    {
-        $secret = (string) $this->app->config('app.key', '');
-
-        if ($secret !== '') {
-            return $secret;
-        }
-
-        return 'voltstack|' . $this->app->basePath();
+        return $this->checksum->sign($component, $state, $meta);
     }
 }

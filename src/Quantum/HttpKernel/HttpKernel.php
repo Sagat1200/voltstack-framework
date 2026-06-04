@@ -79,7 +79,7 @@ class HttpKernel
         }
 
         if ($response instanceof Component) {
-            return new Response($this->app->make(ComponentManager::class)->render($response));
+            return new Response($this->app->make(ComponentManager::class)->renderRoot($response));
         }
 
         if (is_string($response) || is_numeric($response)) {

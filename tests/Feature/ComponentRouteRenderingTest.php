@@ -22,7 +22,10 @@ final class ComponentRouteRenderingTest extends TestCase
         $response = $app->make(HttpKernel::class)->handle(Request::create('/counter/7'));
 
         self::assertSame(200, $response->statusCode());
-        self::assertSame('<section>Count: 7</section>', $response->content());
+        self::assertStringContainsString('data-volt-root="true"', $response->content());
+        self::assertStringContainsString('data-volt-component="' . TestCounterPage::class . '"', $response->content());
+        self::assertStringContainsString('<section>Count: 7</section>', $response->content());
+        self::assertStringContainsString('data-volt-snapshot=', $response->content());
     }
 }
 

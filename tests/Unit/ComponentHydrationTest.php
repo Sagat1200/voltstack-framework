@@ -34,6 +34,7 @@ final class ComponentHydrationTest extends TestCase
         self::assertSame('VoltStack', $hydrated->name);
         self::assertSame(1, $hydrated->visits);
         self::assertSame('<div>Hello VoltStack (1)</div>', $manager->render($hydrated));
+        self::assertStringContainsString('data-volt-root="true"', $manager->renderRoot($hydrated, $snapshot));
     }
 
     public function test_it_rejects_a_snapshot_with_an_invalid_checksum(): void

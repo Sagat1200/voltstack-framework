@@ -12,10 +12,11 @@ use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\Router;
 use Quantum\View\PhpViewEngine;
 use Quantum\View\ViewFactory;
-
 use VoltStack\Runtime\Component\ComponentManager;
 use VoltStack\Runtime\Hydration\Dehydrator;
 use VoltStack\Runtime\Hydration\Hydrator;
+use VoltStack\Runtime\Protocol\Checksum;
+use VoltStack\Runtime\Protocol\ProtocolController;
 class Application extends Container
 {
     protected static ?self $instance = null;
@@ -93,8 +94,14 @@ class Application extends Container
             $this->singleton(ResponseFactory::class);
         }
 
+        if (! isset($this->bindings[Checksum::class])) {
+            $this->singleton(Checksum::class, fn (Application $app) => new Checksum($app));
+        }
+
         if (! isset($this->bindings[Dehydrator::class])) {
-            $this->singleton(Dehydrator::class, fn (Application $app) => new Dehydrator($app));
+            $this->singleton(Dehydrator::class, fn (Application $app) => new Dehydrator(
+                $app->make(Checksum::class),
+            ));
         }
 
         if (! isset($this->bindings[Hydrator::class])) {
@@ -112,7 +119,12 @@ class Application extends Container
         }
 
         if (! isset($this->bindings[Router::class])) {
-            $this->singleton(Router::class, fn (Application $app) => new Router($app));
+            $this->singleton(Router::class, function (Application $app): Router {
+                $router = new Router($app);
+                $router->post('/_volt/action', ProtocolController::class);
+
+                return $router;
+            });
         }
 
         if (! isset($this->bindings[HttpKernel::class])) {

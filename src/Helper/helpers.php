@@ -72,3 +72,16 @@ if (! function_exists('e')) {
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
+
+if (! function_exists('volt_runtime_script')) {
+    function volt_runtime_script(): string
+    {
+        $path = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'volt.js';
+
+        if (! is_file($path)) {
+            throw new RuntimeException('The VoltStack frontend runtime script could not be found.');
+        }
+
+        return "<script>\n" . file_get_contents($path) . "\n</script>";
+    }
+}
