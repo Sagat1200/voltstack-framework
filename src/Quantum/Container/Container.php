@@ -24,6 +24,11 @@ class Container implements ContainerInterface
     protected array $instances = [];
 
     /**
+     * @var array<string, mixed>
+     */
+    protected array $scopedInstances = [];
+
+    /**
      * @var array<string, string>
      */
     protected array $aliases = [];
@@ -41,10 +46,24 @@ class Container implements ContainerInterface
         $this->bind($abstract, $concrete, true);
     }
 
+    public function scoped(string $abstract, mixed $concrete = null): void
+    {
+        $abstract = $this->normalize($abstract);
+        $concrete ??= $abstract;
+
+        $this->bindings[$abstract] = new Binding($concrete, false, true);
+    }
+
     public function instance(string $abstract, mixed $instance): void
     {
         $abstract = $this->normalize($abstract);
         $this->instances[$abstract] = $instance;
+    }
+
+    public function scopedInstance(string $abstract, mixed $instance): void
+    {
+        $abstract = $this->normalize($abstract);
+        $this->scopedInstances[$abstract] = $instance;
     }
 
     public function alias(string $abstract, string $alias): void
@@ -57,6 +76,7 @@ class Container implements ContainerInterface
         $abstract = $this->normalize($abstract);
 
         return isset($this->instances[$abstract])
+            || isset($this->scopedInstances[$abstract])
             || isset($this->bindings[$abstract])
             || class_exists($abstract);
     }
@@ -69,6 +89,10 @@ class Container implements ContainerInterface
             return $this->instances[$abstract];
         }
 
+        if (array_key_exists($abstract, $this->scopedInstances)) {
+            return $this->scopedInstances[$abstract];
+        }
+
         $binding = $this->bindings[$abstract] ?? null;
         $concrete = $binding?->concrete ?? $abstract;
 
@@ -78,7 +102,16 @@ class Container implements ContainerInterface
             $this->instances[$abstract] = $object;
         }
 
+        if ($binding?->scoped) {
+            $this->scopedInstances[$abstract] = $object;
+        }
+
         return $object;
+    }
+
+    public function flushScope(): void
+    {
+        $this->scopedInstances = [];
     }
 
     protected function resolve(mixed $concrete, array $parameters = []): mixed

@@ -15,6 +15,7 @@ use Throwable;
 use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Component;
 use VoltStack\Runtime\Component\ComponentManager;
+use VoltStack\Runtime\Context\ScopeManager;
 
 class HttpKernel
 {
@@ -48,12 +49,15 @@ class HttpKernel
 
     public function handle(Request $request): Response
     {
+        $scope = $this->app->make(ScopeManager::class);
+        $scope->begin($request);
+
         try {
             $pipeline = new MiddlewarePipeline($this->app, $this->middlewares);
 
             $response = $pipeline->handle(
                 $request,
-                fn (Request $request): mixed => $this->router->dispatch($request),
+                fn(Request $request): mixed => $this->router->dispatch($request),
             );
 
             return $this->toResponse($response);
@@ -61,6 +65,8 @@ class HttpKernel
             return new Response('Not Found', 404);
         } catch (Throwable $exception) {
             throw $exception;
+        } finally {
+            $scope->end();
         }
     }
 

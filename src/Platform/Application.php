@@ -7,16 +7,20 @@ namespace VoltStack\Framework;
 use Quantum\Config\ConfigRepository;
 use Quantum\Container\Container;
 use Quantum\Container\Contracts\ContainerInterface;
+use Quantum\Http\Request;
 use Quantum\Http\ResponseFactory;
 use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\Router;
 use Quantum\View\PhpViewEngine;
 use Quantum\View\ViewFactory;
 use VoltStack\Runtime\Component\ComponentManager;
+use VoltStack\Runtime\Context\RuntimeContext;
+use VoltStack\Runtime\Context\ScopeManager;
 use VoltStack\Runtime\Hydration\Dehydrator;
 use VoltStack\Runtime\Hydration\Hydrator;
 use VoltStack\Runtime\Protocol\Checksum;
 use VoltStack\Runtime\Protocol\ProtocolController;
+use RuntimeException;
 class Application extends Container
 {
     protected static ?self $instance = null;
@@ -79,6 +83,30 @@ class Application extends Container
             $this->instance(ConfigRepository::class, new ConfigRepository());
         }
 
+        if (! isset($this->bindings[Request::class])) {
+            $this->scoped(Request::class, function (): Request {
+                $context = RuntimeContext::current();
+
+                if ($context === null) {
+                    throw new RuntimeException('No active runtime context is available for the current request.');
+                }
+
+                return $context->request();
+            });
+        }
+
+        if (! isset($this->bindings[RuntimeContext::class])) {
+            $this->scoped(RuntimeContext::class, function (): RuntimeContext {
+                $context = RuntimeContext::current();
+
+                if ($context === null) {
+                    throw new RuntimeException('No active runtime context is available.');
+                }
+
+                return $context;
+            });
+        }
+
         if (! isset($this->bindings[PhpViewEngine::class])) {
             $this->singleton(PhpViewEngine::class);
         }
@@ -116,6 +144,10 @@ class Application extends Container
                 $app->make(Hydrator::class),
                 $app->make(Dehydrator::class),
             ));
+        }
+
+        if (! isset($this->bindings[ScopeManager::class])) {
+            $this->singleton(ScopeManager::class, fn (Application $app) => new ScopeManager($app));
         }
 
         if (! isset($this->bindings[Router::class])) {

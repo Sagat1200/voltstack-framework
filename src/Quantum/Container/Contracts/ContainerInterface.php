@@ -10,6 +10,8 @@ interface ContainerInterface
 
     public function singleton(string $abstract, mixed $concrete = null): void;
 
+    public function scoped(string $abstract, mixed $concrete = null): void;
+
     public function instance(string $abstract, mixed $instance): void;
 
     public function alias(string $abstract, string $alias): void;
@@ -17,4 +19,6 @@ interface ContainerInterface
     public function has(string $abstract): bool;
 
     public function make(string $abstract, array $parameters = []): mixed;
+
+    public function flushScope(): void;
 }

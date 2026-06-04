@@ -9,6 +9,6 @@ final readonly class Binding
     public function __construct(
         public mixed $concrete,
         public bool $shared = false,
-    ) {
-    }
+        public bool $scoped = false,
+    ) {}
 }
