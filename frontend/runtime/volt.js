@@ -119,7 +119,7 @@
 
     snapshot.state[key] = element.type === 'checkbox' ? !!element.checked : element.value;
     root.setAttribute('data-volt-snapshot', JSON.stringify(snapshot));
-  }
+  });
 
   document.addEventListener('click', function (event) {
     const trigger = event.target.closest('[volt-click]');
