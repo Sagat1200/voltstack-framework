@@ -168,6 +168,10 @@ Phase 7 → Distributed Runtime Future
 Core estable + HTTP estable + vistas estables + componentes reactivos base estables + integracion real de aplicacion
 ```
 
+### Documento de alcance oficial
+
+El alcance estable de `1.0.0`, sus APIs publicas recomendadas y sus exclusiones quedan definidos en `Docs/20-Stable_Release_1.0.0.md`.
+
 ---
 
 ## Phase 1 — Foundation Core

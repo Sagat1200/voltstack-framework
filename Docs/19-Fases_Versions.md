@@ -41,6 +41,10 @@ Tambien registra el estado de avance de cada linea para mantener alineadas la do
 - mantener estabilidad del flujo end-to-end sobre `app-skeleton`
 - mover features no esenciales a fases posteriores
 
+### Referencia de consolidacion
+
+La definicion oficial del alcance de la release estable queda registrada en `Docs/20-Stable_Release_1.0.0.md`.
+
 ---
 
 ## Objetivo Principal

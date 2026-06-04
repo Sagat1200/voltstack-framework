@@ -20,6 +20,9 @@
     "require-dev": {
         "phpunit/phpunit": "^13.1"
     },
+    "bin": [
+        "volt"
+    ],
     "autoload": {
         "psr-4": {
             "VoltStack\\Framework\\": "src/Platform",
