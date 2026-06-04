@@ -13,6 +13,8 @@ use Quantum\Routing\Router;
 use Quantum\View\View;
 use Throwable;
 use VoltStack\Framework\Application;
+use VoltStack\Runtime\Component\Component;
+use VoltStack\Runtime\Component\ComponentManager;
 
 class HttpKernel
 {
@@ -74,6 +76,10 @@ class HttpKernel
 
         if ($response instanceof View) {
             return new Response($response->render());
+        }
+
+        if ($response instanceof Component) {
+            return new Response($this->app->make(ComponentManager::class)->render($response));
         }
 
         if (is_string($response) || is_numeric($response)) {

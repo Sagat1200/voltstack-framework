@@ -13,6 +13,9 @@ use Quantum\Routing\Router;
 use Quantum\View\PhpViewEngine;
 use Quantum\View\ViewFactory;
 
+use VoltStack\Runtime\Component\ComponentManager;
+use VoltStack\Runtime\Hydration\Dehydrator;
+use VoltStack\Runtime\Hydration\Hydrator;
 class Application extends Container
 {
     protected static ?self $instance = null;
@@ -88,6 +91,24 @@ class Application extends Container
 
         if (! isset($this->bindings[ResponseFactory::class])) {
             $this->singleton(ResponseFactory::class);
+        }
+
+        if (! isset($this->bindings[Dehydrator::class])) {
+            $this->singleton(Dehydrator::class, fn (Application $app) => new Dehydrator($app));
+        }
+
+        if (! isset($this->bindings[Hydrator::class])) {
+            $this->singleton(Hydrator::class, fn (Application $app) => new Hydrator(
+                $app->make(Dehydrator::class),
+            ));
+        }
+
+        if (! isset($this->bindings[ComponentManager::class])) {
+            $this->singleton(ComponentManager::class, fn (Application $app) => new ComponentManager(
+                $app,
+                $app->make(Hydrator::class),
+                $app->make(Dehydrator::class),
+            ));
         }
 
         if (! isset($this->bindings[Router::class])) {

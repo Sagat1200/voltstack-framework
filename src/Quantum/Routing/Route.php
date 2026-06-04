@@ -12,6 +12,8 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use RuntimeException;
 use VoltStack\Framework\Application;
+use VoltStack\Runtime\Component\Component;
+use VoltStack\Runtime\Component\ComponentManager;
 
 final class Route
 {
@@ -95,6 +97,10 @@ final class Route
         }
 
         if (is_string($action) && class_exists($action)) {
+            if (is_subclass_of($action, Component::class)) {
+                return $app->make(ComponentManager::class)->mount($action, $parameters, $request);
+            }
+
             $instance = $app->make($action);
 
             if (! method_exists($instance, '__invoke')) {
