@@ -6,6 +6,7 @@ namespace VoltStack\Test\Feature;
 
 use PHPUnit\Framework\TestCase;
 use Quantum\Http\Request;
+use Quantum\Security\CsrfTokenManager;
 use Quantum\HttpKernel\HttpKernel;
 use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Component;
@@ -21,12 +22,14 @@ final class ReactiveProtocolTest extends TestCase
             'count' => 2,
         ]);
         $snapshot = $components->dehydrate($component);
+        $csrf = $app->make(CsrfTokenManager::class)->token();
 
         $response = $app->make(HttpKernel::class)->handle(Request::create(
             '/_volt/action',
             'POST',
             [],
             [
+                '_token' => $csrf,
                 'component' => TestReactiveCounter::class,
                 'action' => 'increment',
                 'params' => [],
@@ -56,6 +59,7 @@ final class ReactiveProtocolTest extends TestCase
             'POST',
             [],
             [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
                 'component' => TestReactiveCounter::class,
                 'action' => 'increment',
                 'params' => [],
@@ -74,6 +78,35 @@ final class ReactiveProtocolTest extends TestCase
         $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame('Snapshot checksum is invalid.', $payload['error']['message']);
+    }
+
+    public function test_it_rejects_reactive_requests_without_a_valid_csrf_token(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveCounter::class, [
+            'count' => 2,
+        ]);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                'component' => TestReactiveCounter::class,
+                'action' => 'increment',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(422, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('CSRF token mismatch.', $payload['error']['message']);
     }
 }
 

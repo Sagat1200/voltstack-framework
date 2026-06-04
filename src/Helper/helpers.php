@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use Quantum\Config\ConfigRepository;
+use Quantum\Auth\AuthManager;
 use Quantum\Http\Response;
 use Quantum\Http\ResponseFactory;
+use Quantum\Security\CsrfTokenManager;
+use Quantum\Validation\Validator;
 use Quantum\View\View;
 use Quantum\View\ViewFactory;
 use VoltStack\Framework\Application;
@@ -83,5 +86,33 @@ if (! function_exists('volt_runtime_script')) {
         }
 
         return "<script>\n" . file_get_contents($path) . "\n</script>";
+    }
+}
+
+if (! function_exists('validator')) {
+    function validator(): Validator
+    {
+        return app(Validator::class);
+    }
+}
+
+if (! function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        return app(CsrfTokenManager::class)->token();
+    }
+}
+
+if (! function_exists('csrf_field')) {
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">';
+    }
+}
+
+if (! function_exists('auth')) {
+    function auth(): AuthManager
+    {
+        return app(AuthManager::class);
     }
 }

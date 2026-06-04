@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace VoltStack\Framework;
 
 use Quantum\Config\ConfigRepository;
+use Quantum\Auth\AuthManager;
 use Quantum\Container\Container;
 use Quantum\Container\Contracts\ContainerInterface;
 use Quantum\Http\Request;
 use Quantum\Http\ResponseFactory;
 use Quantum\HttpKernel\HttpKernel;
+use Quantum\Middlewares\CsrfMiddleware;
 use Quantum\Routing\Router;
+use Quantum\Security\CsrfTokenManager;
+use Quantum\Validation\Validator;
 use Quantum\View\PhpViewEngine;
 use Quantum\View\ViewFactory;
 use VoltStack\Runtime\Component\ComponentManager;
@@ -120,6 +124,22 @@ class Application extends Container
 
         if (! isset($this->bindings[ResponseFactory::class])) {
             $this->singleton(ResponseFactory::class);
+        }
+
+        if (! isset($this->bindings[Validator::class])) {
+            $this->singleton(Validator::class);
+        }
+
+        if (! isset($this->bindings[CsrfTokenManager::class])) {
+            $this->singleton(CsrfTokenManager::class, fn (Application $app) => new CsrfTokenManager($app));
+        }
+
+        if (! isset($this->bindings[AuthManager::class])) {
+            $this->scoped(AuthManager::class);
+        }
+
+        if (! isset($this->bindings[CsrfMiddleware::class])) {
+            $this->singleton(CsrfMiddleware::class);
         }
 
         if (! isset($this->bindings[Checksum::class])) {
