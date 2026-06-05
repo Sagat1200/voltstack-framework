@@ -5,20 +5,16 @@ declare(strict_types=1);
 namespace {{ namespace }};
 
 use VoltStack\Runtime\Component\Component;
+use Quantum\View\View;
 
 final class {{ class }} extends Component
 {
     public string $title = '{{ title }}';
 
-    public function render(): string
+    public function render(): View
     {
-        return sprintf(
-            '<section style="font-family:Arial,sans-serif;max-width:720px;margin:40px auto;padding:24px;border:1px solid #d0d7de;border-radius:12px;">'
-            . '<h1>%s</h1>'
-            . '<p>Componente generado con <code>php volt make:component</code>.</p>'
-            . '</section>%s',
-            e($this->title),
-            volt_runtime_script(),
-        );
+        return $this->view('{{ view }}', [
+            'title' => $this->title,
+        ]);
     }
 }

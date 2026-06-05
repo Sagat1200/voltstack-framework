@@ -12,41 +12,46 @@ use Quantum\Console\Output;
 final class MakeComponentCommandTest extends TestCase
 {
     private string $basePath;
+    private string $classPath;
+    private string $viewPath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->basePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'voltstack-make-component-' . uniqid('', true);
-        mkdir($this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages', 0777, true);
+        $this->classPath = $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'View' . DIRECTORY_SEPARATOR . 'Components';
+        $this->viewPath = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views';
+
+        mkdir($this->classPath, 0777, true);
+        mkdir($this->viewPath, 0777, true);
+        mkdir($this->basePath . DIRECTORY_SEPARATOR . 'bootstrap', 0777, true);
+
+        $escapedBasePath = var_export($this->basePath, true);
+        $escapedClassPath = var_export($this->classPath, true);
+        $escapedViewPath = var_export($this->viewPath, true);
+
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php',
+            <<<PHP
+<?php
+
+declare(strict_types=1);
+
+use Quantum\Config\ConfigRepository;
+use VoltStack\Framework\Application;
+
+\$app = new Application({$escapedBasePath});
+\$app->make(ConfigRepository::class)->set('ui-reactive.class_view_components', [{$escapedClassPath}, {$escapedViewPath}]);
+
+return \$app;
+PHP
+        );
     }
 
     protected function tearDown(): void
     {
-        $generated = $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages' . DIRECTORY_SEPARATOR . 'Admin' . DIRECTORY_SEPARATOR . 'UserCard.php';
-        $generatedDirectory = dirname($generated);
-        $pagesDirectory = $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages';
-        $appDirectory = $this->basePath . DIRECTORY_SEPARATOR . 'app';
-
-        if (is_file($generated)) {
-            unlink($generated);
-        }
-
-        if (is_dir($generatedDirectory)) {
-            rmdir($generatedDirectory);
-        }
-
-        if (is_dir($pagesDirectory)) {
-            rmdir($pagesDirectory);
-        }
-
-        if (is_dir($appDirectory)) {
-            rmdir($appDirectory);
-        }
-
-        if (is_dir($this->basePath)) {
-            rmdir($this->basePath);
-        }
+        $this->deleteDirectory($this->basePath);
 
         parent::tearDown();
     }
@@ -64,17 +69,53 @@ final class MakeComponentCommandTest extends TestCase
             new Output(),
         );
 
-        $generated = $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages' . DIRECTORY_SEPARATOR . 'Admin' . DIRECTORY_SEPARATOR . 'UserCard.php';
+        $generatedClass = $this->classPath . DIRECTORY_SEPARATOR . 'Admin' . DIRECTORY_SEPARATOR . 'UserCard.php';
+        $generatedView = $this->viewPath . DIRECTORY_SEPARATOR . 'Admin' . DIRECTORY_SEPARATOR . 'user_card.php';
 
         self::assertSame(0, $exitCode);
-        self::assertFileExists($generated);
+        self::assertFileExists($generatedClass);
+        self::assertFileExists($generatedView);
 
-        $contents = file_get_contents($generated);
+        $contents = file_get_contents($generatedClass);
+        $viewContents = file_get_contents($generatedView);
 
         self::assertIsString($contents);
-        self::assertStringContainsString('namespace App\\Pages\\Admin;', $contents);
+        self::assertIsString($viewContents);
+        self::assertStringContainsString('namespace App\\View\\Components\\Admin;', $contents);
         self::assertStringContainsString('final class UserCard extends Component', $contents);
         self::assertStringContainsString("public string \$title = 'Admin User Card';", $contents);
-        self::assertStringContainsString('volt_runtime_script()', $contents);
+        self::assertStringContainsString("return \$this->view('admin.user_card'", $contents);
+        self::assertStringContainsString('php volt make:component', $viewContents);
+        self::assertStringContainsString('<?= volt_runtime_script() ?>', $viewContents);
+    }
+
+    private function deleteDirectory(string $path): void
+    {
+        if (! is_dir($path)) {
+            return;
+        }
+
+        $items = scandir($path);
+
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if (in_array($item, ['.', '..'], true)) {
+                continue;
+            }
+
+            $target = $path . DIRECTORY_SEPARATOR . $item;
+
+            if (is_dir($target)) {
+                $this->deleteDirectory($target);
+                continue;
+            }
+
+            unlink($target);
+        }
+
+        rmdir($path);
     }
 }

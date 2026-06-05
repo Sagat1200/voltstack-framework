@@ -8,6 +8,7 @@ use Quantum\Console\Command;
 use Quantum\Console\Input;
 use Quantum\Console\Output;
 use RuntimeException;
+use VoltStack\Framework\Application;
 
 final class MakeComponentCommand extends Command
 {
@@ -32,35 +33,59 @@ final class MakeComponentCommand extends Command
         }
 
         $descriptor = $this->buildDescriptor($name);
-        $targetPath = $descriptor['path'];
+        $classPath = $descriptor['class_path'];
+        $viewPath = $descriptor['view_path'];
 
-        if (is_file($targetPath)) {
-            $output->error(sprintf('El componente ya existe en [%s].', $targetPath));
+        if (is_file($classPath)) {
+            $output->error(sprintf('La clase del componente ya existe en [%s].', $classPath));
 
             return 1;
         }
 
-        if (! is_dir($descriptor['directory']) && ! mkdir($descriptor['directory'], 0777, true) && ! is_dir($descriptor['directory'])) {
-            throw new RuntimeException(sprintf('No se pudo crear el directorio [%s].', $descriptor['directory']));
+        if (is_file($viewPath)) {
+            $output->error(sprintf('La vista del componente ya existe en [%s].', $viewPath));
+
+            return 1;
         }
 
-        $contents = strtr($this->stub(), [
+        if (! is_dir($descriptor['class_directory']) && ! mkdir($descriptor['class_directory'], 0777, true) && ! is_dir($descriptor['class_directory'])) {
+            throw new RuntimeException(sprintf('No se pudo crear el directorio [%s].', $descriptor['class_directory']));
+        }
+
+        if (! is_dir($descriptor['view_directory']) && ! mkdir($descriptor['view_directory'], 0777, true) && ! is_dir($descriptor['view_directory'])) {
+            throw new RuntimeException(sprintf('No se pudo crear el directorio [%s].', $descriptor['view_directory']));
+        }
+
+        $classContents = strtr($this->classStub(), [
             '{{ namespace }}' => $descriptor['namespace'],
             '{{ class }}' => $descriptor['class'],
             '{{ title }}' => $descriptor['title'],
+            '{{ view }}' => $descriptor['view_name'],
         ]);
+        $viewContents = $this->viewStub();
 
-        file_put_contents($targetPath, $contents);
+        file_put_contents($classPath, $classContents);
+        file_put_contents($viewPath, $viewContents);
 
         $output->writeln('Componente creado correctamente.');
         $output->writeln(sprintf('  Clase: %s\\%s', $descriptor['namespace'], $descriptor['class']));
-        $output->writeln(sprintf('  Archivo: %s', $targetPath));
+        $output->writeln(sprintf('  Archivo clase: %s', $classPath));
+        $output->writeln(sprintf('  Archivo vista: %s', $viewPath));
 
         return 0;
     }
 
     /**
-     * @return array{class: string, namespace: string, directory: string, path: string, title: string}
+     * @return array{
+     *   class: string,
+     *   namespace: string,
+     *   class_directory: string,
+     *   class_path: string,
+     *   view_directory: string,
+     *   view_path: string,
+     *   view_name: string,
+     *   title: string
+     * }
      */
     private function buildDescriptor(string $name): array
     {
@@ -74,24 +99,33 @@ final class MakeComponentCommand extends Command
         $class = array_pop($segments);
         $class = preg_replace('/\.php$/i', '', (string) $class) ?? (string) $class;
 
-        $namespace = 'App\\Pages';
-        $directory = $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages';
+        [$classDirectory, $viewDirectory] = $this->componentDirectories();
+        $namespace = $this->namespaceFromDirectory($classDirectory, 'App\\View\\Components');
+        $classTargetDirectory = $classDirectory;
+        $viewTargetDirectory = $viewDirectory;
 
         if ($segments !== []) {
             $namespace .= '\\' . implode('\\', $segments);
-            $directory .= DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments);
+            $classTargetDirectory .= DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments);
+            $viewTargetDirectory .= DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments);
         }
+
+        $viewFile = $this->viewFileName($class);
+        $viewName = $this->viewName($segments, $class);
 
         return [
             'class' => $class,
             'namespace' => $namespace,
-            'directory' => $directory,
-            'path' => $directory . DIRECTORY_SEPARATOR . $class . '.php',
+            'class_directory' => $classTargetDirectory,
+            'class_path' => $classTargetDirectory . DIRECTORY_SEPARATOR . $class . '.php',
+            'view_directory' => $viewTargetDirectory,
+            'view_path' => $viewTargetDirectory . DIRECTORY_SEPARATOR . $viewFile . '.php',
+            'view_name' => $viewName,
             'title' => $this->title($segments, $class),
         ];
     }
 
-    private function stub(): string
+    private function classStub(): string
     {
         $stubPath = dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'Component' . DIRECTORY_SEPARATOR . 'Component.stub';
 
@@ -108,6 +142,96 @@ final class MakeComponentCommand extends Command
         return $contents;
     }
 
+    private function viewStub(): string
+    {
+        $stubPath = dirname(__DIR__, 4) . DIRECTORY_SEPARATOR . 'stubs' . DIRECTORY_SEPARATOR . 'Component' . DIRECTORY_SEPARATOR . 'View.stub';
+
+        if (! is_file($stubPath)) {
+            throw new RuntimeException(sprintf('El stub de la vista del componente no existe en [%s].', $stubPath));
+        }
+
+        $contents = file_get_contents($stubPath);
+
+        if ($contents === false) {
+            throw new RuntimeException(sprintf('No se pudo leer el stub [%s].', $stubPath));
+        }
+
+        return $contents;
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function componentDirectories(): array
+    {
+        $bootstrapPath = $this->basePath . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';
+
+        if (! is_file($bootstrapPath)) {
+            return [
+                $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'View' . DIRECTORY_SEPARATOR . 'Components',
+                $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views',
+            ];
+        }
+
+        $app = require $bootstrapPath;
+
+        if (! $app instanceof Application) {
+            return [
+                $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'View' . DIRECTORY_SEPARATOR . 'Components',
+                $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views',
+            ];
+        }
+
+        $configured = $app->config('ui-reactive.class_view_components', []);
+
+        if (! is_array($configured) || count($configured) < 2) {
+            return [
+                $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'View' . DIRECTORY_SEPARATOR . 'Components',
+                $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views',
+            ];
+        }
+
+        return [
+            $this->normalizeDirectory((string) $configured[0]),
+            $this->normalizeDirectory((string) $configured[1]),
+        ];
+    }
+
+    private function namespaceFromDirectory(string $directory, string $fallback): string
+    {
+        $baseAppPath = $this->normalizeDirectory($this->basePath . DIRECTORY_SEPARATOR . 'app');
+
+        if (str_starts_with($directory, $baseAppPath)) {
+            $relative = trim(substr($directory, strlen($baseAppPath)), '\\/');
+            $namespace = 'App';
+
+            if ($relative !== '') {
+                $namespace .= '\\' . str_replace(['/', '\\'], '\\', $relative);
+            }
+
+            return $namespace;
+        }
+
+        return $fallback;
+    }
+
+    private function normalizeDirectory(string $path): string
+    {
+        $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+
+        if ($this->isAbsolutePath($normalized)) {
+            return rtrim($normalized, '\\/');
+        }
+
+        return rtrim($this->basePath . DIRECTORY_SEPARATOR . ltrim($normalized, '\\/'), '\\/');
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        return preg_match('/^[A-Za-z]:\\\\/', $path) === 1
+            || str_starts_with($path, DIRECTORY_SEPARATOR);
+    }
+
     /**
      * @param array<int, string> $segments
      */
@@ -120,5 +244,24 @@ final class MakeComponentCommand extends Command
         );
 
         return implode(' ', $labels);
+    }
+
+    /**
+     * @param array<int, string> $segments
+     */
+    private function viewName(array $segments, string $class): string
+    {
+        $parts = array_map(
+            static fn (string $segment): string => strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $segment) ?? $segment),
+            $segments,
+        );
+        $parts[] = $this->viewFileName($class);
+
+        return implode('.', $parts);
+    }
+
+    private function viewFileName(string $class): string
+    {
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $class) ?? $class);
     }
 }
