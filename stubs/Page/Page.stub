@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use VoltStack\Runtime\Component\Component;
+
+final class {{ class }} extends Component
+{
+    public string $title = '{{ title }}';
+}
+
+__halt_compiler(); ?>
+<section >
+    <h1>{{ $title }}</h1>
+    <p>Pagina reactiva generada con <code>php volt make:page</code>.</p>
+</section>

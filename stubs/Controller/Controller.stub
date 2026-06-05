@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Quantum\Controllers\Controller;
+use Quantum\View\View;
+
+final class {{ class }} extends Controller
+{
+    public function __invoke(): View
+    {
+        return $this->view('{{ view }}');
+    }
+}

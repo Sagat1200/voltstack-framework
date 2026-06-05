@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Quantum\Console;
 
 use Quantum\Console\Commands\ServeCommand;
+use Quantum\Console\Commands\RouteListCommand;
+use Quantum\Console\Commands\MakeControllerCommand;
+use Quantum\Console\Commands\MakeComponentCommand;
+use Quantum\Console\Commands\MakePageCommand;
 use Quantum\Console\Exceptions\CommandNotFoundException;
 use Throwable;
 
@@ -31,6 +35,10 @@ final class ConsoleApplication
 
         if (! $registered) {
             $this->add(new ServeCommand($basePath));
+            $this->add(new RouteListCommand($basePath));
+            $this->add(new MakeControllerCommand($basePath));
+            $this->add(new MakeComponentCommand($basePath));
+            $this->add(new MakePageCommand($basePath));
         }
     }
 

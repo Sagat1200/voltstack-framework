@@ -45,6 +45,37 @@ if (! function_exists('config')) {
     }
 }
 
+if (! function_exists('base_path')) {
+    function base_path(string $path = ''): string
+    {
+        /** @var Application $app */
+        $app = app();
+
+        return $app->basePath($path);
+    }
+}
+
+if (! function_exists('class_path')) {
+    function class_path(string $path = ''): string
+    {
+        return base_path($path);
+    }
+}
+
+if (! function_exists('view_path')) {
+    function view_path(string $path = ''): string
+    {
+        return base_path($path);
+    }
+}
+
+if (! function_exists('single_page_path')) {
+    function single_page_path(string $path = ''): string
+    {
+        return base_path($path);
+    }
+}
+
 if (! function_exists('view')) {
     function view(string $name, array $data = []): View
     {
