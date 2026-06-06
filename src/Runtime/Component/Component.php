@@ -7,6 +7,7 @@ namespace VoltStack\Runtime\Component;
 use Quantum\Http\Request;
 use Quantum\Validation\Validator;
 use Quantum\View\View;
+use VoltStack\Framework\Application;
 use ReflectionClass;
 use RuntimeException;
 
@@ -50,6 +51,17 @@ abstract class Component
 
     protected function inlineTemplate(): ?string
     {
+        $app = Application::getInstance();
+
+        if ($app !== null) {
+            $loader = $app->make(InlinePageLoader::class);
+            $template = $loader->templateFor(static::class);
+
+            if (is_string($template) && trim($template) !== '') {
+                return $template;
+            }
+        }
+
         $file = (new ReflectionClass($this))->getFileName();
 
         if (! is_string($file) || ! is_file($file)) {
@@ -80,36 +92,36 @@ abstract class Component
             $remaining = substr($contents, $haltPosition + strlen($haltMarker));
             $closeTag = strpos($remaining, '?>');
 
-return $closeTag === false
-? $remaining
-: substr($remaining, $closeTag + 2);
-}
+            return $closeTag === false
+                ? $remaining
+                : substr($remaining, $closeTag + 2);
+        }
 
-$closeTag = strpos($contents, '?>');
+        $closeTag = strpos($contents, '?>');
 
-if ($closeTag === false) {
-return null;
-}
+        if ($closeTag === false) {
+            return null;
+        }
 
-return substr($contents, $closeTag + 2);
-}
+        return substr($contents, $closeTag + 2);
+    }
 
-private function interpolateTemplate(string $template): string
-{
-$variables = get_object_vars($this);
+    private function interpolateTemplate(string $template): string
+    {
+        $variables = get_object_vars($this);
 
-return (string) preg_replace_callback(
-'/\{\{\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/',
-static function (array $matches) use ($variables): string {
-$value = $variables[$matches[1]] ?? '';
+        return (string) preg_replace_callback(
+            '/\{\{\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/',
+            static function (array $matches) use ($variables): string {
+                $value = $variables[$matches[1]] ?? '';
 
-if ($value === null) {
-return '';
-}
+                if ($value === null) {
+                    return '';
+                }
 
-return e(is_scalar($value) ? (string) $value : json_encode($value, JSON_THROW_ON_ERROR));
-},
-$template,
-);
-}
+                return e(is_scalar($value) ? (string) $value : json_encode($value, JSON_THROW_ON_ERROR));
+            },
+            $template,
+        );
+    }
 }

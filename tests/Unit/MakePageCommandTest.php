@@ -76,7 +76,7 @@ PHP
         self::assertStringContainsString('namespace App\\VoltPages\\Admin;', $contents);
         self::assertStringContainsString('final class DashboardPage extends Component', $contents);
         self::assertStringContainsString("public string \$title = 'Admin Dashboard';", $contents);
-        self::assertStringContainsString('__halt_compiler(); ?>', $contents);
+        self::assertStringContainsString("?>\n<section", str_replace("\r\n", "\n", $contents));
         self::assertStringContainsString('php volt make:page', $contents);
     }
 

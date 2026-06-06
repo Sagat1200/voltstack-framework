@@ -6,6 +6,8 @@ namespace VoltStack\Framework;
 
 use Quantum\Config\ConfigRepository;
 use Quantum\Auth\AuthManager;
+use Quantum\Cache\CacheManager;
+use Quantum\Cache\Repository as CacheRepository;
 use Quantum\Container\Container;
 use Quantum\Container\Contracts\ContainerInterface;
 use Quantum\Http\Request;
@@ -21,6 +23,7 @@ use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
 use VoltStack\Framework\Contracts\Kernel as KernelContract;
 use VoltStack\Framework\Exceptions\ExceptionHandler;
 use VoltStack\Runtime\Component\ComponentManager;
+use VoltStack\Runtime\Component\InlinePageLoader;
 use VoltStack\Runtime\Context\RuntimeContext;
 use VoltStack\Runtime\Context\ScopeManager;
 use VoltStack\Runtime\Hydration\Dehydrator;
@@ -28,6 +31,7 @@ use VoltStack\Runtime\Hydration\Hydrator;
 use VoltStack\Runtime\Protocol\Checksum;
 use VoltStack\Runtime\Protocol\ProtocolController;
 use RuntimeException;
+
 class Application extends Container
 {
     protected static ?self $instance = null;
@@ -72,6 +76,16 @@ class Application extends Container
         return $this->joinPath($this->basePath('resources'), $path);
     }
 
+    public function storagePath(string $path = ''): string
+    {
+        return $this->joinPath($this->basePath('storage'), $path);
+    }
+
+    public function cachePath(string $path = ''): string
+    {
+        return $this->joinPath($this->storagePath('framework/cache'), $path);
+    }
+
     public function viewPath(string $path = ''): string
     {
         return $this->joinPath($this->resourcePath('views'), $path);
@@ -84,6 +98,8 @@ class Application extends Container
         $this->instance(ContainerInterface::class, $this);
         $this->instance('path.base', $this->basePath);
         $this->instance('path.resources', $this->resourcePath());
+        $this->instance('path.storage', $this->storagePath());
+        $this->instance('path.cache', $this->cachePath());
         $this->instance('path.views', $this->viewPath());
 
         if (! isset($this->instances[ConfigRepository::class])) {
@@ -119,7 +135,7 @@ class Application extends Container
         }
 
         if (! isset($this->bindings[ViewFactory::class])) {
-            $this->singleton(ViewFactory::class, fn (Application $app) => new ViewFactory(
+            $this->singleton(ViewFactory::class, fn(Application $app) => new ViewFactory(
                 $app->make(PhpViewEngine::class),
                 [$app->viewPath()],
             ));
@@ -129,12 +145,20 @@ class Application extends Container
             $this->singleton(ResponseFactory::class);
         }
 
+        if (! isset($this->bindings[CacheManager::class])) {
+            $this->singleton(CacheManager::class);
+        }
+
+        if (! isset($this->bindings[CacheRepository::class])) {
+            $this->singleton(CacheRepository::class, fn (Application $app) => $app->make(CacheManager::class)->store());
+        }
+
         if (! isset($this->bindings[Validator::class])) {
             $this->singleton(Validator::class);
         }
 
         if (! isset($this->bindings[CsrfTokenManager::class])) {
-            $this->singleton(CsrfTokenManager::class, fn (Application $app) => new CsrfTokenManager($app));
+            $this->singleton(CsrfTokenManager::class, fn(Application $app) => new CsrfTokenManager($app));
         }
 
         if (! isset($this->bindings[AuthManager::class])) {
@@ -146,31 +170,40 @@ class Application extends Container
         }
 
         if (! isset($this->bindings[Checksum::class])) {
-            $this->singleton(Checksum::class, fn (Application $app) => new Checksum($app));
+            $this->singleton(Checksum::class, fn(Application $app) => new Checksum($app));
         }
 
         if (! isset($this->bindings[Dehydrator::class])) {
-            $this->singleton(Dehydrator::class, fn (Application $app) => new Dehydrator(
+            $this->singleton(Dehydrator::class, fn(Application $app) => new Dehydrator(
                 $app->make(Checksum::class),
             ));
         }
 
         if (! isset($this->bindings[Hydrator::class])) {
-            $this->singleton(Hydrator::class, fn (Application $app) => new Hydrator(
+            $this->singleton(Hydrator::class, fn(Application $app) => new Hydrator(
                 $app->make(Dehydrator::class),
             ));
         }
 
         if (! isset($this->bindings[ComponentManager::class])) {
-            $this->singleton(ComponentManager::class, fn (Application $app) => new ComponentManager(
+            $this->singleton(ComponentManager::class, fn(Application $app) => new ComponentManager(
                 $app,
                 $app->make(Hydrator::class),
                 $app->make(Dehydrator::class),
             ));
         }
 
+        if (! isset($this->bindings[InlinePageLoader::class])) {
+            $this->singleton(InlinePageLoader::class, function (Application $app): InlinePageLoader {
+                $loader = new InlinePageLoader($app);
+                $loader->register();
+
+                return $loader;
+            });
+        }
+
         if (! isset($this->bindings[ScopeManager::class])) {
-            $this->singleton(ScopeManager::class, fn (Application $app) => new ScopeManager($app));
+            $this->singleton(ScopeManager::class, fn(Application $app) => new ScopeManager($app));
         }
 
         if (! isset($this->bindings[ExceptionHandler::class])) {
@@ -178,7 +211,7 @@ class Application extends Container
         }
 
         if (! isset($this->bindings[ExceptionHandlerContract::class])) {
-            $this->singleton(ExceptionHandlerContract::class, fn (Application $app) => $app->make(ExceptionHandler::class));
+            $this->singleton(ExceptionHandlerContract::class, fn(Application $app) => $app->make(ExceptionHandler::class));
         }
 
         if (! isset($this->bindings[Router::class])) {
@@ -191,15 +224,17 @@ class Application extends Container
         }
 
         if (! isset($this->bindings[HttpKernel::class])) {
-            $this->singleton(HttpKernel::class, fn (Application $app) => new HttpKernel(
+            $this->singleton(HttpKernel::class, fn(Application $app) => new HttpKernel(
                 $app,
                 $app->make(Router::class),
             ));
         }
 
         if (! isset($this->bindings[KernelContract::class])) {
-            $this->singleton(KernelContract::class, fn (Application $app) => $app->make(HttpKernel::class));
+            $this->singleton(KernelContract::class, fn(Application $app) => $app->make(HttpKernel::class));
         }
+
+        $this->make(InlinePageLoader::class);
     }
 
     public function config(?string $key = null, mixed $default = null): mixed

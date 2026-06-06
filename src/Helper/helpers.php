@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Quantum\Config\ConfigRepository;
 use Quantum\Auth\AuthManager;
+use Quantum\Cache\Repository as CacheRepository;
 use Quantum\Http\Response;
 use Quantum\Http\ResponseFactory;
 use Quantum\Security\CsrfTokenManager;
@@ -55,6 +56,26 @@ if (! function_exists('base_path')) {
     }
 }
 
+if (! function_exists('storage_path')) {
+    function storage_path(string $path = ''): string
+    {
+        /** @var Application $app */
+        $app = app();
+
+        return $app->storagePath($path);
+    }
+}
+
+if (! function_exists('cache_path')) {
+    function cache_path(string $path = ''): string
+    {
+        /** @var Application $app */
+        $app = app();
+
+        return $app->cachePath($path);
+    }
+}
+
 if (! function_exists('class_path')) {
     function class_path(string $path = ''): string
     {
@@ -97,6 +118,20 @@ if (! function_exists('response')) {
         }
 
         return $factory->make($content, $statusCode, $headers);
+    }
+}
+
+if (! function_exists('cache')) {
+    function cache(?string $key = null, mixed $default = null): mixed
+    {
+        /** @var CacheRepository $repository */
+        $repository = app(CacheRepository::class);
+
+        if ($key === null) {
+            return $repository;
+        }
+
+        return $repository->get($key, $default);
     }
 }
 
