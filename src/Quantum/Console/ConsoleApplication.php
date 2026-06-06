@@ -11,6 +11,8 @@ use Quantum\Console\Commands\MakeComponentCommand;
 use Quantum\Console\Commands\MakePageCommand;
 use Quantum\Console\Commands\MakeViewCommand;
 use Quantum\Console\Commands\MakeActionCommand;
+use Quantum\Console\Commands\ViewCacheCommand;
+use Quantum\Console\Commands\ViewClearCommand;
 use Quantum\Console\Exceptions\CommandNotFoundException;
 use Throwable;
 
@@ -43,6 +45,8 @@ final class ConsoleApplication
             $this->add(new MakePageCommand($basePath));
             $this->add(new MakeViewCommand($basePath));
             $this->add(new MakeActionCommand($basePath));
+            $this->add(new ViewCacheCommand($basePath));
+            $this->add(new ViewClearCommand($basePath));
         }
     }
 

@@ -17,6 +17,9 @@ use Quantum\Middlewares\CsrfMiddleware;
 use Quantum\Routing\Router;
 use Quantum\Security\CsrfTokenManager;
 use Quantum\Validation\Validator;
+use Quantum\View\Cache\CompiledViewStore;
+use Quantum\View\Compilers\ViewCompiler;
+use Quantum\View\Directives\DirectiveRegistry;
 use Quantum\View\PhpViewEngine;
 use Quantum\View\ViewFactory;
 use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
@@ -131,7 +134,26 @@ class Application extends Container
         }
 
         if (! isset($this->bindings[PhpViewEngine::class])) {
-            $this->singleton(PhpViewEngine::class);
+            $this->singleton(PhpViewEngine::class, fn(Application $app) => new PhpViewEngine(
+                $app->make(CompiledViewStore::class),
+            ));
+        }
+
+        if (! isset($this->bindings[DirectiveRegistry::class])) {
+            $this->singleton(DirectiveRegistry::class);
+        }
+
+        if (! isset($this->bindings[ViewCompiler::class])) {
+            $this->singleton(ViewCompiler::class, fn(Application $app) => new ViewCompiler(
+                $app->make(DirectiveRegistry::class),
+            ));
+        }
+
+        if (! isset($this->bindings[CompiledViewStore::class])) {
+            $this->singleton(CompiledViewStore::class, fn(Application $app) => new CompiledViewStore(
+                $app->make(ViewCompiler::class),
+                (string) $app->config('cache.compiled.views', $app->cachePath('compiled/views')),
+            ));
         }
 
         if (! isset($this->bindings[ViewFactory::class])) {
@@ -150,7 +172,7 @@ class Application extends Container
         }
 
         if (! isset($this->bindings[CacheRepository::class])) {
-            $this->singleton(CacheRepository::class, fn (Application $app) => $app->make(CacheManager::class)->store());
+            $this->singleton(CacheRepository::class, fn(Application $app) => $app->make(CacheManager::class)->store());
         }
 
         if (! isset($this->bindings[Validator::class])) {

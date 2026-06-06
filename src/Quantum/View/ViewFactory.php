@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Quantum\View;
 
 use Quantum\View\Exceptions\ViewNotFoundException;
+use Quantum\View\Runtime\ViewRuntime;
 
 final class ViewFactory
 {
@@ -14,8 +15,7 @@ final class ViewFactory
     public function __construct(
         private readonly PhpViewEngine $engine,
         private array $paths = [],
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<int, string> $paths
@@ -46,7 +46,15 @@ final class ViewFactory
      */
     public function render(string $view, array $data = []): string
     {
-        return $this->engine->render($this->find($view), $data);
+        return $this->renderWithRuntime($view, $data, new ViewRuntime($this, $data));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function renderWithRuntime(string $view, array $data, ViewRuntime $runtime): string
+    {
+        return $this->engine->render($this->find($view), $data, $runtime);
     }
 
     public function exists(string $view): bool
@@ -62,13 +70,19 @@ final class ViewFactory
 
     public function find(string $view): string
     {
-        $relativePath = str_replace('.', DIRECTORY_SEPARATOR, $view) . '.php';
+        $relativePath = str_replace('.', DIRECTORY_SEPARATOR, $view);
+        $candidates = [
+            $relativePath . '.php',
+            $relativePath . '.volt.php',
+        ];
 
         foreach ($this->paths as $path) {
-            $candidate = rtrim($path, '\\/') . DIRECTORY_SEPARATOR . $relativePath;
+            foreach ($candidates as $candidate) {
+                $resolvedPath = rtrim($path, '\\/') . DIRECTORY_SEPARATOR . $candidate;
 
-            if (is_file($candidate)) {
-                return $candidate;
+                if (is_file($resolvedPath)) {
+                    return $resolvedPath;
+                }
             }
         }
 
