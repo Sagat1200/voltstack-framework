@@ -9,6 +9,8 @@ use Quantum\Console\Commands\RouteListCommand;
 use Quantum\Console\Commands\MakeControllerCommand;
 use Quantum\Console\Commands\MakeComponentCommand;
 use Quantum\Console\Commands\MakePageCommand;
+use Quantum\Console\Commands\MakeViewCommand;
+use Quantum\Console\Commands\MakeActionCommand;
 use Quantum\Console\Exceptions\CommandNotFoundException;
 use Throwable;
 
@@ -39,6 +41,8 @@ final class ConsoleApplication
             $this->add(new MakeControllerCommand($basePath));
             $this->add(new MakeComponentCommand($basePath));
             $this->add(new MakePageCommand($basePath));
+            $this->add(new MakeViewCommand($basePath));
+            $this->add(new MakeActionCommand($basePath));
         }
     }
 

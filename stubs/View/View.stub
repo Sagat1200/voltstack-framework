@@ -1,0 +1,4 @@
+<section>
+    <h1><?= e($title ?? '{{ title }}') ?></h1>
+    <p>Vista generada con <code>php volt make:view</code>.</p>
+</section>
