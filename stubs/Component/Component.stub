@@ -13,7 +13,7 @@ final class {{ class }} extends Component
 
     public function render(): View
     {
-        return view('{{ view }}', [
+        return $this->view('{{ view }}', [
             'title' => $this->title,
         ]);
     }

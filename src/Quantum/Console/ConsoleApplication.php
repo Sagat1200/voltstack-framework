@@ -8,6 +8,7 @@ use Quantum\Console\Commands\ServeCommand;
 use Quantum\Console\Commands\RouteListCommand;
 use Quantum\Console\Commands\MakeControllerCommand;
 use Quantum\Console\Commands\MakeComponentCommand;
+use Quantum\Console\Commands\MakeLayoutCommand;
 use Quantum\Console\Commands\MakePageCommand;
 use Quantum\Console\Commands\MakeViewCommand;
 use Quantum\Console\Commands\MakeActionCommand;
@@ -52,6 +53,7 @@ final class ConsoleApplication
             $this->add(new RouteListCommand($basePath));
             $this->add(new MakeControllerCommand($basePath));
             $this->add(new MakeComponentCommand($basePath));
+            $this->add(new MakeLayoutCommand($basePath));
             $this->add(new MakePageCommand($basePath));
             $this->add(new MakeViewCommand($basePath));
             $this->add(new MakeActionCommand($basePath));

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= e($title ?? '{{ title }}') ?></title>
+</head>
+<body>
+    <!-- Layout generado con php volt make:layout -->
+    <main>
+        <?= $slot ?? ($content ?? '') ?>
+    </main>
+</body>
+</html>

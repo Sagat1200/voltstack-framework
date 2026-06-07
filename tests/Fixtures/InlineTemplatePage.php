@@ -11,7 +11,7 @@ final class InlineTemplatePage extends Component
     public string $title = 'Inline Title';
 }
 
-__halt_compiler(); ?>
+?>
 <div>
     <h1>{{ $title }}</h1>
 </div>

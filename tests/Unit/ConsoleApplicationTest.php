@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Quantum\Console\Commands\CacheClearCommand;
 use Quantum\Console\Commands\MakeActionCommand;
 use Quantum\Console\Commands\MakeComponentCommand;
+use Quantum\Console\Commands\MakeLayoutCommand;
 use Quantum\Console\Commands\MakeControllerCommand;
 use Quantum\Console\Commands\MakePageCommand;
 use Quantum\Console\Commands\MakeViewCommand;
@@ -39,6 +40,7 @@ final class ConsoleApplicationTest extends TestCase
         self::assertStringContainsString('Cache:', $output->stdout());
         self::assertStringContainsString('serve', $output->stdout());
         self::assertStringContainsString('make:controller', $output->stdout());
+        self::assertStringContainsString('make:layout', $output->stdout());
         self::assertStringContainsString('[aliases: routes]', $output->stdout());
     }
 
@@ -155,6 +157,7 @@ final class ConsoleApplicationTest extends TestCase
                 new RouteListCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakeControllerCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakeComponentCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
+                new MakeLayoutCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakePageCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakeViewCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakeActionCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
