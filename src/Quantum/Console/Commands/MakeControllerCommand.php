@@ -21,6 +21,23 @@ final class MakeControllerCommand extends Command
         return 'Crea un controller nuevo a partir del stub del framework.';
     }
 
+    public function usage(): string
+    {
+        return 'make:controller <name>';
+    }
+
+    public function category(): string
+    {
+        return 'Generators';
+    }
+
+    public function argumentsHelp(): array
+    {
+        return [
+            'name' => 'Nombre del controller, por ejemplo `Admin/UserController`.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $name = $input->arguments()[0] ?? null;

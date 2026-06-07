@@ -22,6 +22,23 @@ final class MakePageCommand extends Command
         return 'Crea una pagina reactiva nueva a partir del stub del framework.';
     }
 
+    public function usage(): string
+    {
+        return 'make:page <name>';
+    }
+
+    public function category(): string
+    {
+        return 'Generators';
+    }
+
+    public function argumentsHelp(): array
+    {
+        return [
+            'name' => 'Nombre de la pagina, por ejemplo `Admin/Dashboard`.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $name = $input->arguments()[0] ?? null;

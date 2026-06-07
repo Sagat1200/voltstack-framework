@@ -22,6 +22,23 @@ final class MakeComponentCommand extends Command
         return 'Crea un componente reactivo nuevo a partir del stub del framework.';
     }
 
+    public function usage(): string
+    {
+        return 'make:component <name>';
+    }
+
+    public function category(): string
+    {
+        return 'Generators';
+    }
+
+    public function argumentsHelp(): array
+    {
+        return [
+            'name' => 'Nombre del componente, por ejemplo `Admin/UserCard`.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $name = $input->arguments()[0] ?? null;
@@ -239,7 +256,7 @@ final class MakeComponentCommand extends Command
     {
         $parts = [...$segments, $class];
         $labels = array_map(
-            static fn (string $part): string => trim((string) preg_replace('/(?<!^)([A-Z])/', ' $1', $part)),
+            static fn(string $part): string => trim((string) preg_replace('/(?<!^)([A-Z])/', ' $1', $part)),
             $parts,
         );
 
@@ -252,7 +269,7 @@ final class MakeComponentCommand extends Command
     private function viewName(array $segments, string $class): string
     {
         $parts = array_map(
-            static fn (string $segment): string => strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $segment) ?? $segment),
+            static fn(string $segment): string => strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $segment) ?? $segment),
             $segments,
         );
         $parts[] = $this->viewFileName($class);

@@ -31,6 +31,25 @@ final class ServeCommand extends Command
         return 'Levanta el servidor de desarrollo de VoltStack.';
     }
 
+    public function usage(): string
+    {
+        return 'serve [--host=127.0.0.1] [--port=8000] [--dry-run]';
+    }
+
+    public function category(): string
+    {
+        return 'Development';
+    }
+
+    public function optionsHelp(): array
+    {
+        return [
+            '--host=' => 'Define la interfaz o IP del servidor de desarrollo.',
+            '--port=' => 'Define el puerto HTTP a utilizar.',
+            '--dry-run' => 'Imprime el comando `php -S` sin ejecutarlo.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $host = (string) $input->option('host', '127.0.0.1');

@@ -21,6 +21,23 @@ final class MakeActionCommand extends Command
         return 'Crea una action nueva a partir del stub del framework.';
     }
 
+    public function usage(): string
+    {
+        return 'make:action <name>';
+    }
+
+    public function category(): string
+    {
+        return 'Generators';
+    }
+
+    public function argumentsHelp(): array
+    {
+        return [
+            'name' => 'Nombre de la action, por ejemplo `Admin/CreateUserAction`.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $name = $input->arguments()[0] ?? null;

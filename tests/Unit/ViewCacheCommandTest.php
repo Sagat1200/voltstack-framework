@@ -75,13 +75,14 @@ PHP
     public function test_it_compiles_all_views_into_the_compiled_cache_directory(): void
     {
         $command = new ViewCacheCommand($this->basePath);
+        $output = new Output();
 
         $exitCode = $command->handle(
             Input::fromArgv([
                 'volt',
                 'view:cache',
             ]),
-            new Output(),
+            $output,
         );
 
         $app = $this->bootstrappedApplication();
@@ -90,6 +91,27 @@ PHP
         self::assertSame(0, $exitCode);
         self::assertFileExists($store->compiledPathFor($this->viewsPath . DIRECTORY_SEPARATOR . 'home.php'));
         self::assertFileExists($store->compiledPathFor($this->viewsPath . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.php'));
+        self::assertStringContainsString('Vistas compiladas: 2', $output->stdout());
+    }
+
+    public function test_it_can_print_each_compiled_view_in_verbose_mode(): void
+    {
+        $command = new ViewCacheCommand($this->basePath);
+        $output = new Output();
+
+        $exitCode = $command->handle(
+            Input::fromArgv([
+                'volt',
+                'view:cache',
+                '--verbose',
+            ]),
+            $output,
+        );
+
+        self::assertSame(0, $exitCode);
+        self::assertStringContainsString($this->viewsPath . DIRECTORY_SEPARATOR . 'home.php', $output->stdout());
+        self::assertStringContainsString($this->viewsPath . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.php', $output->stdout());
+        self::assertStringContainsString('->', $output->stdout());
     }
 
     public function test_it_clears_the_compiled_view_cache_directory(): void
@@ -100,17 +122,44 @@ PHP
         $store->ensureCompiled($this->viewsPath . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.php');
 
         $command = new ViewClearCommand($this->basePath);
+        $output = new Output();
 
         $exitCode = $command->handle(
             Input::fromArgv([
                 'volt',
                 'view:clear',
             ]),
-            new Output(),
+            $output,
         );
 
         self::assertSame(0, $exitCode);
         self::assertDirectoryDoesNotExist($this->compiledPath);
+        self::assertStringContainsString('Archivos eliminados: 2', $output->stdout());
+    }
+
+    public function test_it_can_print_each_deleted_compiled_view_in_verbose_mode(): void
+    {
+        $app = $this->bootstrappedApplication();
+        $store = $app->make(CompiledViewStore::class);
+        $homeCompiled = $store->ensureCompiled($this->viewsPath . DIRECTORY_SEPARATOR . 'home.php');
+        $noteCompiled = $store->ensureCompiled($this->viewsPath . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.php');
+
+        $command = new ViewClearCommand($this->basePath);
+        $output = new Output();
+
+        $exitCode = $command->handle(
+            Input::fromArgv([
+                'volt',
+                'view:clear',
+                '--verbose',
+            ]),
+            $output,
+        );
+
+        self::assertSame(0, $exitCode);
+        self::assertStringContainsString($homeCompiled, $output->stdout());
+        self::assertStringContainsString($noteCompiled, $output->stdout());
+        self::assertStringContainsString('Archivos eliminados: 2', $output->stdout());
     }
 
     private function bootstrappedApplication(): Application

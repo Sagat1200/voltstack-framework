@@ -10,8 +10,6 @@ use Quantum\Console\Input;
 use Quantum\Console\Output;
 use Quantum\Routing\Route;
 use Quantum\Routing\Router;
-use RuntimeException;
-use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Component;
 
 final class RouteListCommand extends Command
@@ -24,6 +22,21 @@ final class RouteListCommand extends Command
     public function description(): string
     {
         return 'Muestra las rutas registradas por la aplicacion.';
+    }
+
+    public function usage(): string
+    {
+        return 'route:list';
+    }
+
+    public function category(): string
+    {
+        return 'Routing';
+    }
+
+    public function aliases(): array
+    {
+        return ['routes'];
     }
 
     public function handle(Input $input, Output $output): int
@@ -56,23 +69,6 @@ final class RouteListCommand extends Command
         $output->writeln(sprintf('Total routes: %d', count($routes)));
 
         return 0;
-    }
-
-    private function bootstrapApplication(): Application
-    {
-        $bootstrapPath = $this->basePath . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';
-
-        if (! is_file($bootstrapPath)) {
-            throw new RuntimeException(sprintf('The application bootstrap file could not be found at [%s].', $bootstrapPath));
-        }
-
-        $app = require $bootstrapPath;
-
-        if (! $app instanceof Application) {
-            throw new RuntimeException('The application bootstrap file must return a VoltStack application instance.');
-        }
-
-        return $app;
     }
 
     private function formatAction(Route $route): string

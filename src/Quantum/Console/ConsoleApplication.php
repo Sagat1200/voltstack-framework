@@ -11,6 +11,7 @@ use Quantum\Console\Commands\MakeComponentCommand;
 use Quantum\Console\Commands\MakePageCommand;
 use Quantum\Console\Commands\MakeViewCommand;
 use Quantum\Console\Commands\MakeActionCommand;
+use Quantum\Console\Commands\CacheClearCommand;
 use Quantum\Console\Commands\ViewCacheCommand;
 use Quantum\Console\Commands\ViewClearCommand;
 use Quantum\Console\Exceptions\CommandNotFoundException;
@@ -24,12 +25,21 @@ final class ConsoleApplication
     private array $commands = [];
 
     /**
+     * @var array<string, string>
+     */
+    private array $aliases = [];
+
+    private readonly Output $output;
+
+    /**
      * @param iterable<int, Command> $commands
      */
     public function __construct(
         private readonly string $basePath,
         iterable $commands = [],
+        ?Output $output = null,
     ) {
+        $this->output = $output ?? new Output();
         $registered = false;
 
         foreach ($commands as $command) {
@@ -45,6 +55,7 @@ final class ConsoleApplication
             $this->add(new MakePageCommand($basePath));
             $this->add(new MakeViewCommand($basePath));
             $this->add(new MakeActionCommand($basePath));
+            $this->add(new CacheClearCommand($basePath));
             $this->add(new ViewCacheCommand($basePath));
             $this->add(new ViewClearCommand($basePath));
         }
@@ -53,6 +64,16 @@ final class ConsoleApplication
     public function add(Command $command): void
     {
         $this->commands[$command->name()] = $command;
+
+        foreach ($command->aliases() as $alias) {
+            $normalized = trim($alias);
+
+            if ($normalized === '') {
+                continue;
+            }
+
+            $this->aliases[$normalized] = $command->name();
+        }
     }
 
     /**
@@ -61,20 +82,48 @@ final class ConsoleApplication
     public function run(array $argv): int
     {
         $input = Input::fromArgv($argv);
-        $output = new Output();
+        $output = $this->output;
 
-        if ($input->hasOption('help') || in_array($input->command(), [null, 'help', 'list'], true)) {
-            $this->renderHelp($output, $input->script());
+        if ($input->command() === null || $input->command() === 'list') {
+            $this->renderGeneralHelp($output, $input->script());
 
             return 0;
+        }
+
+        if ($input->command() === 'help') {
+            $requestedCommand = $input->arguments()[0] ?? null;
+
+            if ($requestedCommand === null) {
+                $this->renderGeneralHelp($output, $input->script());
+
+                return 0;
+            }
+
+            return $this->renderRequestedCommandHelp($requestedCommand, $output, $input->script());
+        }
+
+        if ($input->hasOption('help')) {
+            return $this->renderRequestedCommandHelp($input->command(), $output, $input->script());
         }
 
         try {
             return $this->command($input->command())->handle($input, $output);
         } catch (CommandNotFoundException $exception) {
             $output->error($exception->getMessage());
+
+            $suggestions = $this->suggestedCommands($input->command());
+
+            if ($suggestions !== []) {
+                $output->writeln();
+                $output->writeln('Did you mean:');
+
+                foreach ($suggestions as $suggestion) {
+                    $output->writeln(sprintf('  - %s', $suggestion));
+                }
+            }
+
             $output->writeln();
-            $this->renderHelp($output, $input->script());
+            $this->renderGeneralHelp($output, $input->script());
 
             return 1;
         } catch (Throwable $exception) {
@@ -86,26 +135,162 @@ final class ConsoleApplication
 
     private function command(?string $name): Command
     {
-        if ($name === null || ! isset($this->commands[$name])) {
+        $resolved = $this->resolveCommandName($name);
+
+        if ($resolved === null || ! isset($this->commands[$resolved])) {
             throw new CommandNotFoundException(sprintf('Command [%s] is not defined.', $name ?? 'null'));
         }
 
-        return $this->commands[$name];
+        return $this->commands[$resolved];
     }
 
-    private function renderHelp(Output $output, string $script): void
+    private function renderRequestedCommandHelp(?string $name, Output $output, string $script): int
+    {
+        try {
+            $this->renderCommandHelp($this->command($name), $output, $script);
+
+            return 0;
+        } catch (CommandNotFoundException $exception) {
+            $output->error($exception->getMessage());
+            $output->writeln();
+            $this->renderGeneralHelp($output, $script);
+
+            return 1;
+        }
+    }
+
+    private function renderGeneralHelp(Output $output, string $script): void
     {
         $output->writeln('VoltStack Console');
         $output->writeln();
         $output->writeln(sprintf('Usage: php %s <command> [options]', basename($script)));
         $output->writeln();
-        $output->writeln('Available commands:');
 
-        foreach ($this->commands as $command) {
-            $output->writeln(sprintf('  %-12s %s', $command->name(), $command->description()));
+        foreach ($this->commandsByCategory() as $category => $commands) {
+            $output->writeln(sprintf('%s:', $category));
+
+            foreach ($commands as $command) {
+                $suffix = $command->aliases() === []
+                    ? ''
+                    : sprintf(' [aliases: %s]', implode(', ', $command->aliases()));
+
+                $output->writeln(sprintf('  %-18s %s%s', $command->name(), $command->description(), $suffix));
+            }
+
+            $output->writeln();
         }
 
+        $output->writeln(sprintf('Use "php %s help <command>" for command details.', basename($script)));
         $output->writeln();
         $output->writeln(sprintf('Base path: %s', $this->basePath));
+    }
+
+    private function renderCommandHelp(Command $command, Output $output, string $script): void
+    {
+        $output->writeln(sprintf('Command: %s', $command->name()));
+        $output->writeln($command->description());
+        $output->writeln();
+        $output->writeln(sprintf('Usage: php %s %s', basename($script), $command->usage()));
+
+        if ($command->aliases() !== []) {
+            $output->writeln();
+            $output->writeln(sprintf('Aliases: %s', implode(', ', $command->aliases())));
+        }
+
+        $arguments = $command->argumentsHelp();
+        $options = $command->optionsHelp();
+
+        if ($arguments !== []) {
+            $output->writeln();
+            $output->writeln('Arguments:');
+
+            foreach ($arguments as $name => $description) {
+                $output->writeln(sprintf('  %-16s %s', $name, $description));
+            }
+        }
+
+        if ($options !== []) {
+            $output->writeln();
+            $output->writeln('Options:');
+
+            foreach ($options as $name => $description) {
+                $output->writeln(sprintf('  %-16s %s', $name, $description));
+            }
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function suggestedCommands(?string $name): array
+    {
+        if ($name === null || $name === '') {
+            return [];
+        }
+
+        $normalized = strtolower($name);
+        $scores = [];
+
+        foreach ($this->commandNamesForSuggestions() as $candidateName => $resolvedCommand) {
+            $candidate = strtolower($candidateName);
+            $distance = levenshtein($normalized, $candidate);
+
+            if (str_contains($candidate, $normalized) || str_contains($normalized, $candidate)) {
+                $distance = min($distance, 2);
+            }
+
+            if ($distance > max(3, (int) floor(strlen($candidate) / 3))) {
+                continue;
+            }
+
+            $scores[$resolvedCommand] = isset($scores[$resolvedCommand])
+                ? min($scores[$resolvedCommand], $distance)
+                : $distance;
+        }
+
+        asort($scores);
+
+        return array_slice(array_keys($scores), 0, 3);
+    }
+
+    private function resolveCommandName(?string $name): ?string
+    {
+        if ($name === null) {
+            return null;
+        }
+
+        return $this->aliases[$name] ?? $name;
+    }
+
+    /**
+     * @return array<string, array<int, Command>>
+     */
+    private function commandsByCategory(): array
+    {
+        $grouped = [];
+
+        foreach ($this->commands as $command) {
+            $grouped[$command->category()][] = $command;
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function commandNamesForSuggestions(): array
+    {
+        $names = [];
+
+        foreach ($this->commands as $name => $command) {
+            $names[$name] = $name;
+
+            foreach ($command->aliases() as $alias) {
+                $names[$alias] = $name;
+            }
+        }
+
+        return $names;
     }
 }

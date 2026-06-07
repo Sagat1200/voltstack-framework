@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Quantum\Console\Commands;
 
+use FilesystemIterator;
 use Quantum\Console\Command;
 use Quantum\Console\Input;
 use Quantum\Console\Output;
 use Quantum\View\Cache\CompiledViewStore;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 final class ViewClearCommand extends Command
 {
@@ -21,10 +24,34 @@ final class ViewClearCommand extends Command
         return 'Limpia la cache de vistas compiladas.';
     }
 
+    public function usage(): string
+    {
+        return 'view:clear [--verbose]';
+    }
+
+    public function category(): string
+    {
+        return 'Cache';
+    }
+
+    public function aliases(): array
+    {
+        return ['views:clear'];
+    }
+
+    public function optionsHelp(): array
+    {
+        return [
+            '--verbose' => 'Lista cada archivo compilado eliminado antes del resumen final.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $app = $this->bootstrapApplication();
         $store = $app->make(CompiledViewStore::class);
+        $verbose = $input->hasOption('verbose');
+        $files = $verbose ? $this->compiledFiles($store->directory()) : [];
         $deleted = $store->clear();
 
         if ($deleted === 0) {
@@ -33,9 +60,43 @@ final class ViewClearCommand extends Command
             return 0;
         }
 
+        if ($verbose) {
+            foreach ($files as $index => $file) {
+                $output->writeln(sprintf('  [%d] %s', $index + 1, $file));
+            }
+        }
+
         $output->writeln('Cache de vistas limpiada correctamente.');
         $output->writeln(sprintf('  Archivos eliminados: %d', $deleted));
 
         return 0;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function compiledFiles(string $directory): array
+    {
+        if (! is_dir($directory)) {
+            return [];
+        }
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+        );
+
+        $files = [];
+
+        foreach ($iterator as $item) {
+            if (! $item->isFile()) {
+                continue;
+            }
+
+            $files[] = $item->getPathname();
+        }
+
+        sort($files);
+
+        return $files;
     }
 }

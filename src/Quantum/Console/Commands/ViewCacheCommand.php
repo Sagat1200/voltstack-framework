@@ -25,12 +25,35 @@ final class ViewCacheCommand extends Command
         return 'Precompila las vistas configuradas y las guarda en cache.';
     }
 
+    public function usage(): string
+    {
+        return 'view:cache [--verbose]';
+    }
+
+    public function category(): string
+    {
+        return 'Cache';
+    }
+
+    public function aliases(): array
+    {
+        return ['views:cache'];
+    }
+
+    public function optionsHelp(): array
+    {
+        return [
+            '--verbose' => 'Muestra cada vista fuente y su archivo compilado en cache.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $app = $this->bootstrapApplication();
         $factory = $app->make(ViewFactory::class);
         $store = $app->make(CompiledViewStore::class);
         $views = $this->discoverViews($factory->paths());
+        $verbose = $input->hasOption('verbose');
 
         if ($views === []) {
             $output->writeln('No se encontraron vistas para compilar.');
@@ -41,8 +64,13 @@ final class ViewCacheCommand extends Command
         $compiled = 0;
 
         foreach ($views as $viewPath) {
-            $store->ensureCompiled($viewPath);
+            $compiledPath = $store->ensureCompiled($viewPath);
             $compiled++;
+
+            if ($verbose) {
+                $output->writeln(sprintf('  [%d] %s', $compiled, $viewPath));
+                $output->writeln(sprintf('      -> %s', $compiledPath));
+            }
         }
 
         $output->writeln('Vistas compiladas correctamente.');

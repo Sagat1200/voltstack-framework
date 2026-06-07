@@ -17,6 +17,40 @@ abstract class Command
 
     abstract public function handle(Input $input, Output $output): int;
 
+    public function usage(): string
+    {
+        return $this->name();
+    }
+
+    public function category(): string
+    {
+        return 'General';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function aliases(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function argumentsHelp(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function optionsHelp(): array
+    {
+        return [];
+    }
+
     protected function bootstrapApplication(): Application
     {
         $bootstrapPath = $this->basePath . DIRECTORY_SEPARATOR . 'bootstrap' . DIRECTORY_SEPARATOR . 'app.php';

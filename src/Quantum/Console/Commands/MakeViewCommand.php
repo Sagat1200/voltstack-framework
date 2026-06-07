@@ -22,6 +22,23 @@ final class MakeViewCommand extends Command
         return 'Crea una vista nueva a partir del stub del framework.';
     }
 
+    public function usage(): string
+    {
+        return 'make:view <name>';
+    }
+
+    public function category(): string
+    {
+        return 'Generators';
+    }
+
+    public function argumentsHelp(): array
+    {
+        return [
+            'name' => 'Nombre de la vista, por ejemplo `admin/profile_card` o `admin.profile_card`.',
+        ];
+    }
+
     public function handle(Input $input, Output $output): int
     {
         $name = $input->arguments()[0] ?? null;
@@ -82,7 +99,7 @@ final class MakeViewCommand extends Command
         $viewFile = strtolower(str_replace('-', '_', $viewFile));
 
         $viewNameSegments = array_map(
-            static fn (string $segment): string => strtolower(str_replace('-', '_', $segment)),
+            static fn(string $segment): string => strtolower(str_replace('-', '_', $segment)),
             [...$segments, $viewFile],
         );
 
