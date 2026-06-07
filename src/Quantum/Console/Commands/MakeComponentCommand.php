@@ -136,7 +136,7 @@ final class MakeComponentCommand extends Command
             'class_directory' => $classTargetDirectory,
             'class_path' => $classTargetDirectory . DIRECTORY_SEPARATOR . $class . '.php',
             'view_directory' => $viewTargetDirectory,
-            'view_path' => $viewTargetDirectory . DIRECTORY_SEPARATOR . $viewFile . '.php',
+            'view_path' => $viewTargetDirectory . DIRECTORY_SEPARATOR . $viewFile . '.volt.php',
             'view_name' => $viewName,
             'title' => $this->title($segments, $class),
         ];

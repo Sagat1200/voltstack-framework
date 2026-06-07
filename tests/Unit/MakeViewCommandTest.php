@@ -65,7 +65,7 @@ PHP
             new Output(),
         );
 
-        $generatedView = $this->viewPath . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'profile_card.php';
+        $generatedView = $this->viewPath . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'profile_card.volt.php';
 
         self::assertSame(0, $exitCode);
         self::assertFileExists($generatedView);

@@ -74,6 +74,6 @@ final class MakeControllerCommandTest extends TestCase
         self::assertIsString($contents);
         self::assertStringContainsString('namespace App\\Controllers\\Admin;', $contents);
         self::assertStringContainsString('final class UserController extends Controller', $contents);
-        self::assertStringContainsString("return \$this->view('admin.user');", $contents);
+        self::assertStringContainsString("return view('admin.user');", $contents);
     }
 }

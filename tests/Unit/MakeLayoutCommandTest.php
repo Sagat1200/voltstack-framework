@@ -41,7 +41,7 @@ final class MakeLayoutCommandTest extends TestCase
             new Output(),
         );
 
-        $generatedLayout = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'layouts' . DIRECTORY_SEPARATOR . 'app.php';
+        $generatedLayout = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'layouts' . DIRECTORY_SEPARATOR . 'app.volt.php';
 
         self::assertSame(0, $exitCode);
         self::assertFileExists($generatedLayout);

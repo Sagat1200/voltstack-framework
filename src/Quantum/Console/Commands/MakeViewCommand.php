@@ -95,7 +95,7 @@ final class MakeViewCommand extends Command
         }
 
         $viewFile = array_pop($segments);
-        $viewFile = preg_replace('/\.php$/i', '', (string) $viewFile) ?? (string) $viewFile;
+        $viewFile = preg_replace('/(?:\.volt)?\.php$/i', '', (string) $viewFile) ?? (string) $viewFile;
         $viewFile = strtolower(str_replace('-', '_', $viewFile));
 
         $viewNameSegments = array_map(
@@ -105,7 +105,7 @@ final class MakeViewCommand extends Command
 
         return [
             'view_directory' => $targetDirectory,
-            'view_path' => $targetDirectory . DIRECTORY_SEPARATOR . $viewFile . '.php',
+            'view_path' => $targetDirectory . DIRECTORY_SEPARATOR . $viewFile . '.volt.php',
             'view_name' => implode('.', $viewNameSegments),
             'title' => $this->title($viewFile),
         ];

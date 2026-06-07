@@ -24,7 +24,7 @@ final class CompiledViewRenderingTest extends TestCase
         mkdir($this->basePath . DIRECTORY_SEPARATOR . 'storage', 0777, true);
 
         file_put_contents(
-            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.php',
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.volt.php',
             <<<'PHP'
 <h1>{{ $title }}</h1>
 <div>{!! $html !!}</div>
@@ -39,14 +39,14 @@ PHP
         );
 
         file_put_contents(
-            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.php',
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.volt.php',
             <<<'PHP'
 <small>{{ $note }}</small>
 PHP
         );
 
         file_put_contents(
-            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'layouts' . DIRECTORY_SEPARATOR . 'app.php',
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'layouts' . DIRECTORY_SEPARATOR . 'app.volt.php',
             <<<'PHP'
 <html>
 <body>
@@ -58,7 +58,7 @@ PHP
         );
 
         file_put_contents(
-            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'dashboard.php',
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'dashboard.volt.php',
             <<<'PHP'
 @extends('layouts.app')
 
@@ -88,7 +88,7 @@ PHP
         );
 
         file_put_contents(
-            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'listing.php',
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'listing.volt.php',
             <<<'PHP'
 <section>
 @forelse($items as $item)

@@ -94,7 +94,7 @@ final class MakeLayoutCommand extends Command
         }
 
         $layoutFile = array_pop($segments);
-        $layoutFile = preg_replace('/\.php$/i', '', (string) $layoutFile) ?? (string) $layoutFile;
+        $layoutFile = preg_replace('/(?:\.volt)?\.php$/i', '', (string) $layoutFile) ?? (string) $layoutFile;
         $layoutFile = strtolower(str_replace('-', '_', $layoutFile));
 
         $layoutNameSegments = array_map(
@@ -104,7 +104,7 @@ final class MakeLayoutCommand extends Command
 
         return [
             'layout_directory' => $targetDirectory,
-            'layout_path' => $targetDirectory . DIRECTORY_SEPARATOR . $layoutFile . '.php',
+            'layout_path' => $targetDirectory . DIRECTORY_SEPARATOR . $layoutFile . '.volt.php',
             'layout_name' => 'layouts.' . implode('.', $layoutNameSegments),
             'title' => $this->title($layoutFile),
         ];

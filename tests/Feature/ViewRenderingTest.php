@@ -24,7 +24,7 @@ final class ViewRenderingTest extends TestCase
         mkdir($this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views', 0777, true);
 
         file_put_contents(
-            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.php',
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.volt.php',
             <<<'PHP'
 <h1><?= e($title) ?></h1>
 <p><?= e($message) ?></p>
@@ -35,7 +35,7 @@ PHP
 protected function tearDown(): void
 {
 $viewFile = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR .
-'home.php';
+'home.volt.php';
 $viewsDirectory = dirname($viewFile);
 $resourcesDirectory = dirname($viewsDirectory);
 
@@ -76,6 +76,31 @@ $app = new Application($this->basePath);
 
 self::assertTrue($app->make(ViewFactory::class)->exists('home'));
 self::assertSame('application/json; charset=UTF-8', response()->json(['ok' => true])->headers()['Content-Type']);
+}
+
+public function test_it_prioritizes_volt_php_views_over_plain_php_views(): void
+{
+$phpFallback = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.php';
+
+file_put_contents(
+    $phpFallback,
+    <<<'PHP'
+<h1>Fallback</h1>
+PHP
+);
+
+$app = new Application($this->basePath);
+
+$html = $app->make(ViewFactory::class)->render('home', [
+    'title' => 'VoltStack',
+    'message' => 'Preferred .volt.php',
+]);
+
+self::assertStringContainsString('<h1>VoltStack</h1>', $html);
+self::assertStringContainsString('<p>Preferred .volt.php</p>', $html);
+self::assertStringNotContainsString('<h1>Fallback</h1>', $html);
+
+unlink($phpFallback);
 }
 }
 

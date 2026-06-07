@@ -72,8 +72,8 @@ final class ViewFactory
     {
         $relativePath = str_replace('.', DIRECTORY_SEPARATOR, $view);
         $candidates = [
-            $relativePath . '.php',
             $relativePath . '.volt.php',
+            $relativePath . '.php',
         ];
 
         foreach ($this->paths as $path) {

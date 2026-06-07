@@ -70,7 +70,7 @@ PHP
         );
 
         $generatedClass = $this->classPath . DIRECTORY_SEPARATOR . 'Admin' . DIRECTORY_SEPARATOR . 'UserCard.php';
-        $generatedView = $this->viewPath . DIRECTORY_SEPARATOR . 'Admin' . DIRECTORY_SEPARATOR . 'user_card.php';
+        $generatedView = $this->viewPath . DIRECTORY_SEPARATOR . 'Admin' . DIRECTORY_SEPARATOR . 'user_card.volt.php';
 
         self::assertSame(0, $exitCode);
         self::assertFileExists($generatedClass);
@@ -84,38 +84,38 @@ PHP
         self::assertStringContainsString('namespace App\\View\\Components\\Admin;', $contents);
         self::assertStringContainsString('final class UserCard extends Component', $contents);
         self::assertStringContainsString("public string \$title = 'Admin User Card';", $contents);
-        self::assertStringContainsString("return \$this->view('admin.user_card'", $contents);
+        self::assertStringContainsString("return view('admin.user_card'", $contents);
         self::assertStringContainsString('php volt make:component', $viewContents);
         self::assertStringContainsString('<?= volt_runtime_script() ?>', $viewContents);
-    }
+}
 
-    private function deleteDirectory(string $path): void
-    {
-        if (! is_dir($path)) {
-            return;
-        }
+private function deleteDirectory(string $path): void
+{
+if (! is_dir($path)) {
+return;
+}
 
-        $items = scandir($path);
+$items = scandir($path);
 
-        if ($items === false) {
-            return;
-        }
+if ($items === false) {
+return;
+}
 
-        foreach ($items as $item) {
-            if (in_array($item, ['.', '..'], true)) {
-                continue;
-            }
+foreach ($items as $item) {
+if (in_array($item, ['.', '..'], true)) {
+continue;
+}
 
-            $target = $path . DIRECTORY_SEPARATOR . $item;
+$target = $path . DIRECTORY_SEPARATOR . $item;
 
-            if (is_dir($target)) {
-                $this->deleteDirectory($target);
-                continue;
-            }
+if (is_dir($target)) {
+$this->deleteDirectory($target);
+continue;
+}
 
-            unlink($target);
-        }
+unlink($target);
+}
 
-        rmdir($path);
-    }
+rmdir($path);
+}
 }
