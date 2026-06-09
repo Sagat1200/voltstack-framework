@@ -7,6 +7,7 @@ namespace VoltStack\Test\Unit;
 use PHPUnit\Framework\TestCase;
 use Quantum\View\Compilers\ViewCompiler;
 use Quantum\View\Directives\DirectiveRegistry;
+use Quantum\View\Directives\Support\CallbackDirective;
 use RuntimeException;
 
 final class ViewCompilerTest extends TestCase
@@ -52,5 +53,18 @@ final class ViewCompilerTest extends TestCase
         self::assertStringContainsString('<?= e($user) ?>', $compiled);
         self::assertStringContainsString('Nada', $compiled);
         self::assertStringContainsString('<?php endif; ?>', $compiled);
+    }
+
+    public function test_it_supports_custom_directives_with_hyphens(): void
+    {
+        $registry = new DirectiveRegistry();
+        $registry->register('tailwind-vite', new CallbackDirective(
+            fn(): string => '<?php echo tailwind_vite()->render(); ?>',
+        ));
+        $compiler = new ViewCompiler($registry);
+
+        $compiled = $compiler->compileString('@tailwind-vite');
+
+        self::assertSame('<?php echo tailwind_vite()->render(); ?>', $compiled);
     }
 }

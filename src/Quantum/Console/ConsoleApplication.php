@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Quantum\Console;
 
+use Quantum\Bootstrap\Bootstrapper;
 use Quantum\Console\Commands\ServeCommand;
 use Quantum\Console\Commands\RouteListCommand;
 use Quantum\Console\Commands\MakeControllerCommand;
@@ -17,6 +18,7 @@ use Quantum\Console\Commands\ViewCacheCommand;
 use Quantum\Console\Commands\ViewClearCommand;
 use Quantum\Console\Exceptions\CommandNotFoundException;
 use Throwable;
+use VoltStack\Framework\Application;
 
 final class ConsoleApplication
 {
@@ -60,6 +62,7 @@ final class ConsoleApplication
             $this->add(new CacheClearCommand($basePath));
             $this->add(new ViewCacheCommand($basePath));
             $this->add(new ViewClearCommand($basePath));
+            $this->registerConfiguredCommands();
         }
     }
 
@@ -294,5 +297,46 @@ final class ConsoleApplication
         }
 
         return $names;
+    }
+
+    private function registerConfiguredCommands(): void
+    {
+        $configPath = $this->basePath . DIRECTORY_SEPARATOR . 'config';
+
+        if (! is_dir($configPath)) {
+            return;
+        }
+
+        $app = new Application($this->basePath);
+        $bootstrapper = new Bootstrapper($app);
+        $bootstrapper->loadConfiguration();
+
+        foreach ((array) $app->config('app.providers', []) as $providerClass) {
+            if (! is_string($providerClass) || trim($providerClass) === '') {
+                continue;
+            }
+
+            $provider = $app->register($providerClass);
+
+            foreach ($provider->commands() as $commandClass) {
+                $this->add($this->makeProviderCommand($commandClass));
+            }
+        }
+    }
+
+    /**
+     * @param class-string<Command> $commandClass
+     */
+    private function makeProviderCommand(string $commandClass): Command
+    {
+        if (! is_a($commandClass, Command::class, true)) {
+            throw new \RuntimeException(sprintf(
+                'Configured command [%s] must extend [%s].',
+                $commandClass,
+                Command::class,
+            ));
+        }
+
+        return new $commandClass($this->basePath);
     }
 }

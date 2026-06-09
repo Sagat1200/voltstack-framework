@@ -5,21 +5,18 @@ declare(strict_types=1);
 namespace Quantum\View\Compilers;
 
 use Quantum\View\Directives\DirectiveRegistry;
-use RuntimeException;
 
 final class ViewCompiler
 {
     public const VERSION = '0.3.0';
-
-    /**
-     * @var array<int, array{type: string, empty_var?: string, has_empty?: bool}>
-     */
-    private array $directiveStack = [];
-
-    private int $forelseCounter = 0;
+    private ?TemplateNodeCompiler $nodeCompiler = null;
 
     public function __construct(
         private readonly DirectiveRegistry $directives,
+        private readonly ?TemplateSourceTokenizer $sourceTokenizer = null,
+        private readonly ?TemplateTokenizer $tokenizer = null,
+        private readonly ?TemplateParser $parser = null,
+        private readonly ?TemplateBlockParser $blockParser = null,
     ) {}
 
     public function version(): string
@@ -29,198 +26,58 @@ final class ViewCompiler
 
     public function compileString(string $contents): string
     {
-        $this->directiveStack = [];
-        $this->forelseCounter = 0;
+        $this->nodeCompiler()->reset();
         $result = '';
 
-        foreach (token_get_all($contents) as $token) {
-            if (is_string($token)) {
-                $result .= $token;
+        foreach ($this->sourceTokenizer()->tokenize($contents) as $token) {
+            if ($token->type() === TemplateSourceToken::INLINE_HTML) {
+                $result .= $this->compileInlineHtml($token->value());
                 continue;
             }
 
-            [$id, $value] = $token;
-
-            if ($id === T_INLINE_HTML) {
-                $result .= $this->compileInlineHtml($value);
-                continue;
-            }
-
-            $result .= $value;
+            $result .= $token->value();
         }
 
-        $this->assertDirectiveStackIsBalanced();
+        $this->nodeCompiler()->assertBalanced();
 
         return $result;
     }
 
     private function compileInlineHtml(string $contents): string
     {
-        $compiled = preg_replace('/\{\{--[\s\S]*?--\}\}/', '', $contents);
+        $compiled = '';
 
-        if ($compiled === null) {
-            throw new RuntimeException('Failed to compile template comments.');
+        $nodes = $this->parser()->parse($this->tokenizer()->tokenize($contents));
+
+        foreach ($this->blockParser()->parse($nodes) as $node) {
+            $compiled .= $this->nodeCompiler()->compile($node);
         }
 
-        $compiled = preg_replace_callback('/\{!!\s*(.+?)\s*!!\}/s', static function (array $matches): string {
-            return sprintf('<?= %s ?>', trim($matches[1]));
-}, $compiled);
+        return $compiled;
+    }
 
-if ($compiled === null) {
-throw new RuntimeException('Failed to compile raw echo blocks.');
-}
+    private function tokenizer(): TemplateTokenizer
+    {
+        return $this->tokenizer ?? new TemplateTokenizer();
+    }
 
-$compiled = preg_replace_callback('/\{\{\s*(.+?)\s*\}\}/s', static function (array $matches): string {
-return sprintf('<?= e(%s) ?>', trim($matches[1]));
-}, $compiled);
+    private function sourceTokenizer(): TemplateSourceTokenizer
+    {
+        return $this->sourceTokenizer ?? new TemplateSourceTokenizer();
+    }
 
-if ($compiled === null) {
-throw new RuntimeException('Failed to compile escaped echo blocks.');
-}
+    private function parser(): TemplateParser
+    {
+        return $this->parser ?? new TemplateParser();
+    }
 
-$compiled = preg_replace_callback('/@([a-zA-Z_][\w]*)\s*(\((?:[^()]+|(?2))*\))?/m', function (array $matches): string {
-$name = strtolower($matches[1]);
-$expression = $matches[2] ?? null;
+    private function blockParser(): TemplateBlockParser
+    {
+        return $this->blockParser ?? new TemplateBlockParser();
+    }
 
-if (is_string($expression) && $expression !== '') {
-$expression = substr($expression, 1, -1);
-}
-
-return $this->compileDirective($name, $expression);
-}, $compiled);
-
-if ($compiled === null) {
-throw new RuntimeException('Failed to compile template directives.');
-}
-
-return $compiled;
-}
-
-private function compileDirective(string $name, ?string $expression): string
-{
-return match ($name) {
-'if', 'unless', 'isset', 'foreach', 'for', 'while', 'section' => $this->compileOpeningDirective($name, $expression),
-'endif', 'endunless', 'endisset', 'endempty', 'endforeach', 'endfor', 'endwhile', 'endsection' =>
-$this->compileClosingDirective($name),
-'forelse' => $this->compileForelse($expression),
-'empty' => $this->compileEmptyDirective($expression),
-'endforelse' => $this->compileEndForelse(),
-default => $this->compileSimpleDirective($name, $expression),
-};
-}
-
-private function compileOpeningDirective(string $name, ?string $expression): string
-{
-$this->directiveStack[] = ['type' => $name];
-
-return $this->compileSimpleDirective($name, $expression);
-}
-
-private function compileClosingDirective(string $name): string
-{
-$expected = match ($name) {
-'endif' => 'if',
-'endunless' => 'unless',
-'endisset' => 'isset',
-'endempty' => 'empty',
-'endforeach' => 'foreach',
-'endfor' => 'for',
-'endwhile' => 'while',
-'endsection' => 'section',
-default => throw new RuntimeException(sprintf('Unknown directive [%s].', $name)),
-};
-
-$current = array_pop($this->directiveStack);
-
-if (! is_array($current) || $current['type'] !== $expected) {
-throw new RuntimeException(sprintf('Unexpected @%s directive.', $name));
-}
-
-return $this->compileSimpleDirective($name, null);
-}
-
-private function compileForelse(?string $expression): string
-{
-$emptyVar = sprintf('$__empty_%d', ++$this->forelseCounter);
-$this->directiveStack[] = [
-'type' => 'forelse',
-'empty_var' => $emptyVar,
-'has_empty' => false,
-];
-
-return sprintf('<?php %s = true; foreach(%s): %s = false; ?>', $emptyVar, $this->expression($expression), $emptyVar);
-}
-
-private function compileEmptyDirective(?string $expression): string
-{
-if ($expression !== null && trim($expression) !== '') {
-$this->directiveStack[] = ['type' => 'empty'];
-
-return $this->compileSimpleDirective('empty', $expression);
-}
-
-$index = array_key_last($this->directiveStack);
-
-if ($index === null || $this->directiveStack[$index]['type'] !== 'forelse') {
-throw new RuntimeException('Unexpected @empty directive.');
-}
-
-if (($this->directiveStack[$index]['has_empty'] ?? false) === true) {
-throw new RuntimeException('Duplicate @empty directive inside @forelse.');
-}
-
-$this->directiveStack[$index]['has_empty'] = true;
-$emptyVar = $this->directiveStack[$index]['empty_var'];
-
-return sprintf('<?php endforeach; if(%s): ?>', $emptyVar);
-}
-
-private function compileEndForelse(): string
-{
-$current = array_pop($this->directiveStack);
-
-if (! is_array($current) || $current['type'] !== 'forelse') {
-throw new RuntimeException('Unexpected @endforelse directive.');
-}
-
-if (($current['has_empty'] ?? false) !== true) {
-throw new RuntimeException('The @forelse directive requires an @empty block.');
-}
-
-return '<?php endif; ?>';
-}
-
-private function compileSimpleDirective(string $name, ?string $expression): string
-{
-$directive = $this->directives->resolve($name);
-
-if ($directive === null) {
-throw new RuntimeException(sprintf('Unknown directive [%s].', $name));
-}
-
-return $directive->compile($expression);
-}
-
-private function assertDirectiveStackIsBalanced(): void
-{
-if ($this->directiveStack === []) {
-return;
-}
-
-$last = end($this->directiveStack);
-$type = is_array($last) ? $last['type'] : 'directive';
-
-throw new RuntimeException(sprintf('Unclosed @%s directive.', $type));
-}
-
-private function expression(?string $expression): string
-{
-$expression = trim((string) $expression);
-
-if ($expression === '') {
-throw new RuntimeException('The directive requires an expression.');
-}
-
-return $expression;
-}
+    private function nodeCompiler(): TemplateNodeCompiler
+    {
+        return $this->nodeCompiler ??= new TemplateNodeCompiler($this->directives);
+    }
 }
