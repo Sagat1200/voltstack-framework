@@ -21,6 +21,7 @@ class SimpleBlockNode extends TemplateNode
         return match ($this->name()) {
             'component' => 'endcomponent',
             'slot' => 'endslot',
+            'scope' => 'endscope',
             'unless' => 'endunless',
             'isset' => 'endisset',
             'empty' => 'endempty',

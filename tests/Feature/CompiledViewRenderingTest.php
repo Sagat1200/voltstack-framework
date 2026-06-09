@@ -141,6 +141,7 @@ PHP
 @attributes([
     'class' => 'card-base',
     'data-kind' => 'panel',
+    'style' => 'padding: 1rem',
 ])
 <article {!! $attributes !!}>
     <header>{!! $header !!}</header>
@@ -150,6 +151,10 @@ PHP
         'variant-primary' => $variant === 'primary',
         'variant-secondary' => $variant === 'secondary',
         'variant-default' => $variant === 'default',
+    ])" style="@style([
+        'color: #dc2626' => $variant === 'primary',
+        'color: #2563eb' => $variant === 'secondary',
+        'color: #374151' => $variant === 'default',
     ])">{{ $variant }}</p>
     <div class="slot">{!! $slot !!}</div>
 </article>
@@ -269,8 +274,8 @@ PHP
         $html = $app->make(ViewFactory::class)->render('component_host');
 
         self::assertStringContainsString('<h2>Tarjeta</h2>', $html);
-        self::assertStringContainsString('<article class="card-base" data-kind="panel">', str_replace("\r\n", "\n", $html));
-        self::assertStringContainsString('<p class="variant variant-default">default</p>', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<article class="card-base" data-kind="panel" style="padding: 1rem">', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<p class="variant variant-default" style="color: #374151">default</p>', str_replace("\r\n", "\n", $html));
         self::assertStringContainsString('<div class="slot">', $html);
         self::assertStringContainsString('<strong>Contenido desde slot</strong>', $html);
     }
@@ -295,7 +300,7 @@ PHP
         $html = $app->make(ViewFactory::class)->render('component_host_with_props');
 
         self::assertStringContainsString('<h2>Custom Card</h2>', $html);
-        self::assertStringContainsString('<p class="variant variant-primary">primary</p>', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<p class="variant variant-primary" style="color: #dc2626">primary</p>', str_replace("\r\n", "\n", $html));
         self::assertStringContainsString('<em>Slot con props</em>', $html);
     }
 
@@ -347,7 +352,7 @@ PHP
 
         self::assertStringContainsString('<header><span>Dynamic Header</span></header>', str_replace("\r\n", "\n", $html));
         self::assertStringContainsString('<h2>Dynamic Card</h2>', $html);
-        self::assertStringContainsString('<p class="variant variant-secondary">secondary</p>', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<p class="variant variant-secondary" style="color: #2563eb">secondary</p>', str_replace("\r\n", "\n", $html));
     }
 
     public function test_it_merges_component_attributes_with_defaults_defined_in_the_component_view(): void
@@ -360,6 +365,7 @@ PHP
     'attributes' => [
         'class' => 'shadow-lg',
         'id' => 'main-card',
+        'style' => 'border: 1px solid #111827',
     ],
 ])
 <span>Contenido</span>
@@ -375,8 +381,34 @@ PHP
 
         $html = str_replace("\r\n", "\n", $app->make(ViewFactory::class)->render('component_host_with_attributes'));
 
-        self::assertStringContainsString('<article class="card-base shadow-lg" data-kind="panel" id="main-card">', $html);
+        self::assertStringContainsString('<article class="card-base shadow-lg" data-kind="panel" style="padding: 1rem; border: 1px solid #111827" id="main-card">', $html);
         self::assertStringContainsString('<h2>Card With Attributes</h2>', $html);
+    }
+
+    public function test_it_isolates_variable_assignments_inside_scope_blocks(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'scope_demo.volt.php',
+            <<<'PHP'
+@php $title = 'Exterior'; @endphp
+@scope
+    @php $title = 'Interior'; @endphp
+    <span>{{ $title }}</span>
+@endscope
+<p>{{ $title }}</p>
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        $html = str_replace("\r\n", "\n", $app->make(ViewFactory::class)->render('scope_demo'));
+
+        self::assertStringContainsString('<span>Interior</span>', $html);
+        self::assertStringContainsString('<p>Exterior</p>', $html);
     }
 
     public function test_it_preserves_compiler_exceptions_thrown_while_rendering_nested_views(): void

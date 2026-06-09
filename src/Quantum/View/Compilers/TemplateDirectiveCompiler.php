@@ -37,8 +37,8 @@ final class TemplateDirectiveCompiler
         }
 
         return match ($name) {
-            'if', 'unless', 'isset', 'foreach', 'for', 'while', 'section', 'component', 'slot' => $this->compileOpeningDirective($node),
-            'endif', 'endunless', 'endisset', 'endempty', 'endforeach', 'endfor', 'endwhile', 'endsection', 'endcomponent', 'endslot' =>
+            'if', 'unless', 'isset', 'foreach', 'for', 'while', 'section', 'component', 'slot', 'scope' => $this->compileOpeningDirective($node),
+            'endif', 'endunless', 'endisset', 'endempty', 'endforeach', 'endfor', 'endwhile', 'endsection', 'endcomponent', 'endslot', 'endscope' =>
             $this->compileClosingDirective($name, $node),
             'forelse' => $this->compileForelse($node),
             'empty' => $this->compileEmptyDirective($node),
@@ -86,6 +86,7 @@ final class TemplateDirectiveCompiler
             'endsection' => 'section',
             'endcomponent' => 'component',
             'endslot' => 'slot',
+            'endscope' => 'scope',
             default => throw new TemplateParseException(sprintf('Unknown directive [%s]', $name), $node->line(), $node->column()),
         };
 

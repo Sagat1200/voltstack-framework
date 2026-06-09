@@ -34,6 +34,11 @@ final class ComponentAttributeBag
                 continue;
             }
 
+            if ($key === 'style' && isset($merged[$key])) {
+                $merged[$key] = $this->mergeStyleValues($merged[$key], $value);
+                continue;
+            }
+
             $merged[$key] = $value;
         }
 
@@ -43,6 +48,11 @@ final class ComponentAttributeBag
     public static function formatClasses(mixed $value): string
     {
         return self::normalizeClassValueStatic($value);
+    }
+
+    public static function formatStyles(mixed $value): string
+    {
+        return self::normalizeStyleValueStatic($value);
     }
 
     /**
@@ -96,7 +106,9 @@ final class ComponentAttributeBag
 
             $normalized[$key] = $key === 'class'
                 ? self::normalizeClassValueStatic($value)
-                : $this->normalizeAttributeValue($value);
+                : ($key === 'style'
+                    ? self::normalizeStyleValueStatic($value)
+                    : $this->normalizeAttributeValue($value));
         }
 
         return $normalized;
@@ -160,5 +172,57 @@ final class ComponentAttributeBag
         ], static fn(string $class): bool => $class !== '');
 
         return implode(' ', $values);
+    }
+
+    private static function normalizeStyleValueStatic(mixed $value): string
+    {
+        if (is_string($value)) {
+            return self::trimStyleDeclaration($value);
+        }
+
+        if (! is_array($value)) {
+            return is_scalar($value) ? self::trimStyleDeclaration((string) $value) : '';
+        }
+
+        $styles = [];
+
+        foreach ($value as $key => $entry) {
+            if (is_int($key)) {
+                if (is_scalar($entry)) {
+                    $declaration = self::trimStyleDeclaration((string) $entry);
+
+                    if ($declaration !== '') {
+                        $styles[] = $declaration;
+                    }
+                }
+
+                continue;
+            }
+
+            if ($entry) {
+                $declaration = self::trimStyleDeclaration((string) $key);
+
+                if ($declaration !== '') {
+                    $styles[] = $declaration;
+                }
+            }
+        }
+
+        return implode('; ', array_values(array_filter($styles, static fn(string $style): bool => $style !== '')));
+    }
+
+    private function mergeStyleValues(mixed $defaults, mixed $current): string
+    {
+        $values = array_filter([
+            self::normalizeStyleValueStatic($defaults),
+            self::normalizeStyleValueStatic($current),
+        ], static fn(string $style): bool => $style !== '');
+
+        return implode('; ', $values);
+    }
+
+    private static function trimStyleDeclaration(string $style): string
+    {
+        return rtrim(trim($style), ';');
     }
 }

@@ -141,6 +141,19 @@ final class DirectiveRegistry
             true,
         ));
 
+        $this->register('style', new CallbackDirective(
+            fn(?string $expression): string => sprintf('<?php echo e($__volt->styleList(%s)); ?>', $this->expression($expression)),
+            true,
+        ));
+
+        $this->register('scope', new CallbackDirective(
+            fn(): string => '<?php (function (array $__volt_scope_vars) use ($__volt) { extract($__volt_scope_vars, EXTR_SKIP); ?>',
+        ));
+
+        $this->register('endscope', new CallbackDirective(
+            fn(): string => '<?php })(get_defined_vars()); ?>',
+        ));
+
         $this->register('foreach', new CallbackDirective(
             fn(?string $expression): string => sprintf('<?php foreach(%s): ?>', $this->expression($expression)),
             true,

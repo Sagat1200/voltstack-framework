@@ -11,6 +11,8 @@ Implementado actualmente:
 * `@dynamic($component)` y `@dynamic($component, ['prop' => valor])`
 * `@attributes([...])` dentro de la vista del componente
 * `@class([...])` para listas condicionales de clases
+* `@style([...])` para listas condicionales de estilos inline
+* `@scope ... @endscope` para aislamiento local de variables
 * render de componentes clase+vista usando `VoltStack\Runtime\Component\ComponentManager`
 * resolución de componentes por nombre corto hacia el namespace configurado en `ui-reactive.class_view_components`
 * soporte del slot principal mediante la propiedad pública `$slot`
@@ -18,12 +20,12 @@ Implementado actualmente:
 * defaults simples y props opcionales dentro de la vista del componente
 * `ComponentAttributeBag` con merge básico de defaults y concatenación de clases
 * normalización compartida de clases entre `@class` y `ComponentAttributeBag`
+* normalización compartida de estilos entre `@style` y `ComponentAttributeBag`
+* aislamiento de asignaciones dentro de `@scope` sin contaminar el contexto exterior
 * compilación estructural del bloque `@component` dentro del pipeline actual de vistas
 
 Pendiente todavía:
 
-* `@style`
-* `@scope`
 * `@extendsComponent`
 * `@renderMode`
 * tags cortos tipo `<x-button />`

@@ -196,6 +196,23 @@ final class TemplatePipelineTest extends TestCase
         self::assertCount(1, $nodes[0]->children());
     }
 
+    public function test_it_builds_a_hierarchical_scope_block(): void
+    {
+        $parser = new TemplateBlockParser();
+
+        $nodes = $parser->parse([
+            TemplateNode::directive('scope', null),
+            TemplateNode::text('Aislado'),
+            TemplateNode::directive('endscope', null),
+        ]);
+
+        self::assertCount(1, $nodes);
+        self::assertInstanceOf(SimpleBlockNode::class, $nodes[0]);
+        self::assertSame('scope', $nodes[0]->name());
+        self::assertNull($nodes[0]->expression());
+        self::assertCount(1, $nodes[0]->children());
+    }
+
     public function test_it_builds_a_specialized_section_block(): void
     {
         $parser = new TemplateBlockParser();
@@ -369,6 +386,29 @@ final class TemplatePipelineTest extends TestCase
         $compiled = $compiler->compile(TemplateNode::directive('class', "['btn', 'btn-primary' => \$primary]"));
 
         self::assertSame("<?php echo e(\$__volt->classList(['btn', 'btn-primary' => \$primary])); ?>", $compiled);
+    }
+
+    public function test_it_compiles_style_directive(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(TemplateNode::directive('style', "['color: red' => \$danger, 'font-weight: bold']"));
+
+        self::assertSame("<?php echo e(\$__volt->styleList(['color: red' => \$danger, 'font-weight: bold'])); ?>", $compiled);
+    }
+
+    public function test_it_compiles_scope_blocks_through_the_node_compiler(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(new SimpleBlockNode('scope', null, [
+            TemplateNode::text('Aislado'),
+        ]));
+
+        self::assertSame('<?php (function (array $__volt_scope_vars) use ($__volt) { extract($__volt_scope_vars, EXTR_SKIP); ?>Aislado<?php })(get_defined_vars()); ?>', $compiled);
+        $compiler->assertBalanced();
     }
 
     public function test_it_compiles_slot_blocks_through_the_node_compiler(): void

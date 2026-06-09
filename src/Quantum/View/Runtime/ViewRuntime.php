@@ -217,4 +217,12 @@ final class ViewRuntime
     {
         return ComponentAttributeBag::formatClasses($definitions);
     }
+
+    /**
+     * @param array<array-key, mixed>|string $definitions
+     */
+    public function styleList(array|string $definitions): string
+    {
+        return ComponentAttributeBag::formatStyles($definitions);
+    }
 }

@@ -14,6 +14,7 @@ final class TemplateBlockParser
     private const SIMPLE_BLOCKS = [
         'component' => 'endcomponent',
         'slot' => 'endslot',
+        'scope' => 'endscope',
         'unless' => 'endunless',
         'isset' => 'endisset',
         'empty' => 'endempty',

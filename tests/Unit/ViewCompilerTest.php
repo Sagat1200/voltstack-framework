@@ -141,6 +141,24 @@ final class ViewCompilerTest extends TestCase
         self::assertSame("<?php echo e(\$__volt->classList(['btn', 'btn-primary' => \$primary])); ?>", $compiled);
     }
 
+    public function test_it_compiles_style_directive(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString("@style(['color: red' => \$danger, 'font-weight: bold'])");
+
+        self::assertSame("<?php echo e(\$__volt->styleList(['color: red' => \$danger, 'font-weight: bold'])); ?>", $compiled);
+    }
+
+    public function test_it_compiles_scope_blocks(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString("@scope Aislado @endscope");
+
+        self::assertSame('<?php (function (array $__volt_scope_vars) use ($__volt) { extract($__volt_scope_vars, EXTR_SKIP); ?>Aislado <?php })(get_defined_vars()); ?>', $compiled);
+    }
+
     public function test_it_attaches_the_source_path_to_specialized_compiler_exceptions(): void
     {
         $compiler = new ViewCompiler(new DirectiveRegistry());

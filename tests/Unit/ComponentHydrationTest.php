@@ -109,6 +109,28 @@ final class ComponentHydrationTest extends TestCase
             ]),
         );
     }
+
+    public function test_it_formats_and_merges_style_lists(): void
+    {
+        self::assertSame(
+            'font-weight: bold; color: red',
+            ComponentAttributeBag::formatStyles([
+                'font-weight: bold',
+                'color: red' => true,
+                'display: none' => false,
+            ]),
+        );
+
+        $attributes = new ComponentAttributeBag([
+            'style' => 'color: red',
+        ]);
+
+        $merged = $attributes->merge([
+            'style' => 'font-weight: bold',
+        ]);
+
+        self::assertSame('style="font-weight: bold; color: red"', (string) $merged);
+    }
 }
 
 final class TestGreetingComponent extends Component
