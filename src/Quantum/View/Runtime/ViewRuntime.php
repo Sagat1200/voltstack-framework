@@ -12,6 +12,10 @@ use VoltStack\Runtime\Component\ComponentManager;
 
 final class ViewRuntime
 {
+    private const RENDER_MODE_SERVER = 'server';
+
+    private const RENDER_MODE_INTERACTIVE = 'interactive';
+
     /**
      * @var array<string, string>
      */
@@ -33,6 +37,15 @@ final class ViewRuntime
     private array $slotStack = [];
 
     private ?string $parentView = null;
+
+    private string|Component|null $parentComponent = null;
+
+    /**
+     * @var array<string, mixed>
+     */
+    private array $parentComponentProps = [];
+
+    private string $renderMode = self::RENDER_MODE_SERVER;
 
     /**
      * @param array<string, mixed> $data
@@ -59,6 +72,25 @@ final class ViewRuntime
         $this->parentView = $view;
     }
 
+    public function setRenderMode(string $mode): void
+    {
+        $mode = strtolower(trim($mode));
+
+        if (! in_array($mode, [self::RENDER_MODE_SERVER, self::RENDER_MODE_INTERACTIVE], true)) {
+            throw new RuntimeException(sprintf(
+                'Unsupported render mode [%s]. Expected one of: server, interactive.',
+                $mode === '' ? 'empty' : $mode,
+            ));
+        }
+
+        $this->renderMode = $mode;
+    }
+
+    public function renderMode(): string
+    {
+        return $this->renderMode;
+    }
+
     public function hasParentView(): bool
     {
         return is_string($this->parentView) && trim($this->parentView) !== '';
@@ -74,6 +106,41 @@ final class ViewRuntime
         $runtime->parentView = null;
 
         return $this->factory->renderWithRuntime($this->parentView, $this->data, $runtime);
+    }
+
+    /**
+     * @param array<string, mixed> $props
+     */
+    public function extendComponent(string|Component $component, array $props = []): void
+    {
+        $this->parentComponent = $component;
+        $this->parentComponentProps = $props;
+    }
+
+    public function hasParentComponent(): bool
+    {
+        return is_string($this->parentComponent) || $this->parentComponent instanceof Component;
+    }
+
+    public function renderParentComponent(string $slot): string
+    {
+        if (! $this->hasParentComponent()) {
+            return $slot;
+        }
+
+        $component = $this->parentComponent;
+        $props = $this->parentComponentProps;
+        $this->parentComponent = null;
+        $this->parentComponentProps = [];
+
+        if (! is_string($component) && ! $component instanceof Component) {
+            return $slot;
+        }
+
+        return $this->renderDynamicComponent($component, [
+            ...$props,
+            'slot' => $slot,
+        ]);
     }
 
     public function startSection(string $name): void
@@ -107,6 +174,7 @@ final class ViewRuntime
             'component' => $component,
             'props' => $props,
             'slots' => [],
+            'render_mode' => $this->renderMode,
         ];
         ob_start();
     }
@@ -122,6 +190,7 @@ final class ViewRuntime
         $component = $entry['component'];
         $props = is_array($entry['props']) ? $entry['props'] : [];
         $namedSlots = is_array($entry['slots']) ? $entry['slots'] : [];
+        $renderMode = is_string($entry['render_mode'] ?? null) ? $entry['render_mode'] : self::RENDER_MODE_SERVER;
 
         if (! is_string($component) && ! $component instanceof Component) {
             throw new RuntimeException('Unable to resolve the current component instance.');
@@ -135,7 +204,7 @@ final class ViewRuntime
             'slot' => $slot,
         ]);
 
-        return app(ComponentManager::class)->render($instance);
+        return $this->renderMountedComponent($instance, $renderMode);
     }
 
     public function startSlot(string $name): void
@@ -179,7 +248,7 @@ final class ViewRuntime
         $manager = app(ComponentManager::class);
         $instance = $manager->mount($component, $props);
 
-        return $manager->render($instance);
+        return $this->renderMountedComponent($instance, $this->renderMode);
     }
 
     /**
@@ -224,5 +293,14 @@ final class ViewRuntime
     public function styleList(array|string $definitions): string
     {
         return ComponentAttributeBag::formatStyles($definitions);
+    }
+
+    private function renderMountedComponent(Component $component, string $mode): string
+    {
+        $manager = app(ComponentManager::class);
+
+        return $mode === self::RENDER_MODE_INTERACTIVE
+            ? $manager->renderRoot($component, null, $mode)
+            : $manager->render($component);
     }
 }

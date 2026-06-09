@@ -111,7 +111,7 @@ final class ComponentManager
         throw new RuntimeException('Components must render a string or a view instance.');
     }
 
-    public function renderRoot(Component $component, ?Snapshot $snapshot = null): string
+    public function renderRoot(Component $component, ?Snapshot $snapshot = null, string $renderMode = 'interactive'): string
     {
         $snapshot ??= $this->dehydrate($component);
         $encodedSnapshot = htmlspecialchars(
@@ -122,7 +122,8 @@ final class ComponentManager
         $csrf = htmlspecialchars($this->app->make(\Quantum\Security\CsrfTokenManager::class)->token(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         return sprintf(
-            '<div data-volt-root="true" data-volt-component="%s" data-volt-endpoint="%s" data-volt-csrf="%s" data-volt-snapshot="%s">%s</div>',
+            '<div data-volt-root="true" data-volt-render-mode="%s" data-volt-component="%s" data-volt-endpoint="%s" data-volt-csrf="%s" data-volt-snapshot="%s">%s</div>',
+            htmlspecialchars($renderMode, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             htmlspecialchars($component::class, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             htmlspecialchars((string) $this->app->config('runtime.endpoint', '/_volt/action'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             $csrf,

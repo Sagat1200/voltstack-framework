@@ -13,6 +13,11 @@ Implementado actualmente:
 * `@class([...])` para listas condicionales de clases
 * `@style([...])` para listas condicionales de estilos inline
 * `@scope ... @endscope` para aislamiento local de variables
+* `@extendsComponent('nombre')` y `@extendsComponent('nombre', ['prop' => valor])` para envolver la salida del componente hijo en un componente padre
+* `@renderMode('server')` y `@renderMode('interactive')` para controlar cómo se renderizan los componentes desde una vista
+* tags cortos básicos tipo `<x-button />` y `<x-card>...</x-card>` transformados al pipeline actual de directivas
+* named slots en component tags con sintaxis `<x-slot:nombre>...</x-slot:nombre>`
+* namespaces avanzados en component tags tipo `<x-ui:button />` y `<x-ui:panel>...</x-ui:panel>`
 * render de componentes clase+vista usando `VoltStack\Runtime\Component\ComponentManager`
 * resolución de componentes por nombre corto hacia el namespace configurado en `ui-reactive.class_view_components`
 * soporte del slot principal mediante la propiedad pública `$slot`
@@ -22,13 +27,14 @@ Implementado actualmente:
 * normalización compartida de clases entre `@class` y `ComponentAttributeBag`
 * normalización compartida de estilos entre `@style` y `ComponentAttributeBag`
 * aislamiento de asignaciones dentro de `@scope` sin contaminar el contexto exterior
+* composición padre/hijo en vistas de componentes mediante `@extendsComponent`, usando el output del hijo como `slot` del padre
+* `@renderMode('interactive')` hace que `@component` y `@dynamic` rendericen roots reactivos con `data-volt-root` y snapshot
+* los component tags cortos hoy soportan props simples, atributos HTML básicos, slot principal, named slots con `x-slot:nombre` y namespaces tipo `ui:button`
 * compilación estructural del bloque `@component` dentro del pipeline actual de vistas
 
 Pendiente todavía:
 
-* `@extendsComponent`
-* `@renderMode`
-* tags cortos tipo `<x-button />`
+* sintaxis HTML más rica para atributos/slots complejos y namespaces externos configurables
 
 Referencia real del primer slice:
 

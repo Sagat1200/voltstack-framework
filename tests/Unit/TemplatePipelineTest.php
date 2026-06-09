@@ -365,6 +365,26 @@ final class TemplatePipelineTest extends TestCase
         self::assertSame("<?php echo \$__volt->renderDynamicComponent(\$component); ?>", $compiled);
     }
 
+    public function test_it_compiles_extends_component_directive(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(TemplateNode::directive('extendscomponent', "'marco', ['title' => \$title]"));
+
+        self::assertSame("<?php \$__volt->extendComponent('marco', ['title' => \$title]); ?>", $compiled);
+    }
+
+    public function test_it_compiles_render_mode_directive(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(TemplateNode::directive('rendermode', "'interactive'"));
+
+        self::assertSame("<?php \$__volt->setRenderMode('interactive'); ?>", $compiled);
+    }
+
     public function test_it_compiles_attributes_directive(): void
     {
         $compiler = new TemplateNodeCompiler(new DirectiveRegistry());

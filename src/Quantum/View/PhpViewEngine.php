@@ -43,7 +43,11 @@ final class PhpViewEngine
         $output = (string) ob_get_clean();
 
         if ($runtime->hasParentView()) {
-            return $runtime->renderParent();
+            $output = $runtime->renderParent();
+        }
+
+        if ($runtime->hasParentComponent()) {
+            return $runtime->renderParentComponent($output);
         }
 
         return $output;

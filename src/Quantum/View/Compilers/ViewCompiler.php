@@ -18,6 +18,7 @@ final class ViewCompiler
         private readonly ?TemplateTokenizer $tokenizer = null,
         private readonly ?TemplateParser $parser = null,
         private readonly ?TemplateBlockParser $blockParser = null,
+        private readonly ?ComponentTagTransformer $componentTagTransformer = null,
     ) {}
 
     public function version(): string
@@ -55,6 +56,7 @@ final class ViewCompiler
     private function compileInlineHtml(string $contents, int $line = 1, int $column = 1): string
     {
         $compiled = '';
+        $contents = $this->componentTagTransformer()->transform($contents, $line, $column);
 
         $nodes = $this->parser()->parse($this->tokenizer()->tokenize($contents, $line, $column));
 
@@ -88,5 +90,10 @@ final class ViewCompiler
     private function nodeCompiler(): TemplateNodeCompiler
     {
         return $this->nodeCompiler ??= new TemplateNodeCompiler($this->directives);
+    }
+
+    private function componentTagTransformer(): ComponentTagTransformer
+    {
+        return $this->componentTagTransformer ?? new ComponentTagTransformer();
     }
 }

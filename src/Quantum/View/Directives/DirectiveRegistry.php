@@ -128,6 +128,11 @@ final class DirectiveRegistry
             true,
         ));
 
+        $this->register('extendscomponent', new CallbackDirective(
+            fn(?string $expression): string => $this->compileExtendsComponentDirective($expression),
+            true,
+        ));
+
         $this->register('attributes', new CallbackDirective(
             fn(?string $expression): string => sprintf(
                 '<?php $attributes = (($attributes ?? new \VoltStack\Runtime\Component\ComponentAttributeBag())->merge(%s)); ?>',
@@ -152,6 +157,11 @@ final class DirectiveRegistry
 
         $this->register('endscope', new CallbackDirective(
             fn(): string => '<?php })(get_defined_vars()); ?>',
+        ));
+
+        $this->register('rendermode', new CallbackDirective(
+            fn(?string $expression): string => sprintf('<?php $__volt->setRenderMode(%s); ?>', $this->expression($expression)),
+            true,
         ));
 
         $this->register('foreach', new CallbackDirective(
@@ -242,6 +252,18 @@ final class DirectiveRegistry
         }
 
         return sprintf('<?php echo $__volt->renderDynamicComponent(%s, %s); ?>', $component, $props);
+    }
+
+    private function compileExtendsComponentDirective(?string $expression): string
+    {
+        $expression = $this->expression($expression);
+        [$component, $props] = $this->componentArguments($expression, '@extendsComponent');
+
+        if ($props === null) {
+            return sprintf('<?php $__volt->extendComponent(%s); ?>', $component);
+        }
+
+        return sprintf('<?php $__volt->extendComponent(%s, %s); ?>', $component, $props);
     }
 
     /**

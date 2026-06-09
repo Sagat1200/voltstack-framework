@@ -123,6 +123,69 @@ final class ViewCompilerTest extends TestCase
         self::assertSame("<?php echo \$__volt->renderDynamicComponent(\$component, ['title' => 'Dynamic']); ?>", $compiled);
     }
 
+    public function test_it_compiles_extends_component_directives(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString("@extendsComponent('marco', ['title' => \$title])");
+
+        self::assertSame("<?php \$__volt->extendComponent('marco', ['title' => \$title]); ?>", $compiled);
+    }
+
+    public function test_it_compiles_render_mode_directives(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString("@renderMode('interactive')");
+
+        self::assertSame("<?php \$__volt->setRenderMode('interactive'); ?>", $compiled);
+    }
+
+    public function test_it_compiles_self_closing_component_tags(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString('<x-tarjeta title="Short Card" variant="primary" class="shadow-tag" />');
+
+        self::assertSame("<?php echo \$__volt->renderDynamicComponent('tarjeta', ['title' => 'Short Card', 'variant' => 'primary', 'attributes' => ['class' => 'shadow-tag']]); ?>", $compiled);
+    }
+
+    public function test_it_compiles_wrapped_component_tags(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString('<x-tarjeta :title="$title">Hola</x-tarjeta>');
+
+        self::assertSame("<?php \$__volt->startComponent('tarjeta', ['title' => \$title]); ?>Hola<?php echo \$__volt->endComponent(); ?>", $compiled);
+    }
+
+    public function test_it_compiles_named_slot_tags_inside_component_tags(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString('<x-tarjeta><x-slot:header>Cabecera</x-slot:header>Cuerpo</x-tarjeta>');
+
+        self::assertSame("<?php \$__volt->startComponent('tarjeta'); ?><?php \$__volt->startSlot('header'); ?>Cabecera<?php \$__volt->endSlot(); ?>Cuerpo<?php echo \$__volt->endComponent(); ?>", $compiled);
+    }
+
+    public function test_it_compiles_namespaced_self_closing_component_tags(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString('<x-ui:button label="Namespaced Button" />');
+
+        self::assertSame("<?php echo \$__volt->renderDynamicComponent('ui.button', ['label' => 'Namespaced Button']); ?>", $compiled);
+    }
+
+    public function test_it_compiles_namespaced_wrapped_component_tags(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        $compiled = $compiler->compileString('<x-ui:panel title="Panel NS">Contenido</x-ui:panel>');
+
+        self::assertSame("<?php \$__volt->startComponent('ui.panel', ['title' => 'Panel NS']); ?>Contenido<?php echo \$__volt->endComponent(); ?>", $compiled);
+    }
+
     public function test_it_compiles_attributes_directive(): void
     {
         $compiler = new ViewCompiler(new DirectiveRegistry());

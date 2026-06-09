@@ -75,6 +75,20 @@ final class ComponentHydrationTest extends TestCase
         );
     }
 
+    public function test_it_switches_between_server_and_interactive_render_modes(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $runtime = new ViewRuntime($app->make(ViewFactory::class));
+
+        self::assertSame('server', $runtime->renderMode());
+
+        $runtime->setRenderMode('interactive');
+        self::assertSame('interactive', $runtime->renderMode());
+
+        $this->expectException(\RuntimeException::class);
+        $runtime->setRenderMode('client');
+    }
+
     public function test_it_merges_component_attribute_bags_preserving_explicit_attributes(): void
     {
         $attributes = new ComponentAttributeBag([
