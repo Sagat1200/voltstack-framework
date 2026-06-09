@@ -12,6 +12,8 @@ final class TemplateBlockParser
      * @var array<string, string>
      */
     private const SIMPLE_BLOCKS = [
+        'component' => 'endcomponent',
+        'slot' => 'endslot',
         'unless' => 'endunless',
         'isset' => 'endisset',
         'empty' => 'endempty',

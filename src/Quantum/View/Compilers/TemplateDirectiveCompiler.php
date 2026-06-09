@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Quantum\View\Compilers;
 
+use Quantum\View\Compilers\TemplateNode;
 use Quantum\View\Directives\DirectiveRegistry;
 use Quantum\View\Exceptions\DirectiveBalanceException;
 use Quantum\View\Exceptions\TemplateParseException;
@@ -19,8 +20,7 @@ final class TemplateDirectiveCompiler
 
     public function __construct(
         private readonly DirectiveRegistry $directives,
-    ) {
-    }
+    ) {}
 
     public function reset(): void
     {
@@ -37,9 +37,9 @@ final class TemplateDirectiveCompiler
         }
 
         return match ($name) {
-            'if', 'unless', 'isset', 'foreach', 'for', 'while', 'section' => $this->compileOpeningDirective($node),
-            'endif', 'endunless', 'endisset', 'endempty', 'endforeach', 'endfor', 'endwhile', 'endsection' =>
-                $this->compileClosingDirective($name, $node),
+            'if', 'unless', 'isset', 'foreach', 'for', 'while', 'section', 'component', 'slot' => $this->compileOpeningDirective($node),
+            'endif', 'endunless', 'endisset', 'endempty', 'endforeach', 'endfor', 'endwhile', 'endsection', 'endcomponent', 'endslot' =>
+            $this->compileClosingDirective($name, $node),
             'forelse' => $this->compileForelse($node),
             'empty' => $this->compileEmptyDirective($node),
             'endforelse' => $this->compileEndForelse($node),
@@ -84,6 +84,8 @@ final class TemplateDirectiveCompiler
             'endfor' => 'for',
             'endwhile' => 'while',
             'endsection' => 'section',
+            'endcomponent' => 'component',
+            'endslot' => 'slot',
             default => throw new TemplateParseException(sprintf('Unknown directive [%s]', $name), $node->line(), $node->column()),
         };
 
@@ -107,7 +109,12 @@ final class TemplateDirectiveCompiler
             'has_empty' => false,
         ];
 
-        return sprintf('<?php %s = true; foreach(%s): %s = false; ?>', $emptyVar, $this->expression($node->expression()), $emptyVar);
+        return sprintf(
+            '<?php %s = true; foreach(%s): %s = false; ?>',
+            $emptyVar,
+            $this->expression($node->expression()),
+            $emptyVar
+        );
     }
 
     private function compileEmptyDirective(TemplateNode $node): string

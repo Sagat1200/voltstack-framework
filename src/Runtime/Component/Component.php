@@ -13,7 +13,14 @@ use RuntimeException;
 
 abstract class Component
 {
+    public string $slot = '';
+
     protected ?Request $request = null;
+
+    /**
+     * @var array<string, mixed>
+     */
+    private array $viewData = [];
 
     public function render(): View|string
     {
@@ -37,6 +44,22 @@ abstract class Component
     public function request(): ?Request
     {
         return $this->request;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function setViewData(array $data): void
+    {
+        $this->viewData = $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function viewData(): array
+    {
+        return $this->viewData;
     }
 
     protected function view(string $name, array $data = []): View

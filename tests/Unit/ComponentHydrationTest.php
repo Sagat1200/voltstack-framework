@@ -6,7 +6,10 @@ namespace VoltStack\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Quantum\Http\Request;
+use Quantum\View\ViewFactory;
+use Quantum\View\Runtime\ViewRuntime;
 use VoltStack\Framework\Application;
+use VoltStack\Runtime\Component\ComponentAttributeBag;
 use VoltStack\Runtime\Component\Component;
 use VoltStack\Runtime\Component\ComponentManager;
 use VoltStack\Runtime\Hydration\Exceptions\InvalidSnapshotException;
@@ -53,6 +56,58 @@ final class ComponentHydrationTest extends TestCase
             'checksum' => 'invalid',
             'meta' => [],
         ]));
+    }
+
+    public function test_it_normalizes_component_props_definitions(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $runtime = new ViewRuntime($app->make(ViewFactory::class));
+
+        self::assertSame(
+            [
+                'title' => null,
+                'size' => 'md',
+            ],
+            $runtime->normalizeProps([
+                'title',
+                'size' => 'md',
+            ]),
+        );
+    }
+
+    public function test_it_merges_component_attribute_bags_preserving_explicit_attributes(): void
+    {
+        $attributes = new ComponentAttributeBag([
+            'class' => 'shadow-lg',
+            'id' => 'card-1',
+        ]);
+
+        $merged = $attributes->merge([
+            'class' => 'card rounded',
+            'data-kind' => 'panel',
+        ]);
+
+        self::assertSame(
+            [
+                'class' => 'card rounded shadow-lg',
+                'data-kind' => 'panel',
+                'id' => 'card-1',
+            ],
+            $merged->all(),
+        );
+        self::assertSame('class="card rounded shadow-lg" data-kind="panel" id="card-1"', (string) $merged);
+    }
+
+    public function test_it_formats_conditional_class_lists(): void
+    {
+        self::assertSame(
+            'btn btn-primary',
+            ComponentAttributeBag::formatClasses([
+                'btn',
+                'btn-primary' => true,
+                'btn-secondary' => false,
+            ]),
+        );
     }
 }
 

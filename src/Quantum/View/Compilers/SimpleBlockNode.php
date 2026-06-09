@@ -19,6 +19,8 @@ class SimpleBlockNode extends TemplateNode
     public function closingDirectiveName(): string
     {
         return match ($this->name()) {
+            'component' => 'endcomponent',
+            'slot' => 'endslot',
             'unless' => 'endunless',
             'isset' => 'endisset',
             'empty' => 'endempty',

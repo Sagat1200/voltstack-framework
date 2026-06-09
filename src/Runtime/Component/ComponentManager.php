@@ -29,6 +29,8 @@ final class ComponentManager
             return $component;
         }
 
+        $component = $this->resolveComponentClass($component);
+
         /** @var Component $instance */
         $instance = $this->app->make($component);
 
@@ -42,19 +44,25 @@ final class ComponentManager
     {
         $component = $this->make($component);
         $component->setRequest($request);
+        $component->setViewData($this->prepareViewData($parameters));
 
         if (! method_exists($component, 'mount')) {
+            $this->applyUpdates($component, $parameters);
+
             return $component;
         }
 
         $method = new ReflectionMethod($component, 'mount');
         $arguments = [];
+        $consumedParameters = [];
 
         foreach ($method->getParameters() as $parameter) {
+            $consumedParameters[] = $parameter->getName();
             $arguments[] = $this->resolveParameter($request, $parameter, $parameters);
         }
 
         $method->invokeArgs($component, $arguments);
+        $this->applyUpdates($component, array_diff_key($parameters, array_flip($consumedParameters)));
 
         return $component;
     }
@@ -77,6 +85,22 @@ final class ComponentManager
         $result = $component->render();
 
         if ($result instanceof View) {
+            foreach ($component->viewData() as $key => $value) {
+                if (array_key_exists($key, $result->data())) {
+                    continue;
+                }
+
+                $result = $result->with($key, $value);
+            }
+
+            foreach ($this->publicProperties($component) as $key => $value) {
+                if (array_key_exists($key, $result->data())) {
+                    continue;
+                }
+
+                $result = $result->with($key, $value);
+            }
+
             return $result->render();
         }
 
@@ -197,5 +221,153 @@ final class ComponentManager
             $parameter->getName(),
             $parameter->getDeclaringClass()?->getName() ?? Component::class,
         ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function publicProperties(Component $component): array
+    {
+        return get_object_vars($component);
+    }
+
+    private function resolveComponentClass(string $component): string
+    {
+        $component = trim($component);
+
+        if ($component === '') {
+            throw new RuntimeException('Component names cannot be empty.');
+        }
+
+        if (class_exists($component)) {
+            return $component;
+        }
+
+        if (str_contains($component, '\\')) {
+            $this->requireComponentClassFile($component);
+
+            return $component;
+        }
+
+        $resolved = $this->componentNamespace() . '\\' . $this->normalizeComponentName($component);
+        $this->requireComponentClassFile($resolved);
+
+        return $resolved;
+    }
+
+    private function componentNamespace(): string
+    {
+        $configured = $this->app->config('ui-reactive.class_view_components', []);
+        $directory = is_array($configured) && isset($configured[0]) && is_string($configured[0]) && trim($configured[0]) !== ''
+            ? $this->normalizeDirectory($configured[0])
+            : $this->app->basePath('app/View/Components');
+        $baseAppPath = $this->normalizeDirectory($this->app->basePath('app'));
+
+        if (str_starts_with($directory, $baseAppPath)) {
+            $relative = trim(substr($directory, strlen($baseAppPath)), '\\/');
+            $namespace = 'App';
+
+            if ($relative !== '') {
+                $namespace .= '\\' . str_replace(['/', '\\'], '\\', $relative);
+            }
+
+            return $namespace;
+        }
+
+        return 'App\\View\\Components';
+    }
+
+    private function normalizeDirectory(string $path): string
+    {
+        $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+
+        if ($this->isAbsolutePath($normalized)) {
+            return rtrim($normalized, '\\/');
+        }
+
+        return rtrim($this->app->basePath($normalized), '\\/');
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        return preg_match('/^[A-Za-z]:\\\\/', $path) === 1
+            || str_starts_with($path, DIRECTORY_SEPARATOR);
+    }
+
+    private function normalizeComponentName(string $component): string
+    {
+        $component = str_replace(['/', '.'], '\\', $component);
+        $segments = array_values(array_filter(explode('\\', $component), static fn(string $segment): bool => trim($segment) !== ''));
+        $segments = array_map(
+            static function (string $segment): string {
+                $words = preg_split('/[-_]/', $segment) ?: [$segment];
+
+                return implode('', array_map(static fn(string $word): string => ucfirst(strtolower($word)), $words));
+            },
+            $segments,
+        );
+
+        return implode('\\', $segments);
+    }
+
+    private function requireComponentClassFile(string $class): void
+    {
+        if (class_exists($class, false) || interface_exists($class, false) || trait_exists($class, false)) {
+            return;
+        }
+
+        $path = $this->componentClassFile($class);
+
+        if ($path === null || ! is_file($path)) {
+            return;
+        }
+
+        require_once $path;
+    }
+
+    private function componentClassFile(string $class): ?string
+    {
+        $namespace = $this->componentNamespace();
+
+        if (! str_starts_with($class, $namespace . '\\') && $class !== $namespace) {
+            return null;
+        }
+
+        $configured = $this->app->config('ui-reactive.class_view_components', []);
+        $directory = is_array($configured) && isset($configured[0]) && is_string($configured[0]) && trim($configured[0]) !== ''
+            ? $this->normalizeDirectory($configured[0])
+            : $this->app->basePath('app/View/Components');
+        $relative = $class === $namespace
+            ? ''
+            : substr($class, strlen($namespace) + 1);
+        $path = $directory;
+
+        if (is_string($relative) && $relative !== '') {
+            $path .= DIRECTORY_SEPARATOR . str_replace('\\', DIRECTORY_SEPARATOR, $relative);
+        }
+
+        return $path . '.php';
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function prepareViewData(array $parameters): array
+    {
+        $viewData = $parameters;
+        $attributes = $viewData['attributes'] ?? [];
+
+        if ($attributes instanceof ComponentAttributeBag) {
+            $viewData['attributes'] = $attributes;
+
+            return $viewData;
+        }
+
+        $viewData['attributes'] = is_array($attributes)
+            ? new ComponentAttributeBag($attributes)
+            : new ComponentAttributeBag();
+
+        return $viewData;
     }
 }

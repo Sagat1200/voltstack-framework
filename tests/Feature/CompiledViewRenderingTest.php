@@ -101,6 +101,60 @@ PHP
 </section>
 PHP
         );
+
+        mkdir($this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'View' . DIRECTORY_SEPARATOR . 'Components', 0777, true);
+
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'View' . DIRECTORY_SEPARATOR . 'Components' . DIRECTORY_SEPARATOR . 'Tarjeta.php',
+            <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App\View\Components;
+
+use Quantum\View\View;
+use VoltStack\Runtime\Component\Component;
+
+final class Tarjeta extends Component
+{
+    public string $title = 'Tarjeta';
+
+    public function render(): View
+    {
+        return view('tarjeta', [
+            'title' => $this->title,
+        ]);
+    }
+}
+PHP
+        );
+
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'tarjeta.volt.php',
+            <<<'PHP'
+@props([
+    'title' => 'Tarjeta',
+    'variant' => 'default',
+    'header' => '',
+])
+@attributes([
+    'class' => 'card-base',
+    'data-kind' => 'panel',
+])
+<article {!! $attributes !!}>
+    <header>{!! $header !!}</header>
+    <h2>{{ $title }}</h2>
+    <p class="@class([
+        'variant',
+        'variant-primary' => $variant === 'primary',
+        'variant-secondary' => $variant === 'secondary',
+        'variant-default' => $variant === 'default',
+    ])">{{ $variant }}</p>
+    <div class="slot">{!! $slot !!}</div>
+</article>
+PHP
+        );
     }
 
     protected function tearDown(): void
@@ -193,6 +247,136 @@ PHP
         self::assertStringContainsString('<article>Beta</article>', $filled);
         self::assertStringNotContainsString('Sin resultados', $filled);
         self::assertStringContainsString('<p>Sin resultados</p>', $empty);
+    }
+
+    public function test_it_renders_a_class_view_component_from_a_template_directive(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'component_host.volt.php',
+            <<<'PHP'
+@component('tarjeta')
+<strong>Contenido desde slot</strong>
+@endcomponent
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        $html = $app->make(ViewFactory::class)->render('component_host');
+
+        self::assertStringContainsString('<h2>Tarjeta</h2>', $html);
+        self::assertStringContainsString('<article class="card-base" data-kind="panel">', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<p class="variant variant-default">default</p>', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<div class="slot">', $html);
+        self::assertStringContainsString('<strong>Contenido desde slot</strong>', $html);
+    }
+
+    public function test_it_passes_props_to_a_component_and_allows_defaults_inside_the_component_view(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'component_host_with_props.volt.php',
+            <<<'PHP'
+@component('tarjeta', ['title' => 'Custom Card', 'variant' => 'primary'])
+<em>Slot con props</em>
+@endcomponent
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        $html = $app->make(ViewFactory::class)->render('component_host_with_props');
+
+        self::assertStringContainsString('<h2>Custom Card</h2>', $html);
+        self::assertStringContainsString('<p class="variant variant-primary">primary</p>', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<em>Slot con props</em>', $html);
+    }
+
+    public function test_it_renders_named_slots_inside_a_component(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'component_host_with_named_slots.volt.php',
+            <<<'PHP'
+@component('tarjeta', ['title' => 'Card With Header'])
+@slot('header')
+<strong>Cabecera del slot</strong>
+@endslot
+<em>Cuerpo principal</em>
+@endcomponent
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        $html = $app->make(ViewFactory::class)->render('component_host_with_named_slots');
+
+        self::assertStringContainsString('<header><strong>Cabecera del slot</strong>', $html);
+        self::assertStringContainsString('<h2>Card With Header</h2>', $html);
+        self::assertStringContainsString('<em>Cuerpo principal</em>', $html);
+    }
+
+    public function test_it_renders_a_dynamic_component_from_a_variable_name(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'component_host_dynamic.volt.php',
+            <<<'PHP'
+@dynamic($componentName, ['title' => 'Dynamic Card', 'variant' => 'secondary', 'header' => '<span>Dynamic Header</span>'])
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        $html = $app->make(ViewFactory::class)->render('component_host_dynamic', [
+            'componentName' => 'tarjeta',
+        ]);
+
+        self::assertStringContainsString('<header><span>Dynamic Header</span></header>', str_replace("\r\n", "\n", $html));
+        self::assertStringContainsString('<h2>Dynamic Card</h2>', $html);
+        self::assertStringContainsString('<p class="variant variant-secondary">secondary</p>', str_replace("\r\n", "\n", $html));
+    }
+
+    public function test_it_merges_component_attributes_with_defaults_defined_in_the_component_view(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'component_host_with_attributes.volt.php',
+            <<<'PHP'
+@component('tarjeta', [
+    'title' => 'Card With Attributes',
+    'attributes' => [
+        'class' => 'shadow-lg',
+        'id' => 'main-card',
+    ],
+])
+<span>Contenido</span>
+@endcomponent
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        $html = str_replace("\r\n", "\n", $app->make(ViewFactory::class)->render('component_host_with_attributes'));
+
+        self::assertStringContainsString('<article class="card-base shadow-lg" data-kind="panel" id="main-card">', $html);
+        self::assertStringContainsString('<h2>Card With Attributes</h2>', $html);
     }
 
     public function test_it_preserves_compiler_exceptions_thrown_while_rendering_nested_views(): void

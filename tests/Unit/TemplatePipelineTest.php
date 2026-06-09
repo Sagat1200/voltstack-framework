@@ -162,6 +162,40 @@ final class TemplatePipelineTest extends TestCase
         self::assertSame(1, $nodes[0]->column());
     }
 
+    public function test_it_builds_a_hierarchical_component_block(): void
+    {
+        $parser = new TemplateBlockParser();
+
+        $nodes = $parser->parse([
+            TemplateNode::directive('component', "'tarjeta'"),
+            TemplateNode::text('Hola componente'),
+            TemplateNode::directive('endcomponent', null),
+        ]);
+
+        self::assertCount(1, $nodes);
+        self::assertInstanceOf(SimpleBlockNode::class, $nodes[0]);
+        self::assertSame('component', $nodes[0]->name());
+        self::assertSame("'tarjeta'", $nodes[0]->expression());
+        self::assertCount(1, $nodes[0]->children());
+    }
+
+    public function test_it_builds_a_hierarchical_slot_block(): void
+    {
+        $parser = new TemplateBlockParser();
+
+        $nodes = $parser->parse([
+            TemplateNode::directive('slot', "'header'"),
+            TemplateNode::text('Cabecera'),
+            TemplateNode::directive('endslot', null),
+        ]);
+
+        self::assertCount(1, $nodes);
+        self::assertInstanceOf(SimpleBlockNode::class, $nodes[0]);
+        self::assertSame('slot', $nodes[0]->name());
+        self::assertSame("'header'", $nodes[0]->expression());
+        self::assertCount(1, $nodes[0]->children());
+    }
+
     public function test_it_builds_a_specialized_section_block(): void
     {
         $parser = new TemplateBlockParser();
@@ -275,6 +309,78 @@ final class TemplatePipelineTest extends TestCase
             "<?php \$__volt->extend('layouts.app'); ?><?php echo \$__volt->render('partials.card'); ?><?php echo \$__volt->yieldContent('content'); ?><?php \$__volt->startSection('sidebar'); ?>Links<?php \$__volt->endSection(); ?>",
             $compiled,
         );
+        $compiler->assertBalanced();
+    }
+
+    public function test_it_compiles_component_blocks_through_the_node_compiler(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(new SimpleBlockNode('component', "'tarjeta'", [
+            TemplateNode::text('Hola'),
+        ]));
+
+        self::assertSame("<?php \$__volt->startComponent('tarjeta'); ?>Hola<?php echo \$__volt->endComponent(); ?>", $compiled);
+        $compiler->assertBalanced();
+    }
+
+    public function test_it_compiles_props_directive(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(TemplateNode::directive('props', "['title' => 'Hola', 'size' => 'md']"));
+
+        self::assertSame(
+            "<?php extract(\$__volt->normalizeProps(['title' => 'Hola', 'size' => 'md']) + get_defined_vars(), EXTR_SKIP); ?>",
+            $compiled
+        );
+    }
+
+    public function test_it_compiles_dynamic_directive(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(TemplateNode::directive('dynamic', '$component'));
+
+        self::assertSame("<?php echo \$__volt->renderDynamicComponent(\$component); ?>", $compiled);
+    }
+
+    public function test_it_compiles_attributes_directive(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(TemplateNode::directive('attributes', "['class' => 'card']"));
+
+        self::assertSame(
+            "<?php \$attributes = ((\$attributes ?? new \\VoltStack\\Runtime\\Component\\ComponentAttributeBag())->merge(['class' => 'card'])); ?>",
+            $compiled
+        );
+    }
+
+    public function test_it_compiles_class_directive(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(TemplateNode::directive('class', "['btn', 'btn-primary' => \$primary]"));
+
+        self::assertSame("<?php echo e(\$__volt->classList(['btn', 'btn-primary' => \$primary])); ?>", $compiled);
+    }
+
+    public function test_it_compiles_slot_blocks_through_the_node_compiler(): void
+    {
+        $compiler = new TemplateNodeCompiler(new DirectiveRegistry());
+        $compiler->reset();
+
+        $compiled = $compiler->compile(new SimpleBlockNode('slot', "'header'", [
+            TemplateNode::text('Cabecera'),
+        ]));
+
+        self::assertSame("<?php \$__volt->startSlot('header'); ?>Cabecera<?php \$__volt->endSlot(); ?>", $compiled);
         $compiler->assertBalanced();
     }
 }

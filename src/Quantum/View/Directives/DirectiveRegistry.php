@@ -97,6 +97,50 @@ final class DirectiveRegistry
             true,
         ));
 
+        $this->register('component', new CallbackDirective(
+            fn(?string $expression): string => $this->compileComponentDirective($expression),
+            true,
+        ));
+
+        $this->register('endcomponent', new CallbackDirective(
+            fn(): string => '<?php echo $__volt->endComponent(); ?>',
+        ));
+
+        $this->register('props', new CallbackDirective(
+            fn(?string $expression): string => sprintf(
+                '<?php extract($__volt->normalizeProps(%s) + get_defined_vars(), EXTR_SKIP); ?>',
+                $this->expression($expression),
+            ),
+            true,
+        ));
+
+        $this->register('slot', new CallbackDirective(
+            fn(?string $expression): string => sprintf('<?php $__volt->startSlot(%s); ?>', $this->expression($expression)),
+            true,
+        ));
+
+        $this->register('endslot', new CallbackDirective(
+            fn(): string => '<?php $__volt->endSlot(); ?>',
+        ));
+
+        $this->register('dynamic', new CallbackDirective(
+            fn(?string $expression): string => $this->compileDynamicDirective($expression),
+            true,
+        ));
+
+        $this->register('attributes', new CallbackDirective(
+            fn(?string $expression): string => sprintf(
+                '<?php $attributes = (($attributes ?? new \VoltStack\Runtime\Component\ComponentAttributeBag())->merge(%s)); ?>',
+                $this->expression($expression),
+            ),
+            true,
+        ));
+
+        $this->register('class', new CallbackDirective(
+            fn(?string $expression): string => sprintf('<?php echo e($__volt->classList(%s)); ?>', $this->expression($expression)),
+            true,
+        ));
+
         $this->register('foreach', new CallbackDirective(
             fn(?string $expression): string => sprintf('<?php foreach(%s): ?>', $this->expression($expression)),
             true,
@@ -161,5 +205,119 @@ final class DirectiveRegistry
         }
 
         return $expression;
+    }
+
+    private function compileComponentDirective(?string $expression): string
+    {
+        $expression = $this->expression($expression);
+        [$component, $props] = $this->componentArguments($expression, '@component');
+
+        if ($props === null) {
+            return sprintf('<?php $__volt->startComponent(%s); ?>', $component);
+        }
+
+        return sprintf('<?php $__volt->startComponent(%s, %s); ?>', $component, $props);
+    }
+
+    private function compileDynamicDirective(?string $expression): string
+    {
+        $expression = $this->expression($expression);
+        [$component, $props] = $this->componentArguments($expression, '@dynamic');
+
+        if ($props === null) {
+            return sprintf('<?php echo $__volt->renderDynamicComponent(%s); ?>', $component);
+        }
+
+        return sprintf('<?php echo $__volt->renderDynamicComponent(%s, %s); ?>', $component, $props);
+    }
+
+    /**
+     * @return array{0: string, 1: ?string}
+     */
+    private function componentArguments(string $expression, string $directive): array
+    {
+        $arguments = $this->splitTopLevelArguments($expression);
+
+        if ($arguments === [] || count($arguments) > 2) {
+            throw new RuntimeException(sprintf('The %s directive accepts a component name and optional props array.', $directive));
+        }
+
+        $component = trim($arguments[0] ?? '');
+        $props = isset($arguments[1]) ? trim($arguments[1]) : null;
+
+        if ($component === '' || $props === '') {
+            throw new RuntimeException(sprintf('The %s directive accepts a component name and optional props array.', $directive));
+        }
+
+        return [$component, $props];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function splitTopLevelArguments(string $expression): array
+    {
+        $arguments = [];
+        $current = '';
+        $length = strlen($expression);
+        $depth = 0;
+        $quote = null;
+        $escaping = false;
+
+        for ($index = 0; $index < $length; $index++) {
+            $character = $expression[$index];
+
+            if ($quote !== null) {
+                $current .= $character;
+
+                if ($escaping) {
+                    $escaping = false;
+                    continue;
+                }
+
+                if ($character === '\\') {
+                    $escaping = true;
+                    continue;
+                }
+
+                if ($character === $quote) {
+                    $quote = null;
+                }
+
+                continue;
+            }
+
+            if ($character === '\'' || $character === '"') {
+                $quote = $character;
+                $current .= $character;
+                continue;
+            }
+
+            if (in_array($character, ['(', '[', '{'], true)) {
+                $depth++;
+                $current .= $character;
+                continue;
+            }
+
+            if (in_array($character, [')', ']', '}'], true)) {
+                $depth = max(0, $depth - 1);
+                $current .= $character;
+                continue;
+            }
+
+            if ($character === ',' && $depth === 0) {
+                $arguments[] = trim($current);
+                $current = '';
+                continue;
+            }
+
+            $current .= $character;
+        }
+
+        if (trim($current) !== '') {
+            $arguments[] = trim($current);
+        }
+
+        return $arguments;
     }
 }
