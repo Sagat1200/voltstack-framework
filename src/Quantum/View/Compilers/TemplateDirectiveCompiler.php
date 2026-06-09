@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Quantum\View\Compilers;
 
 use Quantum\View\Directives\DirectiveRegistry;
-use RuntimeException;
+use Quantum\View\Exceptions\DirectiveBalanceException;
+use Quantum\View\Exceptions\TemplateParseException;
 
 final class TemplateDirectiveCompiler
 {
     /**
-     * @var array<int, array{type: string, empty_var?: string, has_empty?: bool}>
+     * @var array<int, array{type: string, line: int, column: int, empty_var?: string, has_empty?: bool}>
      */
     private array $directiveStack = [];
 
@@ -32,16 +33,16 @@ final class TemplateDirectiveCompiler
         $name = $node->name();
 
         if (! is_string($name) || $name === '') {
-            throw new RuntimeException('Template directive nodes require a name.');
+            throw new TemplateParseException('Template directive nodes require a name', $node->line(), $node->column());
         }
 
         return match ($name) {
-            'if', 'unless', 'isset', 'foreach', 'for', 'while', 'section' => $this->compileOpeningDirective($name, $node->expression()),
+            'if', 'unless', 'isset', 'foreach', 'for', 'while', 'section' => $this->compileOpeningDirective($node),
             'endif', 'endunless', 'endisset', 'endempty', 'endforeach', 'endfor', 'endwhile', 'endsection' =>
-                $this->compileClosingDirective($name),
-            'forelse' => $this->compileForelse($node->expression()),
-            'empty' => $this->compileEmptyDirective($node->expression()),
-            'endforelse' => $this->compileEndForelse(),
+                $this->compileClosingDirective($name, $node),
+            'forelse' => $this->compileForelse($node),
+            'empty' => $this->compileEmptyDirective($node),
+            'endforelse' => $this->compileEndForelse($node),
             default => $this->compileSimpleDirective($name, $node->expression()),
         };
     }
@@ -54,18 +55,25 @@ final class TemplateDirectiveCompiler
 
         $last = end($this->directiveStack);
         $type = is_array($last) ? $last['type'] : 'directive';
+        $line = is_array($last) ? $last['line'] : 1;
+        $column = is_array($last) ? $last['column'] : 1;
 
-        throw new RuntimeException(sprintf('Unclosed @%s directive.', $type));
+        throw new DirectiveBalanceException(sprintf('Unclosed @%s directive', $type), $line, $column);
     }
 
-    private function compileOpeningDirective(string $name, ?string $expression): string
+    private function compileOpeningDirective(TemplateNode $node): string
     {
-        $this->directiveStack[] = ['type' => $name];
+        $name = (string) $node->name();
+        $this->directiveStack[] = [
+            'type' => $name,
+            'line' => $node->line(),
+            'column' => $node->column(),
+        ];
 
-        return $this->compileSimpleDirective($name, $expression);
+        return $this->compileSimpleDirective($name, $node->expression());
     }
 
-    private function compileClosingDirective(string $name): string
+    private function compileClosingDirective(string $name, TemplateNode $node): string
     {
         $expected = match ($name) {
             'endif' => 'if',
@@ -76,34 +84,42 @@ final class TemplateDirectiveCompiler
             'endfor' => 'for',
             'endwhile' => 'while',
             'endsection' => 'section',
-            default => throw new RuntimeException(sprintf('Unknown directive [%s].', $name)),
+            default => throw new TemplateParseException(sprintf('Unknown directive [%s]', $name), $node->line(), $node->column()),
         };
 
         $current = array_pop($this->directiveStack);
 
         if (! is_array($current) || $current['type'] !== $expected) {
-            throw new RuntimeException(sprintf('Unexpected @%s directive.', $name));
+            throw new DirectiveBalanceException(sprintf('Unexpected @%s directive', $name), $node->line(), $node->column());
         }
 
         return $this->compileSimpleDirective($name, null);
     }
 
-    private function compileForelse(?string $expression): string
+    private function compileForelse(TemplateNode $node): string
     {
         $emptyVar = sprintf('$__empty_%d', ++$this->forelseCounter);
         $this->directiveStack[] = [
             'type' => 'forelse',
+            'line' => $node->line(),
+            'column' => $node->column(),
             'empty_var' => $emptyVar,
             'has_empty' => false,
         ];
 
-        return sprintf('<?php %s = true; foreach(%s): %s = false; ?>', $emptyVar, $this->expression($expression), $emptyVar);
+        return sprintf('<?php %s = true; foreach(%s): %s = false; ?>', $emptyVar, $this->expression($node->expression()), $emptyVar);
     }
 
-    private function compileEmptyDirective(?string $expression): string
+    private function compileEmptyDirective(TemplateNode $node): string
     {
+        $expression = $node->expression();
+
         if ($expression !== null && trim($expression) !== '') {
-            $this->directiveStack[] = ['type' => 'empty'];
+            $this->directiveStack[] = [
+                'type' => 'empty',
+                'line' => $node->line(),
+                'column' => $node->column(),
+            ];
 
             return $this->compileSimpleDirective('empty', $expression);
         }
@@ -111,11 +127,15 @@ final class TemplateDirectiveCompiler
         $index = array_key_last($this->directiveStack);
 
         if ($index === null || $this->directiveStack[$index]['type'] !== 'forelse') {
-            throw new RuntimeException('Unexpected @empty directive.');
+            throw new DirectiveBalanceException('Unexpected @empty directive', $node->line(), $node->column());
         }
 
         if (($this->directiveStack[$index]['has_empty'] ?? false) === true) {
-            throw new RuntimeException('Duplicate @empty directive inside @forelse.');
+            throw new DirectiveBalanceException(
+                'Duplicate @empty directive inside @forelse',
+                $this->directiveStack[$index]['line'],
+                $this->directiveStack[$index]['column'],
+            );
         }
 
         $this->directiveStack[$index]['has_empty'] = true;
@@ -124,16 +144,20 @@ final class TemplateDirectiveCompiler
         return sprintf('<?php endforeach; if(%s): ?>', $emptyVar);
     }
 
-    private function compileEndForelse(): string
+    private function compileEndForelse(TemplateNode $node): string
     {
         $current = array_pop($this->directiveStack);
 
         if (! is_array($current) || $current['type'] !== 'forelse') {
-            throw new RuntimeException('Unexpected @endforelse directive.');
+            throw new DirectiveBalanceException('Unexpected @endforelse directive', $node->line(), $node->column());
         }
 
         if (($current['has_empty'] ?? false) !== true) {
-            throw new RuntimeException('The @forelse directive requires an @empty block.');
+            throw new DirectiveBalanceException(
+                'The @forelse directive requires an @empty block',
+                $current['line'],
+                $current['column'],
+            );
         }
 
         return '<?php endif; ?>';
@@ -144,7 +168,7 @@ final class TemplateDirectiveCompiler
         $directive = $this->directives->resolve($name);
 
         if ($directive === null) {
-            throw new RuntimeException(sprintf('Unknown directive [%s].', $name));
+            throw new TemplateParseException(sprintf('Unknown directive [%s]', $name));
         }
 
         return $directive->compile($expression);
@@ -155,7 +179,7 @@ final class TemplateDirectiveCompiler
         $expression = trim((string) $expression);
 
         if ($expression === '') {
-            throw new RuntimeException('The directive requires an expression.');
+            throw new TemplateParseException('The directive requires an expression');
         }
 
         return $expression;

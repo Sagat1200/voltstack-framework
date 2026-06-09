@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Quantum\View;
 
 use Quantum\View\Cache\CompiledViewStore;
+use Quantum\View\Exceptions\TemplateCompilerException;
 use Quantum\View\Runtime\ViewRuntime;
 use RuntimeException;
 use Throwable;
@@ -31,6 +32,10 @@ final class PhpViewEngine
             require $compiledPath;
         } catch (Throwable $exception) {
             ob_end_clean();
+
+            if ($exception instanceof TemplateCompilerException) {
+                throw $exception;
+            }
 
             throw new RuntimeException(sprintf('Unable to render view [%s].', $path), 0, $exception);
         }

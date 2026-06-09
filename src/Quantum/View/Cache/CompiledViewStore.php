@@ -51,7 +51,7 @@ final class CompiledViewStore
             throw new RuntimeException(sprintf('Unable to read source view [%s].', $sourcePath));
         }
 
-        $compiled = $this->compiler->compileString($contents);
+        $compiled = $this->compiler->compileString($contents, $sourcePath);
         $header = $this->header($sourcePath);
 
         if (file_put_contents($compiledPath, $header . $compiled) === false) {

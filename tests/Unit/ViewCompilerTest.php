@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Quantum\View\Compilers\ViewCompiler;
 use Quantum\View\Directives\DirectiveRegistry;
 use Quantum\View\Directives\Support\CallbackDirective;
+use Quantum\View\Exceptions\DirectiveBalanceException;
 use RuntimeException;
 
 final class ViewCompilerTest extends TestCase
@@ -17,7 +18,7 @@ final class ViewCompilerTest extends TestCase
         $compiler = new ViewCompiler(new DirectiveRegistry());
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Unclosed @if directive.');
+        $this->expectExceptionMessage('Unclosed @if directive at line 1, column 1.');
 
         $compiler->compileString('@if($user)<span>Hola</span>');
     }
@@ -27,7 +28,7 @@ final class ViewCompilerTest extends TestCase
         $compiler = new ViewCompiler(new DirectiveRegistry());
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Unclosed @forelse directive.');
+        $this->expectExceptionMessage('Unclosed @forelse directive at line 1, column 1.');
 
         $compiler->compileString('@forelse($users as $user)<span>{{ $user }}</span>');
     }
@@ -37,7 +38,7 @@ final class ViewCompilerTest extends TestCase
         $compiler = new ViewCompiler(new DirectiveRegistry());
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('The @forelse directive requires an @empty block.');
+        $this->expectExceptionMessage('The @forelse directive requires an @empty block at line 1, column 1.');
 
         $compiler->compileString('@forelse($users as $user)<span>{{ $user }}</span>@endforelse');
     }
@@ -66,5 +67,23 @@ final class ViewCompilerTest extends TestCase
         $compiled = $compiler->compileString('@tailwind-vite');
 
         self::assertSame('<?php echo tailwind_vite()->render(); ?>', $compiled);
+    }
+
+    public function test_it_attaches_the_source_path_to_specialized_compiler_exceptions(): void
+    {
+        $compiler = new ViewCompiler(new DirectiveRegistry());
+
+        try {
+            $compiler->compileString('@if($user)<span>Hola</span>', 'resources/views/home.volt.php');
+            self::fail('Expected compiler exception was not thrown.');
+        } catch (DirectiveBalanceException $exception) {
+            self::assertSame('resources/views/home.volt.php', $exception->sourcePath());
+            self::assertSame(1, $exception->sourceLine());
+            self::assertSame(1, $exception->sourceColumn());
+            self::assertSame(
+                'Unclosed @if directive at line 1, column 1 in [resources/views/home.volt.php].',
+                $exception->getMessage(),
+            );
+        }
     }
 }

@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Quantum\Config\ConfigRepository;
 use Quantum\View\Cache\CompiledViewStore;
 use Quantum\View\ViewFactory;
+use Quantum\View\Exceptions\DirectiveBalanceException;
 use VoltStack\Framework\Application;
 
 final class CompiledViewRenderingTest extends TestCase
@@ -191,6 +192,40 @@ PHP
         self::assertStringContainsString('<article>Beta</article>', $filled);
         self::assertStringNotContainsString('Sin resultados', $filled);
         self::assertStringContainsString('<p>Sin resultados</p>', $empty);
+    }
+
+    public function test_it_preserves_compiler_exceptions_thrown_while_rendering_nested_views(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.volt.php',
+            <<<'PHP'
+@if($note)
+<small>{{ $note }}</small>
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        try {
+            $app->make(ViewFactory::class)->render('home', [
+                'title' => 'VoltStack',
+                'html' => '<strong>raw</strong>',
+                'message' => 'Compilado',
+                'showDetails' => true,
+                'note' => 'Incluida',
+            ]);
+
+            self::fail('Expected compiler exception was not thrown.');
+        } catch (DirectiveBalanceException $exception) {
+            self::assertStringEndsWith('partials' . DIRECTORY_SEPARATOR . 'note.volt.php', (string) $exception->sourcePath());
+            self::assertSame(1, $exception->sourceLine());
+            self::assertSame(1, $exception->sourceColumn());
+            self::assertStringContainsString('Unclosed @if directive', $exception->getMessage());
+        }
     }
 
     private function deleteDirectory(string $path): void

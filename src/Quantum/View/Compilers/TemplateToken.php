@@ -16,31 +16,33 @@ final class TemplateToken
     private function __construct(
         private readonly string $type,
         private readonly string $value,
+        private readonly int $line,
+        private readonly int $column,
     ) {}
 
-    public static function text(string $value): self
+    public static function text(string $value, int $line = 1, int $column = 1): self
     {
-        return new self(self::TEXT, $value);
+        return new self(self::TEXT, $value, $line, $column);
     }
 
-    public static function comment(string $value): self
+    public static function comment(string $value, int $line = 1, int $column = 1): self
     {
-        return new self(self::COMMENT, $value);
+        return new self(self::COMMENT, $value, $line, $column);
     }
 
-    public static function echo(string $value): self
+    public static function echo(string $value, int $line = 1, int $column = 1): self
     {
-        return new self(self::ECHO, $value);
+        return new self(self::ECHO, $value, $line, $column);
     }
 
-    public static function rawEcho(string $value): self
+    public static function rawEcho(string $value, int $line = 1, int $column = 1): self
     {
-        return new self(self::RAW_ECHO, $value);
+        return new self(self::RAW_ECHO, $value, $line, $column);
     }
 
-    public static function directive(string $value): self
+    public static function directive(string $value, int $line = 1, int $column = 1): self
     {
-        return new self(self::DIRECTIVE, $value);
+        return new self(self::DIRECTIVE, $value, $line, $column);
     }
 
     public function type(): string
@@ -51,5 +53,15 @@ final class TemplateToken
     public function value(): string
     {
         return $this->value;
+    }
+
+    public function line(): int
+    {
+        return $this->line;
+    }
+
+    public function column(): int
+    {
+        return $this->column;
     }
 }

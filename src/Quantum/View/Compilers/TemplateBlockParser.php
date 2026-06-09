@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Quantum\View\Compilers;
 
-use RuntimeException;
+use Quantum\View\Exceptions\DirectiveBalanceException;
 
 final class TemplateBlockParser
 {
@@ -85,12 +85,12 @@ final class TemplateBlockParser
         $children = $this->parseSequence($nodes, $index, [self::SIMPLE_BLOCKS[$opening]]);
 
         if (! isset($nodes[$index]) || $nodes[$index]->name() !== self::SIMPLE_BLOCKS[$opening]) {
-            throw new RuntimeException(sprintf('Unclosed @%s directive.', $opening));
+            throw new DirectiveBalanceException(sprintf('Unclosed @%s directive', $opening), $current->line(), $current->column());
         }
 
         $index++;
 
-        return TemplateNode::block($opening, $current->expression(), $children);
+        return TemplateNode::block($opening, $current->expression(), $children, [], [], $current->line(), $current->column());
     }
 
     /**
@@ -104,7 +104,7 @@ final class TemplateBlockParser
         $alternateChildren = [];
 
         if (! isset($nodes[$index])) {
-            throw new RuntimeException('Unclosed @forelse directive.');
+            throw new DirectiveBalanceException('Unclosed @forelse directive', $current->line(), $current->column());
         }
 
         if ($nodes[$index]->name() === 'empty' && $nodes[$index]->expression() === null) {
@@ -113,16 +113,16 @@ final class TemplateBlockParser
         }
 
         if (! isset($nodes[$index]) || $nodes[$index]->name() !== 'endforelse') {
-            throw new RuntimeException('Unclosed @forelse directive.');
+            throw new DirectiveBalanceException('Unclosed @forelse directive', $current->line(), $current->column());
         }
 
         $index++;
 
         if ($alternateChildren === []) {
-            throw new RuntimeException('The @forelse directive requires an @empty block.');
+            throw new DirectiveBalanceException('The @forelse directive requires an @empty block', $current->line(), $current->column());
         }
 
-        return TemplateNode::block('forelse', $current->expression(), $children, $alternateChildren);
+        return TemplateNode::block('forelse', $current->expression(), $children, $alternateChildren, [], $current->line(), $current->column());
     }
 
     /**
@@ -152,12 +152,12 @@ final class TemplateBlockParser
         }
 
         if (! isset($nodes[$index]) || $nodes[$index]->name() !== 'endif') {
-            throw new RuntimeException('Unclosed @if directive.');
+            throw new DirectiveBalanceException('Unclosed @if directive', $current->line(), $current->column());
         }
 
         $index++;
 
-        return TemplateNode::block('if', $current->expression(), $children, $alternateChildren, $branches);
+        return TemplateNode::block('if', $current->expression(), $children, $alternateChildren, $branches, $current->line(), $current->column());
     }
 
     private function isFlatConditionalBlock(string $name): bool
