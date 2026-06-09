@@ -4,6 +4,60 @@
 
 ---
 
+# Estado Actual Implementado
+
+El sistema real ya tiene una base de errores especializada, aunque todavía no toda la jerarquía idealizada en este documento.
+
+Excepciones implementadas hoy:
+
+* `TemplateCompilerException`: base para errores del compilador
+* `TemplateParseException`: errores de tokenización, parseo y compilación estructural
+* `DirectiveBalanceException`: errores de balanceo y cierre de directivas
+* `ViewRenderException`: errores de ejecución/render de vistas
+* `ViewNotFoundException`: resolución de vistas inexistentes
+
+Capacidades implementadas hoy:
+
+* mensajes con `line` y `column`
+* contexto de archivo fuente cuando la compilación conoce el `sourcePath`
+* preservación de excepciones del compilador dentro de vistas anidadas
+* preservación de `ViewRenderException` entre vistas padre e hijas
+* separación entre errores de compilación y errores de runtime
+
+Ejemplos reales actuales:
+
+```text
+Unclosed @if directive at line 1, column 1 in [resources/views/home.volt.php].
+```
+
+```text
+The @forelse directive requires an @empty block at line 1, column 1.
+```
+
+```text
+Unable to render view [C:\...\resources\views\partials\note.volt.php].
+```
+
+Limitaciones actuales:
+
+* no existe todavía una jerarquía completa por lexer/parser/AST/compiler/cache/runtime
+* no existe un contrato formal común tipo `ViewExceptionContract`
+* no existe render enriquecido con fragmento de código o línea resaltada
+* no existe mapping completo desde PHP compilado hacia línea exacta del template
+
+Referencia real del código actual:
+
+* [TemplateCompilerException.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Exceptions/TemplateCompilerException.php)
+* [TemplateParseException.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Exceptions/TemplateParseException.php)
+* [DirectiveBalanceException.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Exceptions/DirectiveBalanceException.php)
+* [ViewRenderException.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Exceptions/ViewRenderException.php)
+* [TemplateDirectiveCompiler.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateDirectiveCompiler.php)
+* [TemplateBlockParser.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateBlockParser.php)
+* [ViewCompiler.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/ViewCompiler.php)
+* [PhpViewEngine.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/PhpViewEngine.php)
+
+---
+
 # 1. Introducción
 
 El Error Handling System de VoltStack es responsable de detectar, capturar, estructurar y reportar errores relacionados con:

@@ -4,6 +4,48 @@
 
 ---
 
+# Estado Actual Implementado
+
+Antes de leer este documento como contrato técnico, conviene distinguir entre:
+
+* arquitectura objetivo
+* arquitectura actualmente implementada
+
+Hoy el framework YA implementa una arquitectura funcional y modular, pero todavía no la arquitectura completa descrita más abajo.
+
+Estado real actual:
+
+* existe compilación previa a PHP, no interpretación runtime
+* existe separación entre compiler y runtime
+* existe `DirectiveRegistry` para directivas core y custom
+* existe soporte para directivas con guiones, por ejemplo `@tailwind-vite`
+* existe un pipeline mínimo con segmentación de fuente, tokenización inline, parseo, parser de bloques y compilación de nodos
+* existe un AST mínimo con nodos especializados como `IfNode`, `ForelseNode`, `SectionNode`, `IncludeNode`, `ExtendsNode` y `YieldNode`
+* existe cache de vistas compiladas y runtime para layouts, sections e includes
+* existe metadata `line/column` en tokens y nodos
+* existen excepciones especializadas del subsistema de vistas
+
+Limitaciones actuales:
+
+* no existe un lexer independiente de propósito general como capa formal separada
+* no existe todavía un AST completo con visitors dedicados por nodo
+* no existe `DirectiveResolver` separado del registry
+* no existe line mapping completo hacia PHP compilado, solo metadata de origen en el pipeline
+* varias secciones de este documento describen la dirección objetivo, no el estado V1 real
+
+Referencia real del código actual:
+
+* [ViewCompiler.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/ViewCompiler.php)
+* [TemplateSourceTokenizer.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateSourceTokenizer.php)
+* [TemplateTokenizer.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateTokenizer.php)
+* [TemplateParser.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateParser.php)
+* [TemplateBlockParser.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateBlockParser.php)
+* [TemplateNodeCompiler.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateNodeCompiler.php)
+* [DirectiveRegistry.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Directives/DirectiveRegistry.php)
+* [PhpViewEngine.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/PhpViewEngine.php)
+
+---
+
 # 1. Introducción
 
 El sistema de directivas de VoltStack representa el núcleo arquitectónico del motor de vistas del framework.

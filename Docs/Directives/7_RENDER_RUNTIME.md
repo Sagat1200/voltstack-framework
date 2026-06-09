@@ -4,6 +4,47 @@
 
 ---
 
+# Estado Actual Implementado
+
+Este documento describe una arquitectura de runtime más amplia que la implementación real actual. Hoy el framework ya tiene un runtime funcional para vistas compiladas, pero no todavía un subsistema separado con `ViewRenderer`, `ViewContext`, `SectionManager`, `LayoutManager`, `IncludeManager` y `BufferManager` como objetos independientes.
+
+Estado real actual:
+
+* `ViewFactory` localiza vistas y prioriza `*.volt.php` sobre `*.php`
+* `PhpViewEngine` garantiza la compilación en cache, inyecta variables y ejecuta la vista compilada
+* `ViewRuntime` concentra el estado de runtime para layouts y secciones
+* el render usa `extract($data, EXTR_SKIP)` y expone el runtime como `$__volt`
+* layouts e includes anidados reutilizan el mismo runtime o clones controlados del runtime
+* el runtime preserva `TemplateCompilerException` y también `ViewRenderException` en renderizados anidados
+
+Capacidades reales actuales:
+
+* render de vistas compiladas
+* includes
+* `@extends`
+* `@section` / `@endsection`
+* `@yield`
+* render anidado mediante `ViewRuntime::render()`
+* resolución preferente de `.volt.php`
+
+Lo que NO existe todavía como subsistema separado:
+
+* `ViewRenderer` como clase dedicada
+* `ViewContext` como objeto formal independiente
+* managers separados para sections, layouts o includes
+* streaming runtime
+* un cache runtime distinto del cache de vistas compiladas
+
+Referencia real del código actual:
+
+* [ViewFactory.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/ViewFactory.php)
+* [PhpViewEngine.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/PhpViewEngine.php)
+* [ViewRuntime.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Runtime/ViewRuntime.php)
+* [CompiledViewRenderingTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Feature/CompiledViewRenderingTest.php)
+* [ViewRenderingTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Feature/ViewRenderingTest.php)
+
+---
+
 # 1. Introducción
 
 El Render Runtime de VoltStack es el sistema responsable de ejecutar templates compilados y producir la salida final HTML.

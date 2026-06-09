@@ -4,6 +4,53 @@
 
 ---
 
+# Estado Actual Implementado
+
+Este documento describe una arquitectura objetivo más amplia que la implementación real actual. Hoy el framework ya tiene un registry funcional y extensible, pero todavía no un subsistema completo con resolver, manager, aliases y lazy loading.
+
+Estado real actual:
+
+* existe un `DirectiveRegistry` único y centralizado
+* el registro interno usa lookup O(1) mediante array asociativo
+* las directivas core se registran automáticamente en el constructor
+* las directivas custom pueden registrarse en runtime
+* existe soporte de overwrite manual mediante `register(..., overwrite: true)`
+* el compiler y el node compiler resuelven directivas a través del registry actual
+* las directivas core se implementan principalmente con `CallbackDirective`
+* ya existen directivas estructurales, de control de flujo, e includes/layouts
+* el sistema soporta nombres con guiones, por ejemplo `tailwind-vite`
+
+Lo que NO existe todavía:
+
+* `DirectiveResolver` como objeto separado
+* `DirectiveManager`
+* aliases de directivas
+* namespaces tipo `ui:button`
+* lazy loading de directivas
+* clases dedicadas por cada directiva core como requisito general
+
+API real actual del registry:
+
+* `register(string $name, DirectiveContract $directive, bool $overwrite = false): void`
+* `has(string $name): bool`
+* `resolve(string $name): ?DirectiveContract`
+
+Directivas core registradas hoy:
+
+* condicionales: `if`, `elseif`, `else`, `endif`, `unless`, `endunless`, `isset`, `endisset`, `empty`, `endempty`
+* loops: `foreach`, `endforeach`, `for`, `endfor`, `while`, `endwhile`, `forelse`, `empty`, `endforelse`
+* layouts: `extends`, `section`, `endsection`, `yield`
+* includes: `include`
+* php: `php`, `endphp`
+
+Referencia real del código actual:
+
+* [DirectiveRegistry.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Directives/DirectiveRegistry.php)
+* [CallbackDirective.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Directives/Support/CallbackDirective.php)
+* [TemplateDirectiveCompiler.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateDirectiveCompiler.php)
+
+---
+
 # 1. Introducción
 
 El Directive Registry es el sistema encargado de registrar, resolver y administrar todas las directivas del motor de templates de VoltStack.

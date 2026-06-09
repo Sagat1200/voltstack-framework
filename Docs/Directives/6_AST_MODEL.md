@@ -4,692 +4,367 @@
 
 ---
 
+# Estado Actual Implementado
+
+Este documento describía una arquitectura AST mucho más amplia que la implementación real actual. Hoy VoltStack ya no compila todo directamente desde texto plano, pero tampoco tiene todavía un subsistema AST completo con visitors, contracts separados, nodos por cada construcción y múltiples passes de transformación.
+
+Estado real actual:
+
+* existe un AST mínimo y especializado, suficiente para desacoplar tokenización, parseo estructural y compilación
+* el nodo base real es `TemplateNode`
+* el parser genera primero una secuencia plana de `TemplateNode`
+* `TemplateBlockParser` transforma esa secuencia plana en una jerarquía mínima para bloques y estructuras
+* `TemplateNodeCompiler` compila los nodos y delega la semántica final de directivas en `TemplateDirectiveCompiler`
+* el sistema ya preserva metadata `line` y `column` en tokens y nodos
+* existen nodos especializados solo donde ya aportan valor real hoy
+
+Lo que NO existe todavía:
+
+* una jerarquía completa con `TextNode`, `EchoNode`, `RawEchoNode`, `ElseNode`, `ElseIfNode`, `ForeachNode`, `ForNode` y `WhileNode` como clases dedicadas
+* un subsistema de visitors
+* transforms de AST
+* metadata arbitraria por nodo
+* relaciones `parent`, `siblings` o traversal genérico
+* un namespace `AST/` separado del compilador actual
+
+Referencia real del código actual:
+
+* [TemplateNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateNode.php)
+* [TemplateParser.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateParser.php)
+* [TemplateBlockParser.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateBlockParser.php)
+* [TemplateNodeCompiler.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateNodeCompiler.php)
+* [IfNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/IfNode.php)
+* [ForelseNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/ForelseNode.php)
+* [SimpleBlockNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/SimpleBlockNode.php)
+* [SectionNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/SectionNode.php)
+* [IncludeNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/IncludeNode.php)
+* [ExtendsNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/ExtendsNode.php)
+* [YieldNode.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/YieldNode.php)
+
+---
+
 # 1. Introducción
 
-El AST (Abstract Syntax Tree) representa la estructura semántica interna de los templates de VoltStack.
+El AST actual de VoltStack representa una capa intermedia mínima entre los tokens del template y el PHP compilado.
 
-El AST es una de las piezas más importantes de toda la arquitectura del framework, ya que desacopla:
+Su objetivo hoy es:
 
-* parsing
-* compilación
-* rendering
-* transformaciones
-* optimizaciones futuras
+* separar el parseo básico de la compilación
+* construir jerarquías mínimas para bloques reales como `@if`, `@forelse` y `@section`
+* preservar ubicación de origen para mejores errores
+* permitir evolución incremental del compilador sin volver al enfoque monolítico anterior
 
-En lugar de compilar templates directamente desde texto, VoltStack transforma los templates en un árbol estructurado de nodos.
-
----
-
-# 2. Objetivos del AST
-
-El sistema AST debe:
-
-* representar templates estructuralmente
-* desacoplar parser y compiler
-* permitir transforms futuros
-* soportar visitors
-* permitir optimizaciones
-* permitir análisis estático
-* soportar reactividad futura
-* soportar hydration metadata
-* soportar SSR avanzado
+No es todavía un AST "completo" en sentido académico o de framework maduro. Es un AST pragmático, enfocado en las necesidades actuales del motor de vistas.
 
 ---
 
-# 3. Filosofía Arquitectónica
+# 2. Flujo Actual
 
-El AST debe representar intención semántica, NO solamente texto.
-
-Ejemplo:
-
-```volt id="mgk4s0"
-@if($user)
-    {{ $user->name }}
-@endif
+```text
+Template Source
+    ↓
+TemplateSourceTokenizer
+    ↓
+TemplateSourceToken(PHP | INLINE_HTML)
+    ↓
+TemplateTokenizer
+    ↓
+TemplateToken(TEXT | COMMENT | ECHO | RAW_ECHO | DIRECTIVE)
+    ↓
+TemplateParser
+    ↓
+TemplateNode[] plano
+    ↓
+TemplateBlockParser
+    ↓
+AST minimo jerarquico
+    ↓
+TemplateNodeCompiler
+    ↓
+Compiled PHP
 ```
 
-NO debe convertirse directamente en PHP.
+Punto importante:
 
-Primero debe convertirse en:
-
-```text id="mgk5x1"
-TemplateNode
- └── IfNode
-      └── EchoNode
-```
+* `TemplateParser` no construye por sí solo toda la jerarquía final
+* la estructura de bloques se arma en una segunda etapa: `TemplateBlockParser`
 
 ---
 
-# 4. Flujo Arquitectónico
+# 3. Nodo Base Real
 
-```text id="mgk8v2"
-Template
-   ↓
-Lexer
-   ↓
-Tokens
-   ↓
-Parser
-   ↓
-AST
-   ↓
-Visitors
-   ↓
-Compiler
-```
+El nodo base real es `TemplateNode`. No existe hoy una clase abstracta `Node` separada ni un árbol completo de subtipos por cada construcción del lenguaje.
 
----
+Propiedades reales actuales de `TemplateNode`:
 
-# 5. Arquitectura General del AST
+| Propiedad | Descripción |
+| --------- | ----------- |
+| `type` | Tipo de token o nodo (`text`, `comment`, `echo`, `raw_echo`, `directive`, `block`) |
+| `value` | Valor crudo del nodo cuando aplica |
+| `name` | Nombre de la directiva o bloque |
+| `expression` | Expresión asociada a la directiva |
+| `children` | Hijos principales del bloque |
+| `alternateChildren` | Hijos alternos, usados por ejemplo en `else` o `empty` |
+| `branches` | Ramas adicionales, hoy usadas para `elseif` |
+| `line` | Línea original |
+| `column` | Columna original |
 
----
+Lo que `TemplateNode` no modela hoy:
 
-# 5.1 Node Base
-
-Todos los nodos deben extender un nodo base.
-
----
-
-## Responsabilidades
-
-* metadata
-* line mapping
-* hijos
-* atributos
+* `parent`
+* `attributes`
+* `source` completo del fragmento
 * visitors
+* contracts de traversal
 
 ---
 
-## Ejemplo Conceptual
+# 4. Tipos de Nodo Reales
 
-```text id="mgk6b4"
-Node
- ├── TemplateNode
- ├── TextNode
- ├── EchoNode
- ├── DirectiveNode
- └── BlockNode
+El modelo actual combina dos ideas:
+
+* nodos genéricos basados en `TemplateNode`
+* nodos especializados solo en los casos donde la estructura o compilación ya lo justifican
+
+---
+
+# 4.1 Nodos Simples
+
+Se crean usando factories estáticas sobre `TemplateNode`:
+
+* `TemplateNode::text(...)`
+* `TemplateNode::comment(...)`
+* `TemplateNode::echo(...)`
+* `TemplateNode::rawEcho(...)`
+* `TemplateNode::directive(...)`
+* `TemplateNode::block(...)`
+
+Ejemplos conceptuales:
+
+```text
+TemplateNode(type: text, value: "Hello")
+TemplateNode(type: echo, expression: "$name")
+TemplateNode(type: directive, name: "php", expression: "$x = 1;")
+```
+
+Importante:
+
+* texto, comentarios, echos y raw echos no tienen hoy clases dedicadas como `TextNode` o `EchoNode`
+* siguen representándose mediante `TemplateNode`
+
+---
+
+# 4.2 Nodos Especializados de Directiva
+
+Hoy existen clases concretas para directivas estructurales no-bloque:
+
+* `IncludeNode`
+* `ExtendsNode`
+* `YieldNode`
+
+Estas clases siguen heredando de `TemplateNode`, pero fijan `type`, `name` y la forma esperada del nodo.
+
+Ejemplo conceptual:
+
+```text
+IncludeNode(expression: "'partials.header'")
+ExtendsNode(expression: "'layouts.app'")
+YieldNode(expression: "'content'")
 ```
 
 ---
 
-# 5.2 Node Metadata
+# 4.3 Nodos Especializados de Bloque
 
-Cada nodo debe contener:
+Hoy existen estas clases concretas para bloques:
 
-| Propiedad  | Descripción        |
-| ---------- | ------------------ |
-| type       | Tipo de nodo       |
-| line       | Línea original     |
-| column     | Columna            |
-| children   | Nodos hijos        |
-| attributes | Metadata           |
-| source     | Fragmento original |
+* `IfNode`
+* `ForelseNode`
+* `SimpleBlockNode`
+* `SectionNode`
 
----
+Responsabilidades actuales:
 
-# 6. Nodos Base
+* `IfNode`: modela `@if`, sus `children`, sus ramas `elseif` en `branches` y su `else` en `alternateChildren`
+* `ForelseNode`: modela `@forelse` y su rama `@empty`
+* `SimpleBlockNode`: cubre bloques simples como `@foreach`, `@for`, `@while`, `@unless`, `@isset`, `@empty(...)`
+* `SectionNode`: especializa `@section` sobre `SimpleBlockNode`
 
----
+Ejemplo conceptual para `@if`:
 
-# 6.1 TemplateNode
-
-Representa el template completo.
-
----
-
-## Responsabilidades
-
-* nodo raíz
-* contener hijos principales
-
----
-
-## Ejemplo
-
-```text id="mgk9y0"
-TemplateNode
- ├── TextNode
- └── IfNode
-```
-
----
-
-# 6.2 TextNode
-
-Representa texto plano.
-
----
-
-## Ejemplo
-
-```volt id="mgk0r1"
-Hello World
-```
-
----
-
-## AST
-
-```text id="mgk2u4"
-TextNode("Hello World")
-```
-
----
-
-# 6.3 EchoNode
-
-Representa output escapado.
-
----
-
-## Ejemplo
-
-```volt id="mgk7m5"
-{{ $name }}
-```
-
----
-
-## AST
-
-```text id="mgk8p6"
-EchoNode(
-    expression: "$name"
-)
-```
-
----
-
-# 6.4 RawEchoNode
-
-Representa output raw.
-
----
-
-## Ejemplo
-
-```volt id="mgk3d7"
-{!! $html !!}
-```
-
----
-
-## AST
-
-```text id="mgk1q8"
-RawEchoNode(
-    expression: "$html"
-)
-```
-
----
-
-# 7. Nodos Condicionales
-
----
-
-# 7.1 IfNode
-
-Representa estructuras @if.
-
----
-
-## Ejemplo
-
-```volt id="mgk9w0"
-@if($user)
-@endif
-```
-
----
-
-## AST
-
-```text id="mgk4r2"
+```text
 IfNode
- ├── condition: "$user"
- └── children
+ ├── expression: "$user"
+ ├── children
+ ├── branches
+ │    └── { expression: "$admin", children: [...] }
+ └── alternateChildren
+```
+
+Ejemplo conceptual para `@forelse`:
+
+```text
+ForelseNode
+ ├── expression: "$users as $user"
+ ├── children
+ └── alternateChildren
 ```
 
 ---
 
-# 7.2 ElseIfNode
+# 5. Construcción Jerárquica Real
 
-Representa @elseif.
+La jerarquía del AST actual no sale completa desde el tokenizer ni desde `TemplateParser`.
 
----
+El flujo real es:
 
-# 7.3 ElseNode
+1. `TemplateTokenizer` produce `TemplateToken`
+2. `TemplateParser` convierte cada token en un `TemplateNode` plano
+3. `TemplateBlockParser` detecta aperturas/cierres y construye bloques jerárquicos
 
-Representa @else.
+`TemplateBlockParser` soporta hoy:
 
----
+* `if / elseif / else / endif`
+* `forelse / empty / endforelse`
+* `unless / endunless`
+* `isset / endisset`
+* `empty(expr) / endempty`
+* `foreach / endforeach`
+* `for / endfor`
+* `while / endwhile`
+* `section / endsection`
 
-# 7.4 UnlessNode
+Esto significa que hoy no existe una clase dedicada para cada apertura/cierre intermedio. Por ejemplo:
 
-Representa @unless.
-
----
-
-# 8. Nodos de Loops
-
----
-
-# 8.1 ForeachNode
-
----
-
-## Ejemplo
-
-```volt id="mgk5t4"
-@foreach($users as $user)
-@endforeach
-```
+* `@elseif` no se convierte en un `ElseIfNode`
+* `@else` no se convierte en un `ElseNode`
+* ambas estructuras quedan absorbidas dentro de `IfNode`
 
 ---
 
-## AST
+# 6. Ejemplo Real del AST Actual
 
-```text id="mgk8g6"
-ForeachNode
- ├── expression
- └── children
-```
+Template:
 
----
-
-# 8.2 ForelseNode
-
-Representa loops con fallback.
-
----
-
-# 8.3 ForNode
-
-Representa @for.
-
----
-
-# 8.4 WhileNode
-
-Representa @while.
-
----
-
-# 9. Nodos Estructurales
-
----
-
-# 9.1 IncludeNode
-
-Representa @include.
-
----
-
-## AST
-
-```text id="mgk3v7"
-IncludeNode(
-    view: "partials.header"
-)
-```
-
----
-
-# 9.2 ExtendsNode
-
-Representa layouts padre.
-
----
-
-# 9.3 SectionNode
-
-Representa secciones.
-
----
-
-# 9.4 YieldNode
-
-Representa puntos de inserción.
-
----
-
-# 10. Nodos PHP
-
----
-
-# 10.1 PhpNode
-
-Representa bloques @php.
-
----
-
-## AST
-
-```text id="mgk9b3"
-PhpNode(
-    code: "$name = 'Volt';"
-)
-```
-
----
-
-# 11. Nodos de Comentarios
-
----
-
-# 11.1 CommentNode
-
-Representa comentarios internos.
-
-No deben compilarse.
-
----
-
-# 12. Arquitectura Jerárquica
-
----
-
-# 12.1 Estructura Completa
-
-```text id="mgk6n0"
-Node
- ├── TemplateNode
- ├── TextNode
- ├── EchoNode
- ├── RawEchoNode
- │
- ├── ConditionalNode
- │    ├── IfNode
- │    ├── ElseIfNode
- │    ├── ElseNode
- │    └── UnlessNode
- │
- ├── LoopNode
- │    ├── ForeachNode
- │    ├── ForelseNode
- │    ├── ForNode
- │    └── WhileNode
- │
- ├── StructuralNode
- │    ├── IncludeNode
- │    ├── ExtendsNode
- │    ├── SectionNode
- │    └── YieldNode
- │
- ├── PhpNode
- │
- └── CommentNode
-```
-
----
-
-# 13. Node Relationships
-
-Los nodos deben soportar:
-
-* parent node
-* child nodes
-* sibling nodes
-* traversal
-
----
-
-# 14. AST Traversal
-
-El AST debe soportar recorridos mediante visitors.
-
----
-
-# Ejemplo
-
-```text id="mgk7j9"
-AST
- ↓
-Visitor
- ↓
-Transformation
-```
-
----
-
-# 15. Visitors
-
----
-
-# 15.1 Objetivos
-
-Los visitors permiten:
-
-* compilación
-* optimización
-* transforms
-* análisis
-
----
-
-# 15.2 Ejemplo
-
-```text id="mgk4e8"
-IfNodeVisitor
-EchoNodeVisitor
-LoopNodeVisitor
-```
-
----
-
-# 16. AST Immutability
-
-Los nodos deben ser preferiblemente inmutables.
-
----
-
-# Beneficios
-
-* predictibilidad
-* seguridad
-* transforms seguros
-* compilación concurrente futura
-
----
-
-# 17. AST Metadata
-
-Cada nodo puede almacenar metadata adicional.
-
----
-
-# Ejemplos
-
-```text id="mgk1m7"
-line
-column
-source
-directive
-expression
-runtimeFlags
-```
-
----
-
-# 18. Line Mapping
-
-El AST debe preservar referencias exactas.
-
----
-
-# Objetivo
-
-Errores precisos:
-
-```text id="mgk6c5"
-resources/views/home.volt
-Line: 52
-```
-
----
-
-# 19. Compatibilidad Futura
-
-La arquitectura AST debe prepararse para:
-
-* ComponentNode
-* SlotNode
-* PropNode
-* ReactiveNode
-* EventNode
-* HydrationNode
-* SPA Node
-* IslandNode
-* AsyncNode
-
----
-
-# 20. AST Transformations
-
-La arquitectura debe permitir transforms posteriores.
-
----
-
-# Ejemplo
-
-```text id="mgk8f0"
-AST
- ↓
-Optimization Pass
- ↓
-Hydration Pass
- ↓
-SSR Pass
-```
-
----
-
-# 21. Performance Goals
-
----
-
-# 21.1 Lightweight Nodes
-
-Los nodos deben minimizar memoria.
-
----
-
-# 21.2 Fast Traversal
-
-Traversal eficiente.
-
----
-
-# 21.3 Lazy Children
-
-Opcionalmente soportar hijos lazy futuros.
-
----
-
-# 22. Error Handling
-
----
-
-# 22.1 Invalid Tree
-
-Detectar nodos corruptos.
-
----
-
-# 22.2 Missing Children
-
-Validar estructuras requeridas.
-
----
-
-# 22.3 Invalid Nesting
-
-Ejemplo:
-
-```text id="mgk5z1"
-@endif without @if
-```
-
----
-
-# 23. Estructura Recomendada
-
-```text id="mgk3k8"
-src/
-└── Quantum/
-    └── View/
-        ├── AST/
-        │   ├── Node/
-        │   ├── Conditional/
-        │   ├── Loop/
-        │   ├── Structural/
-        │   ├── Echo/
-        │   ├── PHP/
-        │   ├── Comments/
-        │   ├── Contracts/
-        │   ├── Visitors/
-        │   └── Support/
-```
-
----
-
-# 24. Ejemplo Completo
-
----
-
-# Template
-
-```volt id="mgk9l2"
+```volt
 @if($user)
     Hello {{ $user->name }}
+@elseif($admin)
+    Admin
+@else
+    Guest
 @endif
 ```
 
----
+AST conceptual actual:
 
-# AST
+```text
+IfNode
+ ├── expression: "$user"
+ ├── children
+ │    ├── TemplateNode(type: text, value: "    Hello ")
+ │    └── TemplateNode(type: echo, expression: "$user->name")
+ ├── branches
+ │    └── { expression: "$admin", children: [TemplateNode(type: text, value: "    Admin")] }
+ └── alternateChildren
+      └── TemplateNode(type: text, value: "    Guest")
+```
 
-```text id="mgk7y3"
-TemplateNode
- └── IfNode
-      ├── condition: "$user"
-      ├── TextNode("Hello ")
-      └── EchoNode("$user->name")
+Template:
+
+```volt
+@section('content')
+    @include('partials.header')
+@endsection
+```
+
+AST conceptual actual:
+
+```text
+SectionNode
+ ├── expression: "'content'"
+ └── children
+      └── IncludeNode(expression: "'partials.header'")
 ```
 
 ---
 
-# PHP Compilado
+# 7. Compilación del AST
 
-```php id="mgk2d6"
-<?php if($user): ?>
-    Hello <?= e($user->name) ?>
-<?php endif; ?>
+La compilación del AST actual ocurre en `TemplateNodeCompiler`.
+
+Responsabilidades reales:
+
+* compilar nodos simples como texto, comentarios y echos
+* compilar nodos especializados como `IncludeNode`, `ExtendsNode` y `YieldNode`
+* compilar bloques jerárquicos como `IfNode`, `ForelseNode` y `SimpleBlockNode`
+* delegar la semántica de directivas en `TemplateDirectiveCompiler`
+
+Esto significa que el AST actual ya desacopla estructura y compilación, pero todavía no introduce una fase separada de visitors o transforms.
+
+Ejemplo conceptual:
+
+```text
+IfNode
+   ↓
+TemplateNodeCompiler
+   ↓
+@if + children + @elseif + @else + @endif
+   ↓
+TemplateDirectiveCompiler
+   ↓
+Compiled PHP
 ```
 
 ---
 
-# 25. Objetivo Estratégico
+# 8. Metadata y Errores
 
-El AST representa el núcleo evolutivo del runtime de VoltStack.
+Una de las mejoras reales del AST/pipeline actual es la preservación de ubicación de origen.
 
-Toda futura capacidad avanzada dependerá de este sistema:
+Cada `TemplateNode` conserva:
 
-* componentes
-* reactividad
-* SPA
-* hidratación
-* SSR
-* streaming
-* islands architecture
-* concurrent rendering
+* `line`
+* `column`
 
-Por ello, el AST debe diseñarse desde el inicio como una arquitectura:
+Esto permite que errores estructurales y de compilación apunten al lugar correcto del template.
 
-* extensible
-* desacoplada
-* optimizable
-* enterprise-ready
-* preparada para evolución progresiva
+Ejemplos de uso real:
+
+* `TemplateParseException`
+* `DirectiveBalanceException`
+
+Casos típicos:
+
+* `Unclosed @if directive at line X, column Y.`
+* `The @forelse directive requires an @empty block at line X, column Y.`
+
+---
+
+# 9. Limitaciones Actuales
+
+La implementación actual todavía no ofrece:
+
+* nodos concretos para cada tipo de texto, echo, comentario o loop
+* un `TemplateNode` raíz que envuelva siempre todo el template como objeto independiente
+* transforms del AST
+* visitors
+* optimizaciones por passes
+* metadata enriquecida más allá de `line` y `column`
+* un modelo genérico de traversal
+
+Esto es intencional en el estado actual: primero se consolidó un AST mínimo útil antes de ampliar la arquitectura.
+
+---
+
+# 10. Dirección Evolutiva
+
+La arquitectura actual ya deja una base razonable para crecer de forma incremental hacia:
+
+* más nodos especializados cuando aporten claridad real
+* separación mayor entre parseo estructural y compilación
+* futuras transformaciones de AST
+* mejor análisis estático
+* componentes, slots o features reactivas más adelante
+
+Pero hoy el contrato correcto de este documento es describir el AST mínimo que realmente existe, no el roadmap completo como si ya estuviera implementado.

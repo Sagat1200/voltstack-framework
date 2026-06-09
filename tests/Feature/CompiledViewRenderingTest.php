@@ -9,6 +9,7 @@ use Quantum\Config\ConfigRepository;
 use Quantum\View\Cache\CompiledViewStore;
 use Quantum\View\ViewFactory;
 use Quantum\View\Exceptions\DirectiveBalanceException;
+use Quantum\View\Exceptions\ViewRenderException;
 use VoltStack\Framework\Application;
 
 final class CompiledViewRenderingTest extends TestCase
@@ -225,6 +226,39 @@ PHP
             self::assertSame(1, $exception->sourceLine());
             self::assertSame(1, $exception->sourceColumn());
             self::assertStringContainsString('Unclosed @if directive', $exception->getMessage());
+        }
+    }
+
+    public function test_it_wraps_non_compiler_runtime_errors_in_a_view_render_exception(): void
+    {
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'partials' . DIRECTORY_SEPARATOR . 'note.volt.php',
+            <<<'PHP'
+<?php throw new RuntimeException('Boom from partial'); ?>
+PHP
+        );
+
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set(
+            'cache.compiled.views',
+            $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'compiled' . DIRECTORY_SEPARATOR . 'views',
+        );
+
+        try {
+            $app->make(ViewFactory::class)->render('home', [
+                'title' => 'VoltStack',
+                'html' => '<strong>raw</strong>',
+                'message' => 'Compilado',
+                'showDetails' => true,
+                'note' => 'Incluida',
+            ]);
+
+            self::fail('Expected render exception was not thrown.');
+        } catch (ViewRenderException $exception) {
+            self::assertStringEndsWith('partials' . DIRECTORY_SEPARATOR . 'note.volt.php', $exception->viewPath());
+            self::assertInstanceOf(\RuntimeException::class, $exception->getPrevious());
+            self::assertSame('Boom from partial', $exception->getPrevious()?->getMessage());
+            self::assertStringContainsString('Unable to render view [', $exception->getMessage());
         }
     }
 

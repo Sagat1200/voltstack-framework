@@ -4,6 +4,46 @@
 
 ---
 
+# Estado Actual Implementado
+
+Este documento describe una arquitectura de cache más amplia que la implementación real actual. Hoy el framework ya cuenta con un sistema funcional de vistas compiladas, pero no todavía con metadata avanzada, dependency tracking completo, manifest ni invalidación por grafo de dependencias.
+
+Estado real actual:
+
+* el cache de vistas compiladas está concentrado en `CompiledViewStore`
+* el archivo compilado se calcula con `md5($sourcePath . '|' . $compiler->version()) . '.php'`
+* la expiración se decide comparando `filemtime()` entre la vista fuente y la vista compilada
+* el compilado escrito incluye un encabezado con `Source` y `Compiler`
+* existe limpieza del cache mediante `CompiledViewStore::clear()`
+* existen los comandos `view:cache` y `view:clear`
+
+Capacidades reales actuales:
+
+* compilación bajo demanda al renderizar
+* precompilación mediante comando
+* limpieza de cache compilada
+* separación por versión del compilador en el nombre del archivo compilado
+* escritura de archivos compilados en el directorio configurado
+
+Lo que NO existe todavía:
+
+* manifest de cache
+* dependency tracking de includes y layouts para invalidación cascada
+* checksum del contenido fuente como estrategia primaria de validación
+* metadata persistida separadamente por vista
+* invalidación por cambios estructurales del árbol de dependencias
+* cache distribuido o estrategia explícita de alta concurrencia
+
+Referencia real del código actual:
+
+* [CompiledViewStore.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Cache/CompiledViewStore.php)
+* [ViewCacheCommand.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/Console/Commands/ViewCacheCommand.php)
+* [ViewClearCommand.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/Console/Commands/ViewClearCommand.php)
+* [PhpViewEngine.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/PhpViewEngine.php)
+* [CompiledViewRenderingTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Feature/CompiledViewRenderingTest.php)
+
+---
+
 # 1. Introducción
 
 El View Cache System de VoltStack es el sistema responsable de almacenar, invalidar y administrar vistas compiladas.

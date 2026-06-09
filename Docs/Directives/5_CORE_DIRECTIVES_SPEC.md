@@ -4,6 +4,46 @@
 
 ---
 
+# Estado Actual Implementado
+
+Este documento define una especificación objetivo amplia para las directivas core de VoltStack. Hoy el framework ya implementa un conjunto funcional y utilizable de directivas core, pero no todavía una especificación cerrada con validaciones y contratos dedicados por cada categoría.
+
+Estado real actual:
+
+* las directivas core viven en `DirectiveRegistry`
+* la mayoría de las directivas core se implementan mediante `CallbackDirective`
+* `TemplateParser` detecta directivas inline y `TemplateBlockParser` arma la jerarquía mínima para los bloques estructurales
+* `TemplateDirectiveCompiler` resuelve y compila la semántica final de cada directiva
+* existen directivas core para condicionales, loops, layouts, includes y bloques PHP
+* el sistema soporta nombres de directiva con guiones, por ejemplo `@tailwind-vite`
+
+Directivas core implementadas hoy:
+
+* condicionales: `if`, `elseif`, `else`, `endif`, `unless`, `endunless`, `isset`, `endisset`, `empty`, `endempty`
+* loops: `foreach`, `endforeach`, `forelse`, `empty`, `endforelse`, `for`, `endfor`, `while`, `endwhile`
+* layouts: `extends`, `section`, `endsection`, `yield`
+* includes: `include`
+* PHP: `php`, `endphp`
+
+Lo que NO existe todavía como subsistema formal:
+
+* clases dedicadas por cada directiva core como requisito general
+* un documento de compatibilidad cerrado para todos los edge cases de cada directiva
+* componentes, slots o directivas reactivas
+* aliases de directivas
+* namespaces tipo `ui:button`
+
+Referencia real del código actual:
+
+* [DirectiveRegistry.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Directives/DirectiveRegistry.php)
+* [TemplateDirectiveCompiler.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateDirectiveCompiler.php)
+* [TemplateBlockParser.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateBlockParser.php)
+* [TemplateParser.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/src/Quantum/View/Compilers/TemplateParser.php)
+* [ViewCompilerTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Unit/ViewCompilerTest.php)
+* [CompiledViewRenderingTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Feature/CompiledViewRenderingTest.php)
+
+---
+
 # 1. Introducción
 
 Este documento define la especificación oficial de las directivas core del sistema de templates de VoltStack V1.

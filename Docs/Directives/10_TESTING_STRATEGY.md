@@ -4,6 +4,45 @@
 
 ---
 
+# Estado Actual Implementado
+
+Este documento plantea una estrategia de testing más amplia que la suite real actual. Hoy el framework ya tiene cobertura útil sobre el compilador, el pipeline mínimo, el runtime y el cache de vistas compiladas, pero no todavía una estrategia formal completa con snapshots dedicados, stress testing y performance benchmarking sistemáticos.
+
+Estado real actual:
+
+* la validación principal se hace con PHPUnit
+* existe cobertura unitaria del pipeline mínimo en `TemplatePipelineTest`
+* existe cobertura unitaria end-to-end del compilador en `ViewCompilerTest`
+* existe cobertura feature del render compilado, layouts, includes, loops, `forelse` y errores de runtime en `CompiledViewRenderingTest`
+* existe cobertura feature del flujo base de vistas y prioridad `.volt.php` en `ViewRenderingTest`
+
+Cobertura real actual:
+
+* tokenización inline y segmentación fuente/PHP
+* parseo a `TemplateNode`
+* construcción jerárquica con `TemplateBlockParser`
+* compilación con `TemplateNodeCompiler` y `ViewCompiler`
+* metadata `line` y `column`
+* excepciones especializadas del compilador
+* preservación de excepciones en runtime
+* cache de vistas compiladas
+
+Lo que NO existe todavía como suite formal separada:
+
+* snapshot tests dedicados como categoría estable
+* benchmarking de performance automatizado
+* stress tests de templates complejos como suite independiente
+* matriz de compatibilidad o golden tests extensivos para todas las directivas
+
+Referencia real de la suite actual:
+
+* [TemplatePipelineTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Unit/TemplatePipelineTest.php)
+* [ViewCompilerTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Unit/ViewCompilerTest.php)
+* [CompiledViewRenderingTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Feature/CompiledViewRenderingTest.php)
+* [ViewRenderingTest.php](file:///c:/W4/Packages/VoltStack/voltstack-framework/tests/Feature/ViewRenderingTest.php)
+
+---
+
 # 1. Introducción
 
 La estrategia de testing de VoltStack define cómo validar la estabilidad, integridad y rendimiento del sistema de templates.

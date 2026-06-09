@@ -4,6 +4,77 @@
 
 ---
 
+# Estado Actual Implementado
+
+Este documento describe la arquitectura objetivo del pipeline. El estado implementado hoy en el framework es más acotado, pero ya es modular y funcional.
+
+Pipeline real actual:
+
+```text
+Template Source
+    ↓
+TemplateSourceTokenizer
+    ↓
+TemplateSourceToken(PHP | INLINE_HTML)
+    ↓
+TemplateTokenizer
+    ↓
+TemplateToken(TEXT | COMMENT | ECHO | RAW_ECHO | DIRECTIVE)
+    ↓
+TemplateParser
+    ↓
+TemplateNode
+    ↓
+TemplateBlockParser
+    ↓
+AST minimo especializado
+    ↓
+TemplateNodeCompiler
+    ↓
+Compiled PHP
+    ↓
+CompiledViewStore
+    ↓
+PhpViewEngine / ViewRuntime
+```
+
+Capas reales implementadas:
+
+* `TemplateSourceTokenizer` separa PHP inline vs HTML inline
+* `TemplateTokenizer` tokeniza comentarios, echos, raw echos y directivas
+* `TemplateParser` transforma tokens en nodos
+* `TemplateBlockParser` eleva secuencias planas a nodos jerárquicos
+* `TemplateNodeCompiler` compila el AST mínimo a PHP
+* `CompiledViewStore` persiste y reutiliza vistas compiladas
+* `PhpViewEngine` y `ViewRuntime` ejecutan layouts, sections, yields e includes
+
+AST mínimo real actual:
+
+* `IfNode`
+* `ForelseNode`
+* `SimpleBlockNode`
+* `SectionNode`
+* `IncludeNode`
+* `ExtendsNode`
+* `YieldNode`
+
+Metadata y errores reales actuales:
+
+* tokens y nodos conservan `line` y `column`
+* errores estructurales incluyen ubicación real
+* el compilador usa `TemplateParseException` y `DirectiveBalanceException`
+* el runtime usa `ViewRenderException`
+
+Pendiente respecto al diseño objetivo:
+
+* lexer formal separado del tokenizer actual
+* visitors dedicados por nodo
+* transforms AST
+* line mapping completo hacia el PHP compilado
+* jerarquía AST más completa y especializada
+
+---
+
 # 1. Introducción
 
 El Compiler Pipeline de VoltStack es el sistema encargado de transformar templates declarativos escritos en sintaxis Volt en código PHP compilado y optimizado.
