@@ -12,6 +12,7 @@ use Quantum\HttpKernel\HttpKernel;
 use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Component;
 use VoltStack\Runtime\Component\ComponentManager;
+use VoltStack\Runtime\Protocol\ActionEffectOptions;
 
 final class ReactiveProtocolTest extends TestCase
 {
@@ -257,6 +258,40 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('text.update', $payload['effects'][3]['type']);
         self::assertSame('status-text', $payload['effects'][3]['target']);
         self::assertSame('Active', $payload['effects'][3]['value']);
+    }
+
+    public function test_it_allows_the_backend_to_attach_transition_options_to_generated_effects(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveTransitionedComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveTransitionedComponent::class,
+                'action' => 'increment',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(1, $payload['effects']);
+        self::assertSame('text.update', $payload['effects'][0]['type']);
+        self::assertSame('counter-value', $payload['effects'][0]['target']);
+        self::assertSame('pop', $payload['effects'][0]['transition']['name']);
+        self::assertSame(220, $payload['effects'][0]['transition']['duration']);
+        self::assertSame('glow', $payload['effects'][0]['transitions']['update']['name']);
+        self::assertSame('volt-transition-soft-edge', $payload['effects'][0]['transitions']['update']['className']);
     }
 
     public function test_it_returns_dom_append_for_stable_target_lists(): void
@@ -537,6 +572,36 @@ final class TestReactiveStyledTargetedComponent extends Component
             $this->active ? ' active' : '',
             $this->active ? ' style="color:red;font-weight:700"' : '',
             $this->active ? 'Active' : 'Idle',
+        );
+    }
+}
+
+final class TestReactiveTransitionedComponent extends Component
+{
+    public int $count = 0;
+
+    public function increment(): ActionEffectOptions
+    {
+        $this->count++;
+
+        return ActionEffectOptions::make()
+            ->transition([
+                'name' => 'pop',
+                'duration' => 220,
+            ], type: 'text.update', target: 'counter-value')
+            ->transitions([
+                'update' => [
+                    'name' => 'glow',
+                    'className' => 'volt-transition-soft-edge',
+                ],
+            ], type: 'text.update', target: 'counter-value');
+    }
+
+    public function render(): string
+    {
+        return sprintf(
+            '<div><span data-volt-target="counter-value">%d</span></div>',
+            $this->count,
         );
     }
 }

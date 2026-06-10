@@ -402,13 +402,26 @@
     });
   }
 
-  function transitionDurationFor(element, effect) {
+  function transitionDurationFor(element, effect, phase) {
     if (!element) {
       return 180;
     }
 
+    const phaseDuration = transitionConfigValue(effect, phase, 'duration');
+
+    if (typeof phaseDuration === 'number' && phaseDuration >= 0) {
+      return phaseDuration;
+    }
+
     if (effect && typeof effect.transitionDuration === 'number' && effect.transitionDuration >= 0) {
       return effect.transitionDuration;
+    }
+
+    const phaseAttribute = element.getAttribute('data-volt-transition-' + phase + '-duration');
+    const phaseParsed = phaseAttribute ? Number(phaseAttribute) : NaN;
+
+    if (Number.isFinite(phaseParsed) && phaseParsed >= 0) {
+      return phaseParsed;
     }
 
     const attributeValue = element.getAttribute('data-volt-transition-duration');
@@ -417,9 +430,47 @@
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 180;
   }
 
-  function transitionVariantFor(element, effect) {
+  function transitionConfigValue(effect, phase, key) {
+    if (!effect || typeof effect !== 'object') {
+      return null;
+    }
+
+    if (effect.transition && typeof effect.transition === 'object' && effect.transition !== null) {
+      const phaseConfig = effect.transition[phase];
+
+      if (phaseConfig && typeof phaseConfig === 'object' && Object.prototype.hasOwnProperty.call(phaseConfig, key)) {
+        return phaseConfig[key];
+      }
+
+      if (key === 'name' && typeof phaseConfig === 'string') {
+        return phaseConfig;
+      }
+    }
+
+    if (effect.transitions && typeof effect.transitions === 'object' && effect.transitions !== null) {
+      const phaseConfig = effect.transitions[phase];
+
+      if (phaseConfig && typeof phaseConfig === 'object' && Object.prototype.hasOwnProperty.call(phaseConfig, key)) {
+        return phaseConfig[key];
+      }
+
+      if (key === 'name' && typeof phaseConfig === 'string') {
+        return phaseConfig;
+      }
+    }
+
+    return null;
+  }
+
+  function transitionVariantFor(element, effect, phase) {
     if (effect && effect.transition === false) {
       return null;
+    }
+
+    const phaseVariant = transitionConfigValue(effect, phase, 'name');
+
+    if (typeof phaseVariant === 'string' && phaseVariant !== '') {
+      return phaseVariant;
     }
 
     if (effect && typeof effect.transition === 'string' && effect.transition !== '') {
@@ -434,6 +485,16 @@
       return null;
     }
 
+    const phaseAttribute = element.getAttribute('data-volt-transition-' + phase);
+
+    if (phaseAttribute === '') {
+      return 'default';
+    }
+
+    if (phaseAttribute) {
+      return phaseAttribute;
+    }
+
     const attributeValue = element.getAttribute('data-volt-transition');
 
     if (attributeValue === '') {
@@ -443,26 +504,71 @@
     return attributeValue || null;
   }
 
-  async function runElementTransition(element, phase, effect) {
-    const variant = transitionVariantFor(element, effect);
+  function transitionClassListFor(element, effect, phase, variant) {
+    const classes = ['volt-transition', 'volt-transition-' + phase];
+
+    if (variant) {
+      classes.push('volt-transition-' + variant);
+    }
+
+    const phaseClasses = [];
+    const classConfig = transitionConfigValue(effect, phase, 'className');
+
+    if (typeof classConfig === 'string' && classConfig !== '') {
+      phaseClasses.push(classConfig);
+    }
+
+    if (element) {
+      const phaseAttribute = element.getAttribute('data-volt-transition-' + phase + '-class');
+
+      if (phaseAttribute) {
+        phaseClasses.push(phaseAttribute);
+      }
+
+      const globalAttribute = element.getAttribute('data-volt-transition-class');
+
+      if (globalAttribute) {
+        phaseClasses.push(globalAttribute);
+      }
+    }
+
+    phaseClasses.forEach(function (classList) {
+      classList.split(/\s+/).forEach(function (className) {
+        if (className) {
+          classes.push(className);
+        }
+      });
+    });
+
+    return classes;
+  }
+
+  async function runElementTransition(root, element, phase, effect) {
+    const variant = transitionVariantFor(element, effect, phase);
 
     if (!element || !phase || !variant) {
       return false;
     }
 
-    const duration = transitionDurationFor(element, effect);
-    const baseClass = 'volt-transition';
-    const phaseClass = 'volt-transition-' + phase;
-    const activeClass = phaseClass + '-active';
-    const variantClass = 'volt-transition-' + variant;
+    const duration = transitionDurationFor(element, effect, phase);
+    const activeClass = 'volt-transition-' + phase + '-active';
+    const classes = transitionClassListFor(element, effect, phase, variant);
+    const detail = effectHookDetail(root, effect, element, {
+      phase: phase,
+      variant: variant,
+      duration: duration,
+    });
 
+    emitRuntimeHook('volt:before-' + phase, detail, element);
     element.style.setProperty('--volt-transition-duration', duration + 'ms');
-    element.classList.add(baseClass, phaseClass, variantClass);
+    element.classList.add.apply(element.classList, classes);
     await nextFrame();
     element.classList.add(activeClass);
     await wait(duration);
-    element.classList.remove(baseClass, phaseClass, activeClass, variantClass);
+    element.classList.remove(activeClass);
+    element.classList.remove.apply(element.classList, classes);
     element.style.removeProperty('--volt-transition-duration');
+    emitRuntimeHook('volt:after-' + phase, detail, element);
 
     return true;
   }
@@ -864,7 +970,7 @@
       case 'text.update':
         if (target && typeof effect.value !== 'undefined') {
           target.textContent = String(effect.value);
-          await runElementTransition(target, 'update', effect);
+          await runElementTransition(root, target, 'update', effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
@@ -874,7 +980,7 @@
           const replacedTarget = applyHtmlReplace(root, target, effect);
 
           if (replacedTarget) {
-            await runElementTransition(replacedTarget, effect.outer === true || effect.mode === 'outer' ? 'enter' : 'update', effect);
+            await runElementTransition(root, replacedTarget, effect.outer === true || effect.mode === 'outer' ? 'enter' : 'update', effect);
           }
 
           return createEffectResult(root, effect, replacedTarget || target, !!target, !!target);
@@ -888,7 +994,7 @@
           }));
 
           for (let index = 0; index < insertedElements.length; index += 1) {
-            await runElementTransition(insertedElements[index], 'enter', effect);
+            await runElementTransition(root, insertedElements[index], 'enter', effect);
           }
 
           return createEffectResult(root, effect, target, true, true, {
@@ -903,7 +1009,7 @@
 
           if (insertedElements.length > 0) {
             for (let index = 0; index < insertedElements.length; index += 1) {
-              await runElementTransition(insertedElements[index], 'enter', effect);
+              await runElementTransition(root, insertedElements[index], 'enter', effect);
             }
 
             return createEffectResult(root, effect, target, true, true, {
@@ -915,7 +1021,7 @@
 
       case 'dom.remove':
         if (target) {
-          await runElementTransition(target, 'leave', effect);
+          await runElementTransition(root, target, 'leave', effect);
           target.remove();
           return createEffectResult(root, effect, target, true, true);
         }
@@ -923,7 +1029,7 @@
 
       case 'dom.move':
         if (applyDomMove(root, target, effect)) {
-          await runElementTransition(target, 'move', effect);
+          await runElementTransition(root, target, 'move', effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
@@ -933,7 +1039,7 @@
           const attributeValue = typeof effect.value === 'undefined' ? '' : String(effect.value);
           target.setAttribute(effect.name, attributeValue);
           syncAttributeProperty(target, effect.name, attributeValue);
-          await runElementTransition(target, 'update', effect);
+          await runElementTransition(root, target, 'update', effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
@@ -942,7 +1048,7 @@
         if (target && typeof effect.name === 'string') {
           target.removeAttribute(effect.name);
           syncAttributeProperty(target, effect.name, null);
-          await runElementTransition(target, 'update', effect);
+          await runElementTransition(root, target, 'update', effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
@@ -950,14 +1056,14 @@
       case 'class.toggle':
         applyClassToggle(target, effect);
         if (target) {
-          await runElementTransition(target, 'update', effect);
+          await runElementTransition(root, target, 'update', effect);
         }
         return createEffectResult(root, effect, target, !!target, !!target);
 
       case 'style.set':
         applyStyleSet(target, effect);
         if (target) {
-          await runElementTransition(target, 'update', effect);
+          await runElementTransition(root, target, 'update', effect);
         }
         return createEffectResult(root, effect, target, !!target, !!target);
 
