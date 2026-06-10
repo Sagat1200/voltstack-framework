@@ -19,6 +19,7 @@ final class ProtocolController extends Controller
         private readonly ComponentManager $components,
         private readonly Validator $validator,
         private readonly CsrfTokenManager $csrf,
+        private readonly ActionEffectBuilder $effects,
     ) {
     }
 
@@ -43,17 +44,22 @@ final class ProtocolController extends Controller
             );
 
             $this->components->applyUpdates($component, $payload->updates());
-            $this->components->callAction($component, $payload->action(), $payload->params(), $request);
+            $previousSnapshot = $this->components->dehydrate($component, [
+                'action' => $payload->action(),
+            ]);
+            $previousHtml = $this->components->renderRoot($component, $previousSnapshot);
+            $actionResult = $this->components->callAction($component, $payload->action(), $payload->params(), $request);
 
             $snapshot = $this->components->dehydrate($component, [
                 'action' => $payload->action(),
             ]);
+            $html = $this->components->renderRoot($component, $snapshot);
 
             return $this->json((new ActionResponse(
                 $payload->component(),
-                $this->components->renderRoot($component, $snapshot),
+                $html,
                 $snapshot,
-                [],
+                $this->effects->build($actionResult, $previousHtml, $html),
                 ['action' => $payload->action()],
             ))->toArray());
         } catch (InvalidSnapshotException|RuntimeException $exception) {
