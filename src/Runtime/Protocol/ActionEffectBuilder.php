@@ -18,6 +18,8 @@ final class ActionEffectBuilder
      */
     public function build(mixed $actionResult, string $previousHtml, string $nextHtml): array
     {
+        $options = $actionResult instanceof ActionEffectOptions ? $actionResult : null;
+
         if ($actionResult instanceof RedirectResponse) {
             $location = $actionResult->headers()['Location'] ?? null;
 
@@ -34,31 +36,33 @@ final class ActionEffectBuilder
         $effects = $this->differ->diff($previousHtml, $nextHtml);
 
         if ($effects !== null && $effects !== []) {
-            return $this->applyOptions($effects, $actionResult);
+            return $this->finalizeEffects($effects, $options);
         }
 
-        return $this->applyOptions([[
+        return $this->finalizeEffects([[
             'type' => 'html.replace',
             'target' => 'root',
             'html' => $nextHtml,
             'outer' => true,
-        ]], $actionResult);
+        ]], $options);
     }
 
     /**
      * @param array<int, array<string, mixed>> $effects
      * @return array<int, array<string, mixed>>
      */
-    private function applyOptions(array $effects, mixed $actionResult): array
+    private function finalizeEffects(array $effects, ?ActionEffectOptions $options): array
     {
-        if (! $actionResult instanceof ActionEffectOptions) {
+        if (! $options instanceof ActionEffectOptions) {
             return $effects;
         }
 
-        return array_map(
-            fn(array $effect): array => $this->applyRulesToEffect($effect, $actionResult->rules()),
+        $annotated = array_map(
+            fn(array $effect): array => $this->applyRulesToEffect($effect, $options->rules()),
             $effects,
         );
+
+        return [...$annotated, ...$options->manualEffects()];
     }
 
     /**

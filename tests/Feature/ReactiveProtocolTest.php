@@ -294,6 +294,83 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('volt-transition-soft-edge', $payload['effects'][0]['transitions']['update']['className']);
     }
 
+    public function test_it_allows_manual_effects_to_be_appended_after_generated_effects(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveManualEffectsComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveManualEffectsComponent::class,
+                'action' => 'save',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(4, $payload['effects']);
+        self::assertSame('text.update', $payload['effects'][0]['type']);
+        self::assertSame('saved-status', $payload['effects'][0]['target']);
+        self::assertSame('Saved', $payload['effects'][0]['value']);
+        self::assertSame('focus', $payload['effects'][1]['type']);
+        self::assertSame('title-input', $payload['effects'][1]['target']);
+        self::assertSame('attribute.set', $payload['effects'][2]['type']);
+        self::assertSame('title-input', $payload['effects'][2]['target']);
+        self::assertSame('data-saved', $payload['effects'][2]['name']);
+        self::assertSame('true', $payload['effects'][2]['value']);
+        self::assertSame('dispatch.event', $payload['effects'][3]['type']);
+        self::assertSame('title-input', $payload['effects'][3]['target']);
+        self::assertSame('demo.saved', $payload['effects'][3]['event']);
+        self::assertSame(['count' => 1], $payload['effects'][3]['detail']);
+    }
+
+    public function test_it_restores_the_previous_scope_after_a_group_block(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveGroupedEffectsComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveGroupedEffectsComponent::class,
+                'action' => 'save',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(4, $payload['effects']);
+        self::assertSame('html.replace', $payload['effects'][0]['type']);
+        self::assertSame('focus', $payload['effects'][1]['type']);
+        self::assertSame('title-input', $payload['effects'][1]['target']);
+        self::assertSame('dispatch.event', $payload['effects'][2]['type']);
+        self::assertSame('title-input', $payload['effects'][2]['target']);
+        self::assertSame('dispatch.event', $payload['effects'][3]['type']);
+        self::assertArrayNotHasKey('target', $payload['effects'][3]);
+        self::assertSame('demo.outside-group', $payload['effects'][3]['event']);
+    }
+
     public function test_it_returns_dom_append_for_stable_target_lists(): void
     {
         $app = new Application(sys_get_temp_dir());
@@ -585,16 +662,14 @@ final class TestReactiveTransitionedComponent extends Component
         $this->count++;
 
         return ActionEffectOptions::make()
-            ->transition([
-                'name' => 'pop',
-                'duration' => 220,
-            ], type: 'text.update', target: 'counter-value')
-            ->transitions([
-                'update' => [
-                    'name' => 'glow',
-                    'className' => 'volt-transition-soft-edge',
-                ],
-            ], type: 'text.update', target: 'counter-value');
+            ->transitions()
+            ->onTarget('counter-value')
+            ->forTextUpdate()
+            ->pop(220)
+            ->onTarget('counter-value')
+            ->forTextUpdate()
+            ->updateAs('glow', className: 'volt-transition-soft-edge')
+            ->end();
     }
 
     public function render(): string
@@ -603,6 +678,56 @@ final class TestReactiveTransitionedComponent extends Component
             '<div><span data-volt-target="counter-value">%d</span></div>',
             $this->count,
         );
+    }
+}
+
+final class TestReactiveManualEffectsComponent extends Component
+{
+    public int $count = 0;
+
+    public function save(): ActionEffectOptions
+    {
+        $this->count++;
+
+        return ActionEffectOptions::make()
+            ->transitions()
+            ->onTarget('saved-status')
+            ->forTextUpdate()
+            ->glow()
+            ->end()
+            ->effects()
+            ->onTarget('title-input')
+            ->focus()
+            ->setAttribute('data-saved', 'true')
+            ->event('demo.saved', ['count' => $this->count])
+            ->end();
+    }
+
+    public function render(): string
+    {
+        return sprintf(
+            '<div><input data-volt-target="title-input" value="demo"><span data-volt-target="saved-status">%s</span></div>',
+            $this->count > 0 ? 'Saved' : 'Idle',
+        );
+    }
+}
+
+final class TestReactiveGroupedEffectsComponent extends Component
+{
+    public function save(): ActionEffectOptions
+    {
+        return ActionEffectOptions::make()
+            ->effects()
+            ->onTarget('title-input')
+            ->focus()
+            ->event('demo.inside-group')
+            ->end()
+            ->event('demo.outside-group');
+    }
+
+    public function render(): string
+    {
+        return '<div><input data-volt-target="title-input" value="demo"></div>';
     }
 }
 
