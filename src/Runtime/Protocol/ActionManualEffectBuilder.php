@@ -135,11 +135,37 @@ final class ActionManualEffectBuilder
         return $this;
     }
 
+    public function focusAndSetAttribute(string $name, string $value = ''): self
+    {
+        return $this->focus()->setAttribute($name, $value);
+    }
+
+    public function focusAndRemoveAttribute(string $name): self
+    {
+        return $this->focus()->removeAttribute($name);
+    }
+
+    /**
+     * @param array<string, mixed> $detail
+     */
+    public function focusAndEvent(string $event, array $detail = []): self
+    {
+        return $this->focus()->event($event, $detail);
+    }
+
     public function blur(): self
     {
         $this->options->blur($this->target, $this->selector);
 
         return $this;
+    }
+
+    /**
+     * @param array<string, mixed> $detail
+     */
+    public function blurAndEvent(string $event, array $detail = []): self
+    {
+        return $this->blur()->event($event, $detail);
     }
 
     public function navigate(string $url, bool $replace = false, bool $preserveScroll = false): self
@@ -177,6 +203,20 @@ final class ActionManualEffectBuilder
         $this->options->scroll($options, $this->target, $this->selector);
 
         return $this;
+    }
+
+    public function scrollIntoView(
+        ?string $behavior = null,
+        ?string $block = null,
+        ?string $inline = null,
+    ): self {
+        $options = array_filter([
+            'behavior' => $behavior,
+            'block' => $block,
+            'inline' => $inline,
+        ], static fn(mixed $value): bool => $value !== null);
+
+        return $this->scroll($options);
     }
 
     public function end(): ActionEffectOptions

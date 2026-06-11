@@ -14,7 +14,8 @@ final class ActionTransitionBuilder
 
     public function __construct(
         private readonly ActionEffectOptions $options,
-    ) {}
+    ) {
+    }
 
     public function onTarget(string $target): self
     {

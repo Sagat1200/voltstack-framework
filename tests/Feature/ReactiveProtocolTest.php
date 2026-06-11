@@ -294,6 +294,38 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('volt-transition-soft-edge', $payload['effects'][0]['transitions']['update']['className']);
     }
 
+    public function test_it_allows_transition_shortcuts_on_action_effect_match(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveMatchedTransitionComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveMatchedTransitionComponent::class,
+                'action' => 'increment',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(1, $payload['effects']);
+        self::assertSame('text.update', $payload['effects'][0]['type']);
+        self::assertSame('counter-value', $payload['effects'][0]['target']);
+        self::assertSame('fade', $payload['effects'][0]['transition']['name']);
+        self::assertSame(180, $payload['effects'][0]['transition']['duration']);
+    }
+
     public function test_it_allows_manual_effects_to_be_appended_after_generated_effects(): void
     {
         $app = new Application(sys_get_temp_dir());
@@ -697,8 +729,7 @@ final class TestReactiveManualEffectsComponent extends Component
             ->end()
             ->effects()
             ->onTarget('title-input')
-            ->focus()
-            ->setAttribute('data-saved', 'true')
+            ->focusAndSetAttribute('data-saved', 'true')
             ->event('demo.saved', ['count' => $this->count])
             ->end();
     }
@@ -712,6 +743,29 @@ final class TestReactiveManualEffectsComponent extends Component
     }
 }
 
+final class TestReactiveMatchedTransitionComponent extends Component
+{
+    public int $count = 0;
+
+    public function increment(): ActionEffectOptions
+    {
+        $this->count++;
+
+        return ActionEffectOptions::make()
+            ->onTarget('counter-value')
+            ->when('text.update')
+            ->fade(180);
+    }
+
+    public function render(): string
+    {
+        return sprintf(
+            '<div><span data-volt-target="counter-value">%d</span></div>',
+            $this->count,
+        );
+    }
+}
+
 final class TestReactiveGroupedEffectsComponent extends Component
 {
     public function save(): ActionEffectOptions
@@ -719,8 +773,7 @@ final class TestReactiveGroupedEffectsComponent extends Component
         return ActionEffectOptions::make()
             ->effects()
             ->onTarget('title-input')
-            ->focus()
-            ->event('demo.inside-group')
+            ->focusAndEvent('demo.inside-group')
             ->end()
             ->event('demo.outside-group');
     }
