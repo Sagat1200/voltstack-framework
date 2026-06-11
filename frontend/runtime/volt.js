@@ -1,7 +1,32 @@
 (function () {
   const runtime = {
     navigationRequestId: 0,
+    navigationController: null,
+    componentRequestStates: new Map(),
+    loadingDelays: new Map(),
+    loadingActivatedAt: new Map(),
+    loadingMinClearDelays: new Map(),
+    successTimeouts: new Map(),
+    successActivatedAt: new Map(),
+    successMinClearDelays: new Map(),
+    errorTimeouts: new Map(),
+    dirtyDebounces: new Map(),
   };
+
+  function componentRequestState(component) {
+    if (!component) {
+      return null;
+    }
+
+    if (!runtime.componentRequestStates.has(component)) {
+      runtime.componentRequestStates.set(component, {
+        requestId: 0,
+        controller: null,
+      });
+    }
+
+    return runtime.componentRequestStates.get(component);
+  }
 
   function findRoot(element) {
     return element.closest('[data-volt-root="true"]');
@@ -77,6 +102,671 @@
     }
 
     return null;
+  }
+
+  function directiveAttribute(element, names) {
+    for (let index = 0; index < names.length; index += 1) {
+      if (element.hasAttribute(names[index])) {
+        return {
+          name: names[index],
+          value: element.getAttribute(names[index]) || '',
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function directiveSelector(names) {
+    return names.map(function (name) {
+      return '[' + name.replace(/[:.]/g, '\\$&') + ']';
+    }).join(', ');
+  }
+
+  function collectElementsWithDirectiveAttributes(root, names) {
+    const elements = [];
+
+    if (!root || !Array.isArray(names) || names.length === 0) {
+      return elements;
+    }
+
+    function matchesNames(element) {
+      return names.some(function (name) {
+        return element.hasAttribute(name);
+      });
+    }
+
+    if (typeof root.hasAttribute === 'function' && matchesNames(root)) {
+      elements.push(root);
+    }
+
+    if (typeof root.querySelectorAll !== 'function') {
+      return elements;
+    }
+
+    root.querySelectorAll('*').forEach(function (element) {
+      if (matchesNames(element)) {
+        elements.push(element);
+      }
+    });
+
+    return elements;
+  }
+
+  function collectDirectiveElements(root, selector) {
+    const elements = [];
+
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      return elements;
+    }
+
+    if (typeof root.matches === 'function' && root.matches(selector)) {
+      elements.push(root);
+    }
+
+    root.querySelectorAll(selector).forEach(function (element) {
+      elements.push(element);
+    });
+
+    return elements;
+  }
+
+  function runtimeDirectiveStore(element) {
+    if (!element.__voltRuntimeDirectiveStore) {
+      element.__voltRuntimeDirectiveStore = {
+        visibility: {},
+        attributes: {},
+      };
+    }
+
+    return element.__voltRuntimeDirectiveStore;
+  }
+
+  function stateDirectiveNames(state, suffix) {
+    const parts = Array.isArray(suffix)
+      ? suffix.filter(function (value) {
+          return !!value;
+        })
+      : suffix
+        ? [suffix]
+        : [];
+    let dashed = 'volt-' + state;
+    let dotted = 'volt:' + state;
+
+    parts.forEach(function (part) {
+      dashed += '-' + part;
+      dotted += '.' + part;
+    });
+
+    return [dashed, dotted];
+  }
+
+  function parseDirectiveList(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return [];
+    }
+
+    return value.split(',').map(function (entry) {
+      return entry.trim();
+    }).filter(function (entry) {
+      return entry !== '';
+    });
+  }
+
+  function runtimeStateContext(root, state) {
+    if (!root) {
+      return {
+        action: null,
+        target: null,
+      };
+    }
+
+    return {
+      action: root.getAttribute('data-volt-' + state + '-action') || null,
+      target: root.getAttribute('data-volt-' + state + '-target') || null,
+    };
+  }
+
+  function matchesDirectiveScope(filterValues, currentValue) {
+    if (!Array.isArray(filterValues) || filterValues.length === 0) {
+      return true;
+    }
+
+    if (!currentValue) {
+      return false;
+    }
+
+    return filterValues.indexOf(currentValue) !== -1;
+  }
+
+  function stateDirectiveScope(element, state, shorthandValue, context) {
+    const actionAttribute = directiveAttribute(element, stateDirectiveNames(state, 'action'));
+    const targetAttribute = directiveAttribute(element, stateDirectiveNames(state, 'target'));
+    const shorthandEntries = parseDirectiveList(shorthandValue);
+    const usesActionShorthand = !!(context && context.action);
+
+    return {
+      actions: actionAttribute
+        ? parseDirectiveList(actionAttribute.value)
+        : usesActionShorthand
+          ? shorthandEntries
+          : [],
+      targets: targetAttribute
+        ? parseDirectiveList(targetAttribute.value)
+        : usesActionShorthand
+          ? []
+          : shorthandEntries,
+    };
+  }
+
+  function stateDirectiveIsActive(element, state, active, shorthandValue, context) {
+    if (!active) {
+      return false;
+    }
+
+    const scope = stateDirectiveScope(element, state, shorthandValue, context);
+
+    return matchesDirectiveScope(scope.actions, context.action) &&
+      matchesDirectiveScope(scope.targets, context.target);
+  }
+
+  function applyDirectiveVisibility(element, state, active, inverse) {
+    const storeKey = state + ':' + (inverse ? 'hide' : 'show');
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.visibility[storeKey]) {
+      store.visibility[storeKey] = {
+        hidden: !!element.hidden,
+        ariaHidden: element.getAttribute('aria-hidden'),
+      };
+    }
+
+    const shouldHide = inverse ? active : !active;
+    const initialState = store.visibility[storeKey];
+
+    if (shouldHide) {
+      element.hidden = true;
+      element.setAttribute('aria-hidden', 'true');
+      return;
+    }
+
+    element.hidden = initialState.hidden;
+
+    if (initialState.ariaHidden === null) {
+      element.removeAttribute('aria-hidden');
+      return;
+    }
+
+    element.setAttribute('aria-hidden', initialState.ariaHidden);
+  }
+
+  function parseDirectiveAttributes(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return [];
+    }
+
+    return value.split(',').map(function (token) {
+      const entry = token.trim();
+
+      if (!entry) {
+        return null;
+      }
+
+      const separator = entry.indexOf('=');
+
+      if (separator === -1) {
+        return {
+          name: entry,
+          value: '',
+        };
+      }
+
+      return {
+        name: entry.slice(0, separator).trim(),
+        value: entry.slice(separator + 1).trim(),
+      };
+    }).filter(function (entry) {
+      return entry && entry.name;
+    });
+  }
+
+  function applyDirectiveAttributes(element, state, active, attributes) {
+    if (!Array.isArray(attributes) || attributes.length === 0) {
+      return;
+    }
+
+    const storeKey = state + ':attr';
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.attributes[storeKey]) {
+      store.attributes[storeKey] = {};
+    }
+
+    attributes.forEach(function (entry) {
+      if (!store.attributes[storeKey].hasOwnProperty(entry.name)) {
+        store.attributes[storeKey][entry.name] = element.hasAttribute(entry.name)
+          ? element.getAttribute(entry.name)
+          : null;
+      }
+
+      if (active) {
+        element.setAttribute(entry.name, entry.value);
+        return;
+      }
+
+      const initialValue = store.attributes[storeKey][entry.name];
+
+      if (initialValue === null) {
+        element.removeAttribute(entry.name);
+        return;
+      }
+
+      element.setAttribute(entry.name, initialValue);
+    });
+  }
+
+  function applyDirectiveClasses(element, active, value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return;
+    }
+
+    value.split(/\s+/).forEach(function (className) {
+      if (!className) {
+        return;
+      }
+
+      element.classList.toggle(className, active);
+    });
+  }
+
+  function stateDirectiveShorthandValue(element, state) {
+    const attribute = directiveAttribute(element, stateDirectiveNames(state));
+
+    return attribute ? attribute.value : '';
+  }
+
+  function parseDirectiveTimeout(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    const match = normalized.match(/^(\d+(?:\.\d+)?)(ms|s)?$/);
+
+    if (!match) {
+      return null;
+    }
+
+    const amount = Number.parseFloat(match[1]);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      return null;
+    }
+
+    const unit = match[2] || 'ms';
+    const multiplier = unit === 's' ? 1000 : 1;
+
+    return Math.round(amount * multiplier);
+  }
+
+  function matchingStateDirectiveElements(root, state, suffix, active, contextOverride) {
+    const context = contextOverride || runtimeStateContext(root, state);
+    const names = stateDirectiveNames(state, suffix);
+
+    return collectElementsWithDirectiveAttributes(root, names).filter(function (element) {
+      return stateDirectiveIsActive(
+        element,
+        state,
+        active,
+        stateDirectiveShorthandValue(element, state),
+        context
+      );
+    });
+  }
+
+  function resolveStateDirectiveDuration(root, state, suffix, context) {
+    const values = matchingStateDirectiveElements(root, state, suffix, true, context).map(function (element) {
+      return parseDirectiveTimeout(directiveValue(element, stateDirectiveNames(state, suffix)));
+    }).filter(function (value) {
+      return value !== null;
+    });
+
+    if (values.length === 0) {
+      return null;
+    }
+
+    return Math.min.apply(null, values);
+  }
+
+  function resolveStateDirectiveTimeout(root, state) {
+    return resolveStateDirectiveDuration(root, state, 'timeout');
+  }
+
+  function resolveStateDirectiveDelay(root, state, context) {
+    return resolveStateDirectiveDuration(root, state, 'delay', context);
+  }
+
+  function resolveStateDirectiveMinDuration(root, state, context) {
+    return resolveStateDirectiveDuration(root, state, 'min-duration', context);
+  }
+
+  function resolveStateDirectiveDebounce(root, state, context) {
+    return resolveStateDirectiveDuration(root, state, 'debounce', context);
+  }
+
+  function clearLoadingDelay(root) {
+    const timeoutId = runtime.loadingDelays.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.loadingDelays.delete(root);
+    }
+  }
+
+  function clearLoadingMinDuration(root) {
+    const timeoutId = runtime.loadingMinClearDelays.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.loadingMinClearDelays.delete(root);
+    }
+  }
+
+  function clearSuccessTimeout(root) {
+    const timeoutId = runtime.successTimeouts.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.successTimeouts.delete(root);
+    }
+  }
+
+  function clearSuccessMinDuration(root) {
+    const timeoutId = runtime.successMinClearDelays.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.successMinClearDelays.delete(root);
+    }
+  }
+
+  function scheduleLoadingDelay(root, trigger, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearLoadingDelay(root);
+
+    const detail = meta && typeof meta === 'object' ? meta : {};
+    const context = {
+      action: detail.action || null,
+      target: stateTargetValue(detail),
+    };
+    const delay = resolveStateDirectiveDelay(root, 'loading', context);
+
+    if (delay === null || delay <= 0) {
+      setLoadingState(root, true, trigger, detail);
+      return;
+    }
+
+    const component = root.getAttribute('data-volt-component') || detail.component || null;
+    const requestId = detail.requestId || null;
+    const timeoutId = window.setTimeout(function () {
+      runtime.loadingDelays.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+      const state = componentRequestState(component);
+
+      if (!activeRoot || !state || state.requestId !== requestId) {
+        return;
+      }
+
+      setLoadingState(activeRoot, true, trigger, Object.assign({}, detail, {
+        component: component,
+      }));
+    }, delay);
+
+    runtime.loadingDelays.set(root, timeoutId);
+  }
+
+  function scheduleLoadingMinDurationClear(root, trigger, meta, remaining) {
+    if (!root) {
+      return;
+    }
+
+    clearLoadingMinDuration(root);
+
+    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: 'min-duration',
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.loadingMinClearDelays.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (!activeRoot || activeRoot.getAttribute('data-volt-loading') !== 'true') {
+        return;
+      }
+
+      setLoadingState(activeRoot, false, trigger, detail);
+    }, remaining);
+
+    runtime.loadingMinClearDelays.set(root, timeoutId);
+  }
+
+  function clearErrorTimeout(root) {
+    const timeoutId = runtime.errorTimeouts.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.errorTimeouts.delete(root);
+    }
+  }
+
+  function clearDirtyDebounce(root) {
+    const timeoutId = runtime.dirtyDebounces.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.dirtyDebounces.delete(root);
+    }
+  }
+
+  function scheduleSuccessTimeout(root, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearSuccessTimeout(root);
+
+    const timeout = resolveStateDirectiveTimeout(root, 'success');
+
+    if (timeout === null) {
+      return;
+    }
+
+    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: 'timeout',
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.successTimeouts.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (!activeRoot || activeRoot.getAttribute('data-volt-success') !== 'true') {
+        return;
+      }
+
+      setSuccessState(activeRoot, false, detail);
+    }, timeout);
+
+    runtime.successTimeouts.set(root, timeoutId);
+  }
+
+  function scheduleSuccessMinDurationClear(root, meta, remaining) {
+    if (!root) {
+      return;
+    }
+
+    clearSuccessMinDuration(root);
+
+    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: 'min-duration',
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.successMinClearDelays.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (!activeRoot || activeRoot.getAttribute('data-volt-success') !== 'true') {
+        return;
+      }
+
+      setSuccessState(activeRoot, false, detail);
+    }, remaining);
+
+    runtime.successMinClearDelays.set(root, timeoutId);
+  }
+
+  function scheduleErrorTimeout(root, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearErrorTimeout(root);
+
+    const timeout = resolveStateDirectiveTimeout(root, 'error');
+
+    if (timeout === null) {
+      return;
+    }
+
+    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: 'timeout',
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.errorTimeouts.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (!activeRoot || activeRoot.getAttribute('data-volt-error') !== 'true') {
+        return;
+      }
+
+      setErrorState(activeRoot, false, detail);
+    }, timeout);
+
+    runtime.errorTimeouts.set(root, timeoutId);
+  }
+
+  function scheduleDirtyDebounce(root, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearDirtyDebounce(root);
+
+    const detail = meta && typeof meta === 'object' ? meta : {};
+    const context = {
+      action: detail.action || null,
+      target: stateTargetValue(detail),
+    };
+    const debounce = resolveStateDirectiveDebounce(root, 'dirty', context);
+
+    if (debounce === null || debounce <= 0) {
+      setDirtyState(root, true, detail);
+      return;
+    }
+
+    const component = root.getAttribute('data-volt-component') || detail.component || null;
+    const timeoutId = window.setTimeout(function () {
+      runtime.dirtyDebounces.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (!activeRoot) {
+        return;
+      }
+
+      setDirtyState(activeRoot, true, Object.assign({}, detail, {
+        component: component,
+        reason: 'debounce',
+        debounce: debounce,
+      }));
+    }, debounce);
+
+    runtime.dirtyDebounces.set(root, timeoutId);
+  }
+
+  function syncRuntimeStateDirective(root, state, active) {
+    const showSelector = directiveSelector(stateDirectiveNames(state));
+    const hideSelector = directiveSelector(stateDirectiveNames(state, 'hide'));
+    const classSelector = directiveSelector(stateDirectiveNames(state, 'class'));
+    const attrSelector = directiveSelector(stateDirectiveNames(state, 'attr'));
+
+    collectDirectiveElements(root, showSelector).forEach(function (element) {
+      applyDirectiveVisibility(
+        element,
+        state,
+        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
+        false
+      );
+    });
+
+    collectDirectiveElements(root, hideSelector).forEach(function (element) {
+      applyDirectiveVisibility(
+        element,
+        state,
+        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
+        true
+      );
+    });
+
+    collectDirectiveElements(root, classSelector).forEach(function (element) {
+      applyDirectiveClasses(
+        element,
+        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
+        directiveValue(element, stateDirectiveNames(state, 'class'))
+      );
+    });
+
+    collectDirectiveElements(root, attrSelector).forEach(function (element) {
+      applyDirectiveAttributes(
+        element,
+        state,
+        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
+        parseDirectiveAttributes(directiveValue(element, stateDirectiveNames(state, 'attr')))
+      );
+    });
+  }
+
+  function syncRuntimeStateDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    syncRuntimeStateDirective(root, 'loading', root.getAttribute('data-volt-loading') === 'true');
+    syncRuntimeStateDirective(root, 'error', root.getAttribute('data-volt-error') === 'true');
+    syncRuntimeStateDirective(root, 'dirty', root.getAttribute('data-volt-dirty') === 'true');
+    syncRuntimeStateDirective(root, 'success', root.getAttribute('data-volt-success') === 'true');
+  }
+
+  function syncAllRuntimeStateDirectives() {
+    document.querySelectorAll('[data-volt-root="true"]').forEach(function (root) {
+      syncRuntimeStateDirectives(root);
+    });
   }
 
   function elementIndex(elements, target) {
@@ -632,11 +1322,366 @@
     return result;
   }
 
-  function setLoadingState(root, active, trigger) {
-    root.setAttribute('data-volt-loading', active ? 'true' : 'false');
+  function resolveRuntimeRoot(rootOrComponent, fallbackComponent) {
+    if (rootOrComponent && typeof rootOrComponent === 'object' && rootOrComponent.isConnected) {
+      return rootOrComponent;
+    }
+
+    if (typeof rootOrComponent === 'string' && rootOrComponent !== '') {
+      return findRootByComponent(rootOrComponent);
+    }
+
+    if (typeof fallbackComponent === 'string' && fallbackComponent !== '') {
+      return findRootByComponent(fallbackComponent);
+    }
+
+    return null;
+  }
+
+  function isAbortError(error) {
+    return !!(
+      error &&
+      typeof error === 'object' &&
+      (
+        error.name === 'AbortError' ||
+        error.code === 20
+      )
+    );
+  }
+
+  function triggerDescriptor(trigger) {
+    if (!trigger || typeof trigger.getAttribute !== 'function') {
+      return null;
+    }
+
+    return {
+      tag: trigger.tagName ? String(trigger.tagName).toLowerCase() : null,
+      target: trigger.getAttribute('data-volt-target'),
+      action: directiveValue(trigger, ['volt-click', 'volt:click', 'volt-submit', 'volt:submit']),
+    };
+  }
+
+  function requestHookDetail(kind, meta, extra) {
+    return Object.assign({
+      type: kind,
+      component: meta && meta.component ? meta.component : null,
+      action: meta && meta.action ? meta.action : null,
+      requestId: meta && meta.requestId ? meta.requestId : null,
+      trigger: meta && meta.trigger ? meta.trigger : null,
+    }, extra || {});
+  }
+
+  function responseErrorDetail(response, payload, meta) {
+    const payloadError = payload && payload.error && typeof payload.error === 'object'
+      ? payload.error
+      : {};
+
+    return requestHookDetail('action', meta, {
+      status: response.status,
+      ok: false,
+      message: payloadError.message || ('Request failed with status ' + response.status + '.'),
+      error: payloadError,
+      outcome: 'error',
+    });
+  }
+
+  function exceptionErrorDetail(error, meta) {
+    return requestHookDetail('action', meta, {
+      ok: false,
+      message: error && error.message ? error.message : 'Unexpected runtime error.',
+      outcome: 'error',
+    });
+  }
+
+  function stateTargetValue(detail) {
+    if (!detail || typeof detail !== 'object') {
+      return null;
+    }
+
+    if (detail.target) {
+      return detail.target;
+    }
+
+    if (detail.trigger && detail.trigger.target) {
+      return detail.trigger.target;
+    }
+
+    return null;
+  }
+
+  function fieldStateTarget(element) {
+    if (!element || typeof element.getAttribute !== 'function') {
+      return null;
+    }
+
+    return directiveValue(element, ['volt-model', 'volt:model']) ||
+      element.getAttribute('data-volt-target') ||
+      element.getAttribute('name') ||
+      element.id ||
+      null;
+  }
+
+  function syncRequestStatus(root) {
+    if (!root) {
+      return;
+    }
+
+    if (root.getAttribute('data-volt-loading') === 'true') {
+      root.setAttribute('data-volt-request-status', 'loading');
+      root.setAttribute('aria-busy', 'true');
+      return;
+    }
+
+    if (root.getAttribute('data-volt-error') === 'true') {
+      root.setAttribute('data-volt-request-status', 'error');
+      root.setAttribute('aria-busy', 'false');
+      return;
+    }
+
+    if (root.getAttribute('data-volt-success') === 'true') {
+      root.setAttribute('data-volt-request-status', 'success');
+      root.setAttribute('aria-busy', 'false');
+      return;
+    }
+
+    if (root.getAttribute('data-volt-dirty') === 'true') {
+      root.setAttribute('data-volt-request-status', 'dirty');
+      root.setAttribute('aria-busy', 'false');
+      return;
+    }
+
+    root.setAttribute('data-volt-request-status', 'idle');
+    root.setAttribute('aria-busy', 'false');
+  }
+
+  function setLoadingState(rootOrComponent, active, trigger, meta) {
+    const detail = meta && typeof meta === 'object' ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (root) {
+      const previous = root.getAttribute('data-volt-loading') === 'true';
+      const context = active
+        ? {
+            action: detail.action || null,
+            target: stateTargetValue(detail),
+          }
+        : runtimeStateContext(root, 'loading');
+      const minDuration = previous ? resolveStateDirectiveMinDuration(root, 'loading', context) : null;
+      const activatedAt = runtime.loadingActivatedAt.get(root) || null;
+      const elapsed = activatedAt === null ? null : Date.now() - activatedAt;
+      const remainingMinDuration = minDuration !== null && elapsed !== null
+        ? Math.max(0, minDuration - elapsed)
+        : null;
+
+      if (!active && previous && remainingMinDuration !== null && remainingMinDuration > 0 && detail.reason !== 'min-duration') {
+        scheduleLoadingMinDurationClear(root, trigger, detail, remainingMinDuration);
+        return;
+      }
+
+      clearLoadingMinDuration(root);
+
+      if (active) {
+        runtime.loadingActivatedAt.set(root, Date.now());
+      } else {
+        runtime.loadingActivatedAt.delete(root);
+      }
+
+      root.setAttribute('data-volt-loading', active ? 'true' : 'false');
+
+      if (active && detail.action) {
+        root.setAttribute('data-volt-loading-action', detail.action);
+      } else {
+        root.removeAttribute('data-volt-loading-action');
+      }
+
+      if (active && detail.trigger && detail.trigger.target) {
+        root.setAttribute('data-volt-loading-target', detail.trigger.target);
+      } else {
+        root.removeAttribute('data-volt-loading-target');
+      }
+
+      if (active && detail.requestId) {
+        root.setAttribute('data-volt-request-id', String(detail.requestId));
+      } else {
+        root.removeAttribute('data-volt-request-id');
+      }
+
+      syncRequestStatus(root);
+      syncRuntimeStateDirectives(root);
+    }
 
     if (trigger && 'disabled' in trigger) {
       trigger.disabled = active;
+    }
+  }
+
+  function setErrorState(rootOrComponent, active, meta) {
+    const detail = meta && typeof meta === 'object' ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (!root) {
+      return;
+    }
+
+    const previous = root.getAttribute('data-volt-error') === 'true';
+    clearErrorTimeout(root);
+    root.setAttribute('data-volt-error', active ? 'true' : 'false');
+
+    if (active) {
+      if (detail.action) {
+        root.setAttribute('data-volt-error-action', detail.action);
+      } else {
+        root.removeAttribute('data-volt-error-action');
+      }
+
+      if (detail.trigger && detail.trigger.target) {
+        root.setAttribute('data-volt-error-target', detail.trigger.target);
+      } else {
+        root.removeAttribute('data-volt-error-target');
+      }
+
+      if (detail.message) {
+        root.setAttribute('data-volt-error-message', String(detail.message));
+      } else {
+        root.removeAttribute('data-volt-error-message');
+      }
+
+      syncRequestStatus(root);
+      syncRuntimeStateDirectives(root);
+      scheduleErrorTimeout(root, detail);
+      return;
+    }
+
+    root.removeAttribute('data-volt-error-message');
+    root.removeAttribute('data-volt-error-action');
+    root.removeAttribute('data-volt-error-target');
+
+    syncRequestStatus(root);
+    syncRuntimeStateDirectives(root);
+
+    if (previous) {
+      emitRuntimeHook('volt:error-cleared', requestHookDetail('error', detail, {
+        target: stateTargetValue(detail),
+        active: false,
+        reason: detail.reason || null,
+      }), root);
+    }
+  }
+
+  function setDirtyState(rootOrComponent, active, meta) {
+    const detail = meta && typeof meta === 'object' ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (!root) {
+      return;
+    }
+
+    if (!active) {
+      clearDirtyDebounce(root);
+    }
+
+    const previous = root.getAttribute('data-volt-dirty') === 'true';
+    root.setAttribute('data-volt-dirty', active ? 'true' : 'false');
+
+    if (active) {
+      const target = stateTargetValue(detail);
+
+      if (target) {
+        root.setAttribute('data-volt-dirty-target', target);
+      } else {
+        root.removeAttribute('data-volt-dirty-target');
+      }
+    } else {
+      root.removeAttribute('data-volt-dirty-target');
+    }
+
+    syncRequestStatus(root);
+    syncRuntimeStateDirectives(root);
+
+    if (previous !== active) {
+      emitRuntimeHook(active ? 'volt:dirty' : 'volt:clean', requestHookDetail('dirty', detail, {
+        target: stateTargetValue(detail),
+        active: active,
+        reason: detail.reason || null,
+        debounce: detail.debounce || null,
+      }), root);
+    }
+  }
+
+  function setSuccessState(rootOrComponent, active, meta) {
+    const detail = meta && typeof meta === 'object' ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (!root) {
+      return;
+    }
+
+    const previous = root.getAttribute('data-volt-success') === 'true';
+    const context = active
+      ? {
+          action: detail.action || null,
+          target: stateTargetValue(detail),
+        }
+      : runtimeStateContext(root, 'success');
+    const minDuration = previous ? resolveStateDirectiveMinDuration(root, 'success', context) : null;
+    const activatedAt = runtime.successActivatedAt.get(root) || null;
+    const elapsed = activatedAt === null ? null : Date.now() - activatedAt;
+    const remainingMinDuration = minDuration !== null && elapsed !== null
+      ? Math.max(0, minDuration - elapsed)
+      : null;
+
+    if (!active && previous && remainingMinDuration !== null && remainingMinDuration > 0 && detail.reason !== 'min-duration') {
+      scheduleSuccessMinDurationClear(root, detail, remainingMinDuration);
+      return;
+    }
+
+    clearSuccessTimeout(root);
+    clearSuccessMinDuration(root);
+
+    if (active) {
+      runtime.successActivatedAt.set(root, Date.now());
+    } else {
+      runtime.successActivatedAt.delete(root);
+    }
+
+    root.setAttribute('data-volt-success', active ? 'true' : 'false');
+
+    if (active) {
+      if (detail.action) {
+        root.setAttribute('data-volt-success-action', detail.action);
+      } else {
+        root.removeAttribute('data-volt-success-action');
+      }
+
+      const target = stateTargetValue(detail);
+
+      if (target) {
+        root.setAttribute('data-volt-success-target', target);
+      } else {
+        root.removeAttribute('data-volt-success-target');
+      }
+    } else {
+      root.removeAttribute('data-volt-success-action');
+      root.removeAttribute('data-volt-success-target');
+    }
+
+    syncRequestStatus(root);
+    syncRuntimeStateDirectives(root);
+
+    const timeout = active ? resolveStateDirectiveTimeout(root, 'success') : null;
+
+    if (active) {
+      scheduleSuccessTimeout(root, detail);
+    }
+
+    if (previous !== active) {
+      emitRuntimeHook(active ? 'volt:success' : 'volt:success-cleared', requestHookDetail('success', detail, {
+        target: stateTargetValue(detail),
+        active: active,
+        timeout: timeout,
+        minDuration: minDuration,
+        reason: detail.reason || null,
+      }), root);
     }
   }
 
@@ -687,9 +1732,11 @@
 
   function setNavigationState(active, trigger) {
     document.documentElement.setAttribute('data-volt-navigating', active ? 'true' : 'false');
+    document.documentElement.setAttribute('aria-busy', active ? 'true' : 'false');
 
     if (document.body) {
       document.body.setAttribute('data-volt-navigating', active ? 'true' : 'false');
+      document.body.setAttribute('aria-busy', active ? 'true' : 'false');
     }
 
     if (trigger && 'disabled' in trigger) {
@@ -718,6 +1765,7 @@
     if (doc.body) {
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
+      syncAllRuntimeStateDirectives();
     }
   }
 
@@ -1129,7 +2177,7 @@
     };
   }
 
-  async function requestPage(url) {
+  async function requestPage(url, signal) {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -1137,6 +2185,7 @@
         'X-Volt-Navigate': 'true',
       },
       credentials: 'same-origin',
+      signal: signal,
     });
 
     if (!response.ok) {
@@ -1157,13 +2206,36 @@
     const settings = options || {};
     const requestId = runtime.navigationRequestId + 1;
     runtime.navigationRequestId = requestId;
+    const previousController = runtime.navigationController;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const requestMeta = {
+      requestId: requestId,
+      trigger: triggerDescriptor(settings.trigger || null),
+    };
+    runtime.navigationController = controller;
+
+    if (previousController) {
+      previousController.abort();
+    }
 
     setNavigationState(true, settings.trigger || null);
+    emitRuntimeHook('volt:request-start', requestHookDetail('navigation', requestMeta, {
+      url: url,
+      historyMode: settings.historyMode || 'push',
+    }), document);
+
+    let outcome = 'success';
 
     try {
-      const payload = await requestPage(url);
+      const payload = await requestPage(url, controller ? controller.signal : undefined);
 
       if (runtime.navigationRequestId !== requestId) {
+        outcome = 'stale';
+        emitRuntimeHook('volt:request-stale', requestHookDetail('navigation', requestMeta, {
+          url: url,
+          finalUrl: payload.finalUrl,
+          outcome: outcome,
+        }), document);
         return;
       }
 
@@ -1196,6 +2268,22 @@
         historyMode: settings.historyMode || 'push',
       }, document);
     } catch (error) {
+      if (isAbortError(error)) {
+        outcome = 'aborted';
+        emitRuntimeHook('volt:request-abort', requestHookDetail('navigation', requestMeta, {
+          url: url,
+          outcome: outcome,
+        }), document);
+        return;
+      }
+
+      outcome = 'error';
+      emitRuntimeHook('volt:request-error', requestHookDetail('navigation', requestMeta, {
+        url: url,
+        message: error && error.message ? error.message : 'Navigation failed.',
+        outcome: outcome,
+      }), document);
+
       if (settings.fallback !== false) {
         window.location.assign(url);
         return;
@@ -1203,9 +2291,18 @@
 
       throw error;
     } finally {
+      if (runtime.navigationController === controller) {
+        runtime.navigationController = null;
+      }
+
       if (runtime.navigationRequestId === requestId) {
         setNavigationState(false, settings.trigger || null);
       }
+
+      emitRuntimeHook('volt:request-finish', requestHookDetail('navigation', requestMeta, {
+        url: url,
+        outcome: outcome,
+      }), document);
     }
   }
 
@@ -1219,7 +2316,40 @@
       return;
     }
 
-    setLoadingState(root, true, trigger);
+    const state = componentRequestState(component);
+    const previousController = state && state.controller ? state.controller : null;
+    const requestId = state ? state.requestId + 1 : 1;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const requestMeta = {
+      component: component,
+      action: action,
+      requestId: requestId,
+      trigger: triggerDescriptor(trigger),
+    };
+
+    if (state) {
+      state.requestId = requestId;
+      state.controller = controller;
+    }
+
+    if (previousController) {
+      previousController.abort();
+    }
+
+    clearDirtyDebounce(root);
+    setErrorState(component, false, requestMeta);
+    setSuccessState(component, false, Object.assign({}, requestMeta, {
+      reason: 'request',
+    }));
+
+    if (trigger && 'disabled' in trigger) {
+      trigger.disabled = true;
+    }
+
+    scheduleLoadingDelay(root, trigger, requestMeta);
+    emitRuntimeHook('volt:request-start', requestHookDetail('action', requestMeta), resolveRuntimeRoot(root, component) || document);
+
+    let outcome = 'success';
 
     try {
       const response = await fetch(endpoint, {
@@ -1229,6 +2359,8 @@
           'X-Requested-With': 'VoltStack',
           'X-CSRF-TOKEN': csrf || '',
         },
+        credentials: 'same-origin',
+        signal: controller ? controller.signal : undefined,
         body: JSON.stringify({
           component: component,
           action: action,
@@ -1238,9 +2370,28 @@
         }),
       });
 
-      const payload = await response.json();
+      let payload = null;
+
+      try {
+        payload = await response.json();
+      } catch (error) {
+        payload = null;
+      }
+
+      if (state && state.requestId !== requestId) {
+        outcome = 'stale';
+        emitRuntimeHook('volt:request-stale', requestHookDetail('action', requestMeta, {
+          status: response.status,
+          outcome: outcome,
+        }), resolveRuntimeRoot(root, component) || document);
+        return;
+      }
 
       if (!response.ok) {
+        outcome = 'error';
+        const errorDetail = responseErrorDetail(response, payload, requestMeta);
+        setErrorState(component, true, errorDetail);
+        emitRuntimeHook('volt:request-error', errorDetail, resolveRuntimeRoot(root, component) || document);
         return;
       }
 
@@ -1256,15 +2407,18 @@
         usedHtmlFallback: false,
       };
 
-      const effectsResult = await withPreservedUiState(root, async function () {
-        const result = await applyEffects(root, payload.effects);
+      const patchRoot = resolveRuntimeRoot(root, component) || root;
 
-        if (!result.preventsHtmlFallback && payload.html && root.isConnected) {
+      await withPreservedUiState(patchRoot, async function () {
+        const activeRoot = resolveRuntimeRoot(root, component) || root;
+        const result = await applyEffects(activeRoot, payload.effects);
+
+        if (!result.preventsHtmlFallback && payload.html && activeRoot.isConnected) {
           patchMeta.usedHtmlFallback = true;
-          root.outerHTML = payload.html;
+          activeRoot.outerHTML = payload.html;
         }
 
-        const updatedRoot = root.isConnected ? root : findRootByComponent(component);
+        const updatedRoot = resolveRuntimeRoot(activeRoot, component);
 
         if (payload.snapshot && updatedRoot) {
           updatedRoot.setAttribute('data-volt-snapshot', JSON.stringify(payload.snapshot));
@@ -1272,13 +2426,38 @@
 
         return result;
       }, patchMeta);
+
+      setDirtyState(component, false, requestMeta);
+      setSuccessState(component, true, requestMeta);
+    } catch (error) {
+      if (isAbortError(error)) {
+        outcome = 'aborted';
+        emitRuntimeHook('volt:request-abort', requestHookDetail('action', requestMeta, {
+          outcome: outcome,
+        }), resolveRuntimeRoot(root, component) || document);
+        return;
+      }
+
+      outcome = 'error';
+      const errorDetail = exceptionErrorDetail(error, requestMeta);
+      setErrorState(component, true, errorDetail);
+      emitRuntimeHook('volt:request-error', errorDetail, resolveRuntimeRoot(root, component) || document);
+      throw error;
     } finally {
-      setLoadingState(root, false, trigger);
+      if (state && state.requestId === requestId) {
+        state.controller = null;
+        clearLoadingDelay(resolveRuntimeRoot(root, component) || root);
+        setLoadingState(component, false, trigger, requestMeta);
+      }
+
+      emitRuntimeHook('volt:request-finish', requestHookDetail('action', requestMeta, {
+        outcome: outcome,
+      }), resolveRuntimeRoot(root, component) || document);
     }
   }
 
   document.addEventListener('input', function (event) {
-    const element = event.target.closest('[volt-model], [volt\\:model]');
+    const element = event.target.closest('input, textarea, select');
 
     if (!element) {
       return;
@@ -1290,20 +2469,23 @@
       return;
     }
 
+    const component = root.getAttribute('data-volt-component');
     const snapshot = readSnapshot(root);
-
-    if (!snapshot || !snapshot.state) {
-      return;
-    }
-
     const key = directiveValue(element, ['volt-model', 'volt:model']);
 
-    if (!key) {
-      return;
+    if (snapshot && snapshot.state && key) {
+      snapshot.state[key] = element.type === 'checkbox' ? !!element.checked : element.value;
+      root.setAttribute('data-volt-snapshot', JSON.stringify(snapshot));
     }
 
-    snapshot.state[key] = element.type === 'checkbox' ? !!element.checked : element.value;
-    root.setAttribute('data-volt-snapshot', JSON.stringify(snapshot));
+    scheduleDirtyDebounce(root, {
+      component: component,
+      target: fieldStateTarget(element),
+    });
+    setSuccessState(root, false, {
+      component: component,
+      target: fieldStateTarget(element),
+    });
   });
 
   document.addEventListener('click', function (event) {
@@ -1392,4 +2574,6 @@
       window.location.reload();
     });
   });
+
+  syncAllRuntimeStateDirectives();
 })();
