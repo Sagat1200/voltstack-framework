@@ -13,6 +13,7 @@ use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Component;
 use VoltStack\Runtime\Component\ComponentManager;
 use VoltStack\Runtime\Protocol\ActionEffectOptions;
+use VoltStack\Runtime\Protocol\ActionRuntimePolicyBuilder;
 
 final class ReactiveProtocolTest extends TestCase
 {
@@ -365,6 +366,96 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('title-input', $payload['effects'][3]['target']);
         self::assertSame('demo.saved', $payload['effects'][3]['event']);
         self::assertSame(['count' => 1], $payload['effects'][3]['detail']);
+    }
+
+    public function test_it_allows_runtime_state_policies_to_be_emitted_from_a_policies_callback(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveRuntimePolicyComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveRuntimePolicyComponent::class,
+                'action' => 'save',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(3, $payload['effects']);
+        self::assertSame('html.replace', $payload['effects'][0]['type']);
+
+        self::assertSame('runtime.policy', $payload['effects'][1]['type']);
+        self::assertSame('success', $payload['effects'][1]['state']);
+        self::assertSame('save', $payload['effects'][1]['scopeAction']);
+        self::assertSame('save-form', $payload['effects'][1]['scopeTarget']);
+        self::assertSame('200ms', $payload['effects'][1]['timeout']);
+        self::assertSame('1.2s', $payload['effects'][1]['minDuration']);
+
+        self::assertSame('runtime.policy', $payload['effects'][2]['type']);
+        self::assertSame('dirty', $payload['effects'][2]['state']);
+        self::assertSame('title', $payload['effects'][2]['scopeTarget']);
+        self::assertSame('200ms', $payload['effects'][2]['debounce']);
+    }
+
+    public function test_it_exposes_additional_semantic_runtime_policy_action_shortcuts(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveSemanticRuntimePolicyAliasesComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveSemanticRuntimePolicyAliasesComponent::class,
+                'action' => 'submit',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(5, $payload['effects']);
+        self::assertSame('html.replace', $payload['effects'][0]['type']);
+
+        self::assertSame('runtime.policy', $payload['effects'][1]['type']);
+        self::assertSame('submit', $payload['effects'][1]['scopeAction']);
+        self::assertSame('submit-form', $payload['effects'][1]['scopeTarget']);
+        self::assertSame('success', $payload['effects'][1]['state']);
+
+        self::assertSame('runtime.policy', $payload['effects'][2]['type']);
+        self::assertSame('increment', $payload['effects'][2]['scopeAction']);
+        self::assertSame('counter-panel', $payload['effects'][2]['scopeTarget']);
+        self::assertSame('loading', $payload['effects'][2]['state']);
+
+        self::assertSame('runtime.policy', $payload['effects'][3]['type']);
+        self::assertSame('update', $payload['effects'][3]['scopeAction']);
+        self::assertSame('record-row', $payload['effects'][3]['scopeTarget']);
+        self::assertSame('dirty', $payload['effects'][3]['state']);
+
+        self::assertSame('runtime.policy', $payload['effects'][4]['type']);
+        self::assertSame('delete', $payload['effects'][4]['scopeAction']);
+        self::assertSame('danger-zone', $payload['effects'][4]['scopeTarget']);
+        self::assertSame('error', $payload['effects'][4]['state']);
     }
 
     public function test_it_restores_the_previous_scope_after_a_group_block(): void
@@ -763,6 +854,58 @@ final class TestReactiveMatchedTransitionComponent extends Component
             '<div><span data-volt-target="counter-value">%d</span></div>',
             $this->count,
         );
+    }
+}
+
+final class TestReactiveRuntimePolicyComponent extends Component
+{
+    public bool $saved = false;
+
+    public function save(): ActionEffectOptions
+    {
+        $this->saved = true;
+
+        return ActionEffectOptions::make()
+            ->policies(fn(ActionRuntimePolicyBuilder $policies) => $policies
+                ->onTarget('save-form')
+                ->forSave()
+                ->success('200ms', '1.2s')
+                ->onTarget('title')
+                ->dirty('200ms'));
+    }
+
+    public function render(): string
+    {
+        return sprintf(
+            '<div data-volt-target="save-form"><span data-volt-target="saved-status">%s</span></div>',
+            $this->saved ? 'Saved' : 'Idle',
+        );
+    }
+}
+
+final class TestReactiveSemanticRuntimePolicyAliasesComponent extends Component
+{
+    public function submit(): ActionEffectOptions
+    {
+        return ActionEffectOptions::make()
+            ->policies(fn(ActionRuntimePolicyBuilder $policies) => $policies
+                ->onTarget('submit-form')
+                ->forSubmit()
+                ->success('300ms')
+                ->onTarget('counter-panel')
+                ->forIncrement()
+                ->loading('150ms', '700ms')
+                ->onTarget('record-row')
+                ->forUpdate()
+                ->dirty('200ms')
+                ->onTarget('danger-zone')
+                ->forDelete()
+                ->error('3s'));
+    }
+
+    public function render(): string
+    {
+        return '<div><form data-volt-target="submit-form"></form></div>';
     }
 }
 

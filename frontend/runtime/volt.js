@@ -3,6 +3,7 @@
     navigationRequestId: 0,
     navigationController: null,
     componentRequestStates: new Map(),
+    statePolicies: new Map(),
     loadingDelays: new Map(),
     loadingActivatedAt: new Map(),
     loadingMinClearDelays: new Map(),
@@ -180,6 +181,18 @@
     }
 
     return element.__voltRuntimeDirectiveStore;
+  }
+
+  function componentStatePolicies(component) {
+    if (!component) {
+      return [];
+    }
+
+    if (!runtime.statePolicies.has(component)) {
+      runtime.statePolicies.set(component, []);
+    }
+
+    return runtime.statePolicies.get(component);
   }
 
   function stateDirectiveNames(state, suffix) {
@@ -386,6 +399,12 @@
   }
 
   function parseDirectiveTimeout(value) {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) && value >= 0
+        ? Math.round(value)
+        : null;
+    }
+
     if (typeof value !== 'string' || value.trim() === '') {
       return null;
     }
@@ -409,6 +428,102 @@
     return Math.round(amount * multiplier);
   }
 
+  function runtimePolicyScopeMatches(policyValue, contextValue) {
+    if (typeof policyValue !== 'string' || policyValue === '') {
+      return true;
+    }
+
+    return policyValue === contextValue;
+  }
+
+  function runtimePolicyValueKey(suffix) {
+    switch (suffix) {
+      case 'delay':
+        return 'delay';
+      case 'timeout':
+        return 'timeout';
+      case 'debounce':
+        return 'debounce';
+      case 'min-duration':
+        return 'minDuration';
+      default:
+        return null;
+    }
+  }
+
+  function matchingRuntimePolicyDurations(root, state, suffix, context) {
+    if (!root) {
+      return [];
+    }
+
+    const component = root.getAttribute('data-volt-component') || null;
+    const valueKey = runtimePolicyValueKey(suffix);
+
+    if (!component || !valueKey) {
+      return [];
+    }
+
+    return componentStatePolicies(component).filter(function (policy) {
+      return policy && policy.state === state &&
+        runtimePolicyScopeMatches(policy.scopeAction, context && context.action) &&
+        runtimePolicyScopeMatches(policy.scopeTarget, context && context.target);
+    }).map(function (policy) {
+      return parseDirectiveTimeout(policy[valueKey]);
+    }).filter(function (value) {
+      return value !== null;
+    });
+  }
+
+  function registerRuntimePolicy(root, effect) {
+    if (!root || !effect || effect.type !== 'runtime.policy' || typeof effect.state !== 'string' || effect.state === '') {
+      return false;
+    }
+
+    const component = root.getAttribute('data-volt-component') || null;
+
+    if (!component) {
+      return false;
+    }
+
+    const normalized = {
+      state: effect.state,
+      scopeAction: typeof effect.scopeAction === 'string' && effect.scopeAction !== ''
+        ? effect.scopeAction
+        : null,
+      scopeTarget: typeof effect.scopeTarget === 'string' && effect.scopeTarget !== ''
+        ? effect.scopeTarget
+        : null,
+      delay: parseDirectiveTimeout(effect.delay),
+      timeout: parseDirectiveTimeout(effect.timeout),
+      debounce: parseDirectiveTimeout(effect.debounce),
+      minDuration: parseDirectiveTimeout(effect.minDuration),
+    };
+    const hasValues = ['delay', 'timeout', 'debounce', 'minDuration'].some(function (key) {
+      return normalized[key] !== null;
+    });
+    const signature = [
+      normalized.state,
+      normalized.scopeAction || '',
+      normalized.scopeTarget || '',
+    ].join('|');
+    const store = componentStatePolicies(component).filter(function (policy) {
+      const policySignature = [
+        policy.state,
+        policy.scopeAction || '',
+        policy.scopeTarget || '',
+      ].join('|');
+
+      return policySignature !== signature;
+    });
+
+    if (hasValues) {
+      store.push(normalized);
+    }
+
+    runtime.statePolicies.set(component, store);
+    return true;
+  }
+
   function matchingStateDirectiveElements(root, state, suffix, active, contextOverride) {
     const context = contextOverride || runtimeStateContext(root, state);
     const names = stateDirectiveNames(state, suffix);
@@ -430,12 +545,14 @@
     }).filter(function (value) {
       return value !== null;
     });
+    const policyValues = matchingRuntimePolicyDurations(root, state, suffix, context || runtimeStateContext(root, state));
+    const allValues = values.concat(policyValues);
 
-    if (values.length === 0) {
+    if (allValues.length === 0) {
       return null;
     }
 
-    return Math.min.apply(null, values);
+    return Math.min.apply(null, allValues);
   }
 
   function resolveStateDirectiveTimeout(root, state) {
@@ -711,12 +828,12 @@
   }
 
   function syncRuntimeStateDirective(root, state, active) {
-    const showSelector = directiveSelector(stateDirectiveNames(state));
-    const hideSelector = directiveSelector(stateDirectiveNames(state, 'hide'));
-    const classSelector = directiveSelector(stateDirectiveNames(state, 'class'));
-    const attrSelector = directiveSelector(stateDirectiveNames(state, 'attr'));
+    const showNames = stateDirectiveNames(state);
+    const hideNames = stateDirectiveNames(state, 'hide');
+    const classNames = stateDirectiveNames(state, 'class');
+    const attrNames = stateDirectiveNames(state, 'attr');
 
-    collectDirectiveElements(root, showSelector).forEach(function (element) {
+    collectElementsWithDirectiveAttributes(root, showNames).forEach(function (element) {
       applyDirectiveVisibility(
         element,
         state,
@@ -725,7 +842,7 @@
       );
     });
 
-    collectDirectiveElements(root, hideSelector).forEach(function (element) {
+    collectElementsWithDirectiveAttributes(root, hideNames).forEach(function (element) {
       applyDirectiveVisibility(
         element,
         state,
@@ -734,7 +851,7 @@
       );
     });
 
-    collectDirectiveElements(root, classSelector).forEach(function (element) {
+    collectElementsWithDirectiveAttributes(root, classNames).forEach(function (element) {
       applyDirectiveClasses(
         element,
         stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
@@ -742,7 +859,7 @@
       );
     });
 
-    collectDirectiveElements(root, attrSelector).forEach(function (element) {
+    collectElementsWithDirectiveAttributes(root, attrNames).forEach(function (element) {
       applyDirectiveAttributes(
         element,
         state,
@@ -2136,6 +2253,22 @@
       case 'dispatch.event':
         dispatchRuntimeEvent(effect, target);
         return createEffectResult(root, effect, target, true, false);
+
+      case 'runtime.policy':
+        {
+          const component = root && root.getAttribute
+            ? root.getAttribute('data-volt-component')
+            : null;
+          const activeRoot = resolveRuntimeRoot(root, component) || root;
+
+          return createEffectResult(
+            activeRoot,
+            effect,
+            activeRoot,
+            registerRuntimePolicy(activeRoot, effect),
+            false
+          );
+        }
 
       case 'navigate':
         if (typeof effect.url === 'string' && effect.url !== '') {

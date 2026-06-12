@@ -219,6 +219,54 @@ final class ActionManualEffectBuilder
         return $this->scroll($options);
     }
 
+    /**
+     * @param array<string, mixed> $policy
+     */
+    public function runtimePolicy(string $state, array $policy = [], ?string $action = null): self
+    {
+        $this->options->runtimePolicy($state, $policy, $action, $this->target);
+
+        return $this;
+    }
+
+    public function loadingPolicy(
+        string|int|float|null $delay = null,
+        string|int|float|null $minDuration = null,
+        ?string $action = null,
+    ): self {
+        $this->options->loadingPolicy($delay, $minDuration, $action, $this->target);
+
+        return $this;
+    }
+
+    public function successPolicy(
+        string|int|float|null $timeout = null,
+        string|int|float|null $minDuration = null,
+        ?string $action = null,
+    ): self {
+        $this->options->successPolicy($timeout, $minDuration, $action, $this->target);
+
+        return $this;
+    }
+
+    public function errorPolicy(
+        string|int|float|null $timeout = null,
+        ?string $action = null,
+    ): self {
+        $this->options->errorPolicy($timeout, $action, $this->target);
+
+        return $this;
+    }
+
+    public function dirtyPolicy(
+        string|int|float|null $debounce = null,
+        ?string $action = null,
+    ): self {
+        $this->options->dirtyPolicy($debounce, $action, $this->target);
+
+        return $this;
+    }
+
     public function end(): ActionEffectOptions
     {
         return $this->options;

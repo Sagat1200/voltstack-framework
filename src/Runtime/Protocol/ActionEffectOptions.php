@@ -91,11 +91,39 @@ final class ActionEffectOptions
     }
 
     /**
+     * Allows a typed callback to configure manual effects with IDE-friendly autocompletion.
+     *
+     * Preferred usage:
+     * `->effects(fn(ActionManualEffectBuilder $effects) => $effects->onTarget('title')->focus())`
+     *
+     * If the callback is typed as `self`, the options instance is passed instead.
+     *
      * @param (callable(self|ActionManualEffectBuilder): (self|ActionManualEffectBuilder|void))|null $callback
      */
     public function effects(?callable $callback = null): ActionManualEffectBuilder|self
     {
         $builder = new ActionManualEffectBuilder($this);
+
+        if ($callback === null) {
+            return $builder;
+        }
+
+        return $this->invokeBlock($callback, $builder);
+    }
+
+    /**
+     * Allows a typed callback to configure runtime policies with IDE-friendly autocompletion.
+     *
+     * Preferred usage:
+     * `->policies(fn(ActionRuntimePolicyBuilder $policies) => $policies->forSave()->success())`
+     *
+     * If the callback is typed as `self`, the options instance is passed instead.
+     *
+     * @param (callable(self|ActionRuntimePolicyBuilder): (self|ActionRuntimePolicyBuilder|void))|null $callback
+     */
+    public function policies(?callable $callback = null): ActionRuntimePolicyBuilder|self
+    {
+        $builder = new ActionRuntimePolicyBuilder($this);
 
         if ($callback === null) {
             return $builder;
@@ -133,6 +161,16 @@ final class ActionEffectOptions
         return $this;
     }
 
+    /**
+     * Allows a typed callback to configure transition rules with IDE-friendly autocompletion.
+     *
+     * Preferred usage:
+     * `->transitions(fn(ActionTransitionBuilder $transitions) => $transitions->onTarget('count')->forTextUpdate()->pop())`
+     *
+     * If the callback is typed as `self`, the options instance is passed instead.
+     *
+     * @param array<string, mixed>|(callable(self|ActionTransitionBuilder): (self|ActionTransitionBuilder|void))|null $transitions
+     */
     public function transitions(
         array|callable|null $transitions = null,
         ?string $type = null,
@@ -329,6 +367,85 @@ final class ActionEffectOptions
             ...$this->effectTargetPayload($target, $selector),
             ...$options,
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $policy
+     */
+    public function runtimePolicy(
+        string $state,
+        array $policy = [],
+        ?string $action = null,
+        ?string $target = null,
+    ): self {
+        $payload = ['state' => $state];
+        $scopedTarget = $target ?? $this->scopedTarget;
+
+        if (is_string($action) && $action !== '') {
+            $payload['scopeAction'] = $action;
+        }
+
+        if (is_string($scopedTarget) && $scopedTarget !== '') {
+            $payload['scopeTarget'] = $scopedTarget;
+        }
+
+        foreach (['delay', 'timeout', 'debounce', 'minDuration'] as $key) {
+            if (! array_key_exists($key, $policy) || $policy[$key] === null) {
+                continue;
+            }
+
+            $payload[$key] = $policy[$key];
+        }
+
+        if (count($payload) === 1) {
+            return $this;
+        }
+
+        return $this->effect('runtime.policy', $payload);
+    }
+
+    public function loadingPolicy(
+        string|int|float|null $delay = null,
+        string|int|float|null $minDuration = null,
+        ?string $action = null,
+        ?string $target = null,
+    ): self {
+        return $this->runtimePolicy('loading', [
+            'delay' => $delay,
+            'minDuration' => $minDuration,
+        ], $action, $target);
+    }
+
+    public function successPolicy(
+        string|int|float|null $timeout = null,
+        string|int|float|null $minDuration = null,
+        ?string $action = null,
+        ?string $target = null,
+    ): self {
+        return $this->runtimePolicy('success', [
+            'timeout' => $timeout,
+            'minDuration' => $minDuration,
+        ], $action, $target);
+    }
+
+    public function errorPolicy(
+        string|int|float|null $timeout = null,
+        ?string $action = null,
+        ?string $target = null,
+    ): self {
+        return $this->runtimePolicy('error', [
+            'timeout' => $timeout,
+        ], $action, $target);
+    }
+
+    public function dirtyPolicy(
+        string|int|float|null $debounce = null,
+        ?string $action = null,
+        ?string $target = null,
+    ): self {
+        return $this->runtimePolicy('dirty', [
+            'debounce' => $debounce,
+        ], $action, $target);
     }
 
     /**
