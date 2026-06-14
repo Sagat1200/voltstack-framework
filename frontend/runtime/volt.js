@@ -2,6 +2,14 @@
   const runtime = {
     navigationRequestId: 0,
     navigationController: null,
+    navigationCache: new Map(),
+    navigationInFlight: new Map(),
+    navigationPreloadHints: new Set(),
+    navigationPrefetchInterest: new Map(),
+    navigationPrefetchElements: new WeakMap(),
+    navigationViewportObserver: null,
+    navigationViewportObserved: new WeakSet(),
+    navigationHeuristicHandle: null,
     componentRequestStates: new Map(),
     statePolicies: new Map(),
     loadingDelays: new Map(),
@@ -13,6 +21,13 @@
     errorTimeouts: new Map(),
     dirtyDebounces: new Map(),
   };
+
+  const NAVIGATION_CACHE_TTL = 5000;
+  const NAVIGATION_CACHE_MAX_ENTRIES = 10;
+  const NAVIGATION_HEURISTIC_DELAY = 180;
+  const NAVIGATION_HEURISTIC_VIEWPORT_MARGIN = 240;
+  const NAVIGATION_PREFETCH_SELECTOR = 'a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]';
+  const NAVIGATION_CACHE_CONTROL_META_NAMES = ['volt-cache-control', 'volt:navigation-cache'];
 
   function componentRequestState(component) {
     if (!component) {
@@ -116,6 +131,960 @@
     }
 
     return null;
+  }
+
+  function normalizeNavigationUrl(url) {
+    try {
+      return new URL(url, window.location.href).toString();
+    } catch (error) {
+      return String(url || '');
+    }
+  }
+
+  function navigationUrlForElement(link) {
+    if (!link || !link.getAttribute) {
+      return null;
+    }
+
+    const href = link.getAttribute('href');
+
+    if (!href || href.startsWith('#')) {
+      return null;
+    }
+
+    try {
+      const url = new URL(href, window.location.href);
+
+      if (!sameOrigin(url)) {
+        return null;
+      }
+
+      return url.toString();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function prefetchModeTokensForElement(link) {
+    const attribute = directiveAttribute(link, ['volt-prefetch', 'volt:prefetch']);
+
+    if (!attribute) {
+      return ['auto'];
+    }
+
+    const value = (attribute.value || '').trim().toLowerCase();
+
+    if (value === '') {
+      return ['auto'];
+    }
+
+    return value.split(/[\s,|]+/).filter(function (token) {
+      return token !== '';
+    });
+  }
+
+  function linkAllowsPrefetchSource(link, source) {
+    const tokens = prefetchModeTokensForElement(link);
+
+    if (tokens.includes('none') || tokens.includes('off') || tokens.includes('false')) {
+      return false;
+    }
+
+    if (tokens.includes('auto') || tokens.includes('all') || tokens.includes('eager') || tokens.includes('true')) {
+      return true;
+    }
+
+    if (source === 'intent') {
+      return tokens.includes('hover') || tokens.includes('focus') || tokens.includes('intent');
+    }
+
+    if (source === 'viewport') {
+      return tokens.includes('viewport') || tokens.includes('visible');
+    }
+
+    if (source === 'idle') {
+      return tokens.includes('idle') || tokens.includes('heuristic');
+    }
+
+    return false;
+  }
+
+  function normalizeHeadAssetUrl(url) {
+    if (!url) {
+      return '';
+    }
+
+    try {
+      return new URL(url, window.location.href).toString();
+    } catch (error) {
+      return String(url);
+    }
+  }
+
+  function parseNavigationDocument(html) {
+    const parser = new DOMParser();
+    return parser.parseFromString(html, 'text/html');
+  }
+
+  function navigationCacheControlTokens(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return [];
+    }
+
+    return value.trim().toLowerCase().split(/[\s,|;]+/).filter(function (token) {
+      return token !== '';
+    });
+  }
+
+  function mergeNavigationCacheControl(baseControl, overrideControl) {
+    const base = baseControl && typeof baseControl === 'object'
+      ? baseControl
+      : {};
+    const override = overrideControl && typeof overrideControl === 'object'
+      ? overrideControl
+      : {};
+
+    return {
+      mode: override.mode && override.mode !== 'default'
+        ? override.mode
+        : (base.mode || 'default'),
+      ttl: override.ttl !== null && typeof override.ttl !== 'undefined'
+        ? override.ttl
+        : (typeof base.ttl === 'number' ? base.ttl : null),
+      raw: override.raw || base.raw || '',
+      source: override.source || base.source || 'default',
+    };
+  }
+
+  function parseNavigationCacheControl(value, source) {
+    const tokens = navigationCacheControlTokens(value);
+    const control = {
+      mode: 'default',
+      ttl: null,
+      raw: typeof value === 'string' ? value : '',
+      source: source || 'default',
+    };
+
+    tokens.forEach(function (token) {
+      if (token === 'no-store' || token === 'store=none') {
+        control.mode = 'no-store';
+        return;
+      }
+
+      if (control.mode !== 'no-store' && (
+        token === 'reload' ||
+        token === 'refresh' ||
+        token === 'network-only' ||
+        token === 'no-cache' ||
+        token === 'revalidate' ||
+        token === 'bypass'
+      )) {
+        control.mode = 'reload';
+        return;
+      }
+
+      if (control.mode === 'default' && (
+        token === 'invalidate' ||
+        token === 'reset' ||
+        token === 'refresh-cache'
+      )) {
+        control.mode = 'invalidate';
+        return;
+      }
+
+      const equalsMatch = token.match(/^(ttl|max-age)=(.+)$/);
+      const colonMatch = token.match(/^(ttl|max-age):(.+)$/);
+      const ttlMatch = equalsMatch || colonMatch;
+
+      if (!ttlMatch) {
+        return;
+      }
+
+      const parsedTtl = parseDirectiveTimeout(ttlMatch[2]);
+
+      if (parsedTtl !== null) {
+        control.ttl = parsedTtl;
+      }
+    });
+
+    return control;
+  }
+
+  function navigationCacheControlForElement(element) {
+    if (!element || typeof element.getAttribute !== 'function') {
+      return parseNavigationCacheControl('', 'default');
+    }
+
+    const attribute = directiveAttribute(element, ['volt-cache', 'volt:cache', 'data-volt-cache']);
+
+    if (!attribute) {
+      return parseNavigationCacheControl('', 'default');
+    }
+
+    return parseNavigationCacheControl(attribute.value, 'element');
+  }
+
+  function navigationCacheControlForDocument(doc) {
+    if (!doc || !doc.head || typeof doc.head.querySelector !== 'function') {
+      return parseNavigationCacheControl('', 'default');
+    }
+
+    for (let index = 0; index < NAVIGATION_CACHE_CONTROL_META_NAMES.length; index += 1) {
+      const name = NAVIGATION_CACHE_CONTROL_META_NAMES[index];
+      const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+
+      if (meta) {
+        return parseNavigationCacheControl(meta.getAttribute('content') || '', 'document');
+      }
+    }
+
+    return parseNavigationCacheControl('', 'default');
+  }
+
+  function shouldReadNavigationCache(control) {
+    const mode = control && control.mode ? control.mode : 'default';
+    return mode !== 'reload' && mode !== 'no-store' && mode !== 'invalidate';
+  }
+
+  function shouldStoreNavigationCache(control) {
+    const mode = control && control.mode ? control.mode : 'default';
+    return mode !== 'no-store';
+  }
+
+  function shouldPrefetchNavigation(control) {
+    const mode = control && control.mode ? control.mode : 'default';
+    return mode !== 'no-store';
+  }
+
+  function navigationCacheTtlForControl(control) {
+    if (control && typeof control.ttl === 'number' && control.ttl >= 0) {
+      return control.ttl;
+    }
+
+    return NAVIGATION_CACHE_TTL;
+  }
+
+  function navigationCacheAliases(entryOrUrl, finalUrl) {
+    const aliases = [];
+
+    function pushAlias(value) {
+      const normalized = normalizeNavigationUrl(value);
+
+      if (!normalized || aliases.indexOf(normalized) !== -1) {
+        return;
+      }
+
+      aliases.push(normalized);
+    }
+
+    if (entryOrUrl && typeof entryOrUrl === 'object') {
+      if (Array.isArray(entryOrUrl.aliases)) {
+        entryOrUrl.aliases.forEach(pushAlias);
+      }
+
+      pushAlias(entryOrUrl.url);
+      pushAlias(entryOrUrl.finalUrl);
+      return aliases;
+    }
+
+    pushAlias(entryOrUrl);
+    pushAlias(finalUrl);
+    return aliases;
+  }
+
+  function uniqueNavigationCacheEntries() {
+    const entries = [];
+    const seen = new Set();
+
+    runtime.navigationCache.forEach(function (entry) {
+      if (!entry || !entry.cacheKey || seen.has(entry.cacheKey)) {
+        return;
+      }
+
+      seen.add(entry.cacheKey);
+      entries.push(entry);
+    });
+
+    return entries;
+  }
+
+  function deleteNavigationCacheEntry(entry) {
+    if (!entry) {
+      return 0;
+    }
+
+    let removed = 0;
+
+    navigationCacheAliases(entry).forEach(function (alias) {
+      if (runtime.navigationCache.get(alias) === entry) {
+        runtime.navigationCache.delete(alias);
+        removed += 1;
+      }
+    });
+
+    return removed;
+  }
+
+  function emitNavigationCacheEvent(name, detail) {
+    emitRuntimeHook(name, Object.assign({
+      cacheEntries: uniqueNavigationCacheEntries().length,
+    }, detail || {}), document);
+  }
+
+  function invalidateNavigationCache(url, reason, extra) {
+    if (typeof url !== 'string' || url === '') {
+      return 0;
+    }
+
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const details = extra && typeof extra === 'object' ? extra : {};
+    const entry = runtime.navigationCache.get(normalizedUrl);
+    const aliases = entry ? navigationCacheAliases(entry) : [normalizedUrl];
+    const removed = entry
+      ? deleteNavigationCacheEntry(entry)
+      : runtime.navigationCache.delete(normalizedUrl)
+        ? 1
+        : 0;
+
+    if (removed > 0 && details.silent !== true) {
+      emitNavigationCacheEvent('volt:cache-invalidate', Object.assign({
+        url: normalizedUrl,
+        aliases: aliases,
+        reason: reason || 'manual',
+        removed: removed,
+      }, details));
+    }
+
+    return removed;
+  }
+
+  function clearNavigationCache(reason, extra) {
+    const removed = uniqueNavigationCacheEntries().length;
+
+    if (removed === 0) {
+      return 0;
+    }
+
+    runtime.navigationCache.clear();
+    emitNavigationCacheEvent('volt:cache-clear', Object.assign({
+      reason: reason || 'manual',
+      removed: removed,
+    }, extra || {}));
+
+    return removed;
+  }
+
+  function cloneNavigationPayload(entry) {
+    if (!entry || typeof entry !== 'object' || typeof entry.html !== 'string') {
+      return null;
+    }
+
+    return {
+      url: entry.url,
+      finalUrl: entry.finalUrl,
+      html: entry.html,
+      document: parseNavigationDocument(entry.html),
+      fetchedAt: entry.fetchedAt,
+      lastAccessedAt: entry.lastAccessedAt,
+      expiresAt: entry.expiresAt,
+      source: entry.source || 'cache',
+      cacheKey: entry.cacheKey || null,
+      aliases: navigationCacheAliases(entry),
+      cacheControl: entry.cacheControl || parseNavigationCacheControl('', 'default'),
+    };
+  }
+
+  function pruneNavigationCache() {
+    const now = Date.now();
+
+    uniqueNavigationCacheEntries().forEach(function (entry) {
+      if (!entry || typeof entry.expiresAt !== 'number' || entry.expiresAt <= now) {
+        deleteNavigationCacheEntry(entry);
+      }
+    });
+
+    const entries = uniqueNavigationCacheEntries().sort(function (left, right) {
+      const leftStamp = typeof left.lastAccessedAt === 'number' ? left.lastAccessedAt : left.fetchedAt;
+      const rightStamp = typeof right.lastAccessedAt === 'number' ? right.lastAccessedAt : right.fetchedAt;
+      return leftStamp - rightStamp;
+    });
+
+    while (entries.length > NAVIGATION_CACHE_MAX_ENTRIES) {
+      const oldestEntry = entries.shift();
+
+      if (!oldestEntry) {
+        break;
+      }
+
+      deleteNavigationCacheEntry(oldestEntry);
+    }
+  }
+
+  function getCachedNavigation(url) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const entry = runtime.navigationCache.get(normalizedUrl);
+
+    if (!entry) {
+      return null;
+    }
+
+    if (typeof entry.expiresAt !== 'number' || entry.expiresAt <= Date.now()) {
+      deleteNavigationCacheEntry(entry);
+      emitNavigationCacheEvent('volt:cache-invalidate', {
+        url: normalizedUrl,
+        aliases: navigationCacheAliases(entry),
+        reason: 'ttl',
+      });
+      return null;
+    }
+
+    entry.lastAccessedAt = Date.now();
+
+    return cloneNavigationPayload(entry);
+  }
+
+  function setCachedNavigation(url, payload, source, control) {
+    if (!payload || typeof payload.html !== 'string' || payload.html === '') {
+      return null;
+    }
+
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const finalUrl = normalizeNavigationUrl(payload.finalUrl || normalizedUrl);
+    const cacheControl = mergeNavigationCacheControl(
+      control,
+      payload.cacheControl && typeof payload.cacheControl === 'object'
+        ? payload.cacheControl
+        : null,
+    );
+    const ttl = navigationCacheTtlForControl(cacheControl);
+
+    if (!shouldStoreNavigationCache(cacheControl) || ttl <= 0) {
+      invalidateNavigationCache(normalizedUrl, 'no-store', {
+        finalUrl: finalUrl,
+      });
+
+      if (finalUrl !== normalizedUrl) {
+        invalidateNavigationCache(finalUrl, 'no-store', {
+          requestedUrl: normalizedUrl,
+        });
+      }
+
+      return null;
+    }
+
+    const now = Date.now();
+    const aliases = navigationCacheAliases(normalizedUrl, finalUrl);
+
+    aliases.forEach(function (alias) {
+      invalidateNavigationCache(alias, 'replace', {
+        requestedUrl: normalizedUrl,
+        finalUrl: finalUrl,
+        silent: true,
+      });
+    });
+
+    const entry = {
+      cacheKey: aliases.join('::'),
+      aliases: aliases,
+      url: normalizedUrl,
+      finalUrl: finalUrl,
+      html: payload.html,
+      fetchedAt: now,
+      lastAccessedAt: now,
+      expiresAt: now + ttl,
+      source: source || 'prefetch',
+      cacheControl: cacheControl,
+    };
+
+    aliases.forEach(function (alias) {
+      runtime.navigationCache.set(alias, entry);
+    });
+    pruneNavigationCache();
+    emitNavigationCacheEvent('volt:cache-store', {
+      url: normalizedUrl,
+      finalUrl: finalUrl,
+      aliases: aliases,
+      source: entry.source,
+      ttl: ttl,
+      mode: cacheControl.mode,
+    });
+
+    return cloneNavigationPayload(entry);
+  }
+
+  function preloadDescriptorFromHeadNode(node) {
+    if (!node || node.nodeType !== 1) {
+      return null;
+    }
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === 'link') {
+      const rel = (node.getAttribute('rel') || '').toLowerCase();
+      const href = normalizeHeadAssetUrl(node.getAttribute('href') || '');
+
+      if (!href) {
+        return null;
+      }
+
+      if (rel === 'stylesheet') {
+        return {
+          key: 'style:' + href,
+          rel: 'preload',
+          href: href,
+          as: 'style',
+          crossOrigin: node.getAttribute('crossorigin') || null,
+        };
+      }
+
+      if (rel === 'modulepreload') {
+        return {
+          key: 'module:' + href,
+          rel: 'modulepreload',
+          href: href,
+          crossOrigin: node.getAttribute('crossorigin') || null,
+        };
+      }
+
+      return null;
+    }
+
+    if (tag === 'script') {
+      const src = normalizeHeadAssetUrl(node.getAttribute('src') || '');
+      const type = (node.getAttribute('type') || '').toLowerCase();
+
+      if (!src || type !== 'module') {
+        return null;
+      }
+
+      return {
+        key: 'module:' + src,
+        rel: 'modulepreload',
+        href: src,
+        crossOrigin: node.getAttribute('crossorigin') || null,
+      };
+    }
+
+    return null;
+  }
+
+  function documentAlreadyHasHeadAsset(descriptor) {
+    if (!descriptor || !descriptor.href || !document.head) {
+      return false;
+    }
+
+    const href = descriptor.href;
+
+    if (descriptor.as === 'style') {
+      return !!document.head.querySelector('link[rel="stylesheet"][href="' + cssEscape(href) + '"]') ||
+        !!document.head.querySelector('link[rel="preload"][as="style"][href="' + cssEscape(href) + '"]');
+    }
+
+    if (descriptor.rel === 'modulepreload') {
+      return !!document.head.querySelector('link[rel="modulepreload"][href="' + cssEscape(href) + '"]') ||
+        !!document.head.querySelector('script[type="module"][src="' + cssEscape(href) + '"]');
+    }
+
+    if (descriptor.rel === 'preload') {
+      return !!document.head.querySelector(
+        'link[rel="preload"][href="' + cssEscape(href) + '"][as="' + cssEscape(descriptor.as || '') + '"]'
+      );
+    }
+
+    return false;
+  }
+
+  function ensurePreloadHint(descriptor) {
+    if (!descriptor || !descriptor.key || !descriptor.href || !document.head) {
+      return;
+    }
+
+    if (runtime.navigationPreloadHints.has(descriptor.key) || documentAlreadyHasHeadAsset(descriptor)) {
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.setAttribute('href', descriptor.href);
+    link.setAttribute('rel', descriptor.rel);
+    link.setAttribute('data-volt-prefetch-preload', descriptor.key);
+
+    if (descriptor.as) {
+      link.setAttribute('as', descriptor.as);
+    }
+
+    if (descriptor.crossOrigin) {
+      link.setAttribute('crossorigin', descriptor.crossOrigin);
+    }
+
+    document.head.appendChild(link);
+    runtime.navigationPreloadHints.add(descriptor.key);
+  }
+
+  function trackPrefetchInterest(element, url) {
+    if (!element) {
+      return normalizeNavigationUrl(url);
+    }
+
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const previousUrl = runtime.navigationPrefetchElements.get(element);
+
+    if (previousUrl === normalizedUrl) {
+      return normalizedUrl;
+    }
+
+    if (previousUrl) {
+      releasePrefetchInterest(element);
+    }
+
+    runtime.navigationPrefetchElements.set(element, normalizedUrl);
+    runtime.navigationPrefetchInterest.set(
+      normalizedUrl,
+      (runtime.navigationPrefetchInterest.get(normalizedUrl) || 0) + 1,
+    );
+
+    return normalizedUrl;
+  }
+
+  function cancelPrefetch(url) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const entry = runtime.navigationInFlight.get(normalizedUrl);
+
+    if (!entry || entry.source !== 'prefetch' || entry.retained || !entry.controller) {
+      return false;
+    }
+
+    entry.controller.abort();
+    return true;
+  }
+
+  function releasePrefetchInterest(element) {
+    if (!element) {
+      return;
+    }
+
+    const url = runtime.navigationPrefetchElements.get(element);
+
+    if (!url) {
+      return;
+    }
+
+    runtime.navigationPrefetchElements.delete(element);
+
+    const nextCount = (runtime.navigationPrefetchInterest.get(url) || 0) - 1;
+
+    if (nextCount > 0) {
+      runtime.navigationPrefetchInterest.set(url, nextCount);
+      return;
+    }
+
+    runtime.navigationPrefetchInterest.delete(url);
+    cancelPrefetch(url);
+  }
+
+  function preloadCriticalHeadAssets(nextHead) {
+    if (!nextHead || !nextHead.children) {
+      return;
+    }
+
+    Array.from(nextHead.children).forEach(function (node) {
+      const descriptor = preloadDescriptorFromHeadNode(node);
+
+      if (descriptor) {
+        ensurePreloadHint(descriptor);
+      }
+    });
+  }
+
+  function requestNavigationPayload(url, signal, source, options) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const settings = options && typeof options === 'object' ? options : {};
+    const requestedControl = settings.cacheControl && typeof settings.cacheControl === 'object'
+      ? settings.cacheControl
+      : parseNavigationCacheControl('', 'default');
+
+    if (runtime.navigationInFlight.has(normalizedUrl)) {
+      const existing = runtime.navigationInFlight.get(normalizedUrl);
+
+      if (
+        existing &&
+        existing.source === 'prefetch' &&
+        existing.controller &&
+        (requestedControl.mode === 'reload' || requestedControl.mode === 'invalidate' || requestedControl.mode === 'no-store')
+      ) {
+        existing.controller.abort();
+        runtime.navigationInFlight.delete(normalizedUrl);
+      } else {
+        if (source !== 'prefetch') {
+          existing.retained = true;
+          existing.source = 'navigate';
+        }
+
+        return existing.promise.then(function (payload) {
+          if (!shouldStoreNavigationCache(requestedControl)) {
+            invalidateNavigationCache(normalizedUrl, 'no-store', {
+              finalUrl: payload && payload.finalUrl ? payload.finalUrl : normalizedUrl,
+            });
+          }
+
+          return payload;
+        });
+      }
+    }
+
+    const prefetchController = source === 'prefetch' && typeof AbortController === 'function'
+      ? new AbortController()
+      : null;
+    const requestSignal = prefetchController ? prefetchController.signal : signal;
+    const entry = {
+      promise: null,
+      controller: prefetchController,
+      source: source || 'navigate',
+      retained: source !== 'prefetch',
+    };
+    const promise = requestPage(normalizedUrl, requestSignal).then(function (payload) {
+      const responseControl = navigationCacheControlForDocument(payload.document);
+      const effectiveControl = mergeNavigationCacheControl(requestedControl, responseControl);
+      const enrichedPayload = Object.assign({}, payload, {
+        cacheControl: effectiveControl,
+      });
+
+      if (source === 'prefetch' && enrichedPayload.document && enrichedPayload.document.head) {
+        preloadCriticalHeadAssets(enrichedPayload.document.head);
+      }
+
+      const cached = setCachedNavigation(normalizedUrl, enrichedPayload, source || 'navigate', effectiveControl);
+      return cached || enrichedPayload;
+    }).finally(function () {
+      runtime.navigationInFlight.delete(normalizedUrl);
+    });
+
+    entry.promise = promise;
+    runtime.navigationInFlight.set(normalizedUrl, entry);
+
+    return entry.promise;
+  }
+
+  function prefetchPage(url, options) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const settings = options && typeof options === 'object' ? options : {};
+    const cacheControl = settings.cacheControl && typeof settings.cacheControl === 'object'
+      ? settings.cacheControl
+      : parseNavigationCacheControl('', 'default');
+
+    if (!shouldPrefetchNavigation(cacheControl)) {
+      return Promise.resolve(null);
+    }
+
+    if (cacheControl.mode === 'reload' || cacheControl.mode === 'invalidate') {
+      invalidateNavigationCache(normalizedUrl, cacheControl.mode, {
+        source: 'prefetch',
+      });
+    }
+
+    if (shouldReadNavigationCache(cacheControl)) {
+      const cached = getCachedNavigation(normalizedUrl);
+
+      if (cached) {
+        emitNavigationCacheEvent('volt:cache-hit', {
+          url: normalizedUrl,
+          finalUrl: cached.finalUrl,
+          source: 'prefetch',
+          mode: cacheControl.mode,
+        });
+
+        return Promise.resolve(cached);
+      }
+    }
+
+    emitNavigationCacheEvent('volt:cache-miss', {
+      url: normalizedUrl,
+      source: 'prefetch',
+      mode: cacheControl.mode,
+    });
+
+    return requestNavigationPayload(normalizedUrl, undefined, 'prefetch', {
+      cacheControl: cacheControl,
+    });
+  }
+
+  function hasNavigationCacheOrFlight(url) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    return !!getCachedNavigation(normalizedUrl) || runtime.navigationInFlight.has(normalizedUrl);
+  }
+
+  function navigationVisitCacheControl(options) {
+    const settings = options && typeof options === 'object' ? options : {};
+    const optionControl = settings.cacheControl && typeof settings.cacheControl === 'object'
+      ? settings.cacheControl
+      : null;
+    const triggerControl = navigationCacheControlForElement(settings.trigger || null);
+
+    return mergeNavigationCacheControl(triggerControl, optionControl);
+  }
+
+  function ensureNavigationViewportObserver() {
+    if (runtime.navigationViewportObserver || typeof IntersectionObserver !== 'function') {
+      return runtime.navigationViewportObserver;
+    }
+
+    runtime.navigationViewportObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        const element = entry.target;
+        const url = navigationUrlForElement(element);
+
+        if (!url) {
+          runtime.navigationViewportObserver.unobserve(element);
+          return;
+        }
+
+        runtime.navigationViewportObserver.unobserve(element);
+        prefetchPage(url, {
+          cacheControl: navigationCacheControlForElement(element),
+        }).catch(function () {
+          return null;
+        });
+      });
+    }, {
+      root: null,
+      rootMargin: '200px 0px',
+      threshold: 0.01,
+    });
+
+    return runtime.navigationViewportObserver;
+  }
+
+  function registerViewportPrefetchTargets(root) {
+    const observer = ensureNavigationViewportObserver();
+
+    if (!observer || !root || typeof root.querySelectorAll !== 'function') {
+      return;
+    }
+
+    root.querySelectorAll(NAVIGATION_PREFETCH_SELECTOR).forEach(function (link) {
+      if (!navigationUrlForElement(link) || !linkAllowsPrefetchSource(link, 'viewport')) {
+        return;
+      }
+
+      if (runtime.navigationViewportObserved.has(link)) {
+        return;
+      }
+
+      runtime.navigationViewportObserved.add(link);
+      observer.observe(link);
+    });
+  }
+
+  function navigationHeuristicScore(link) {
+    if (!link || typeof link.getBoundingClientRect !== 'function') {
+      return null;
+    }
+
+    const rect = link.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+
+    if ((rect.width <= 0 && rect.height <= 0) ||
+      rect.bottom < (-1 * NAVIGATION_HEURISTIC_VIEWPORT_MARGIN) ||
+      rect.top > viewportHeight + NAVIGATION_HEURISTIC_VIEWPORT_MARGIN) {
+      return null;
+    }
+
+    const insideViewport = rect.bottom >= 0 && rect.top <= viewportHeight;
+
+    if (insideViewport) {
+      return Math.max(rect.top, 0);
+    }
+
+    return 1000 + Math.max(rect.top - viewportHeight, 0);
+  }
+
+  function findHeuristicPrefetchCandidate(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      return null;
+    }
+
+    const currentUrl = normalizeNavigationUrl(window.location.href);
+    let bestCandidate = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    root.querySelectorAll(NAVIGATION_PREFETCH_SELECTOR).forEach(function (link) {
+      const url = navigationUrlForElement(link);
+
+      if (!url ||
+        !linkAllowsPrefetchSource(link, 'idle') ||
+        normalizeNavigationUrl(url) === currentUrl ||
+        hasNavigationCacheOrFlight(url)) {
+        return;
+      }
+
+      const score = navigationHeuristicScore(link);
+
+      if (score === null || score >= bestScore) {
+        return;
+      }
+
+      bestCandidate = link;
+      bestScore = score;
+    });
+
+    return bestCandidate;
+  }
+
+  function cancelHeuristicPrefetch() {
+    if (runtime.navigationHeuristicHandle === null) {
+      return;
+    }
+
+    if (typeof cancelIdleCallback === 'function') {
+      cancelIdleCallback(runtime.navigationHeuristicHandle);
+    } else {
+      clearTimeout(runtime.navigationHeuristicHandle);
+    }
+
+    runtime.navigationHeuristicHandle = null;
+  }
+
+  function scheduleHeuristicPrefetch(root) {
+    cancelHeuristicPrefetch();
+
+    const candidateRoot = root && typeof root.querySelectorAll === 'function' ? root : document;
+    const run = function () {
+      runtime.navigationHeuristicHandle = null;
+
+      if (document.hidden) {
+        return;
+      }
+
+      const candidate = findHeuristicPrefetchCandidate(candidateRoot);
+
+      if (!candidate) {
+        return;
+      }
+
+      const url = navigationUrlForElement(candidate);
+
+      if (!url) {
+        return;
+      }
+
+      prefetchPage(url, {
+        cacheControl: navigationCacheControlForElement(candidate),
+      }).catch(function () {
+        return null;
+      });
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      runtime.navigationHeuristicHandle = requestIdleCallback(run, {
+        timeout: NAVIGATION_HEURISTIC_DELAY,
+      });
+      return;
+    }
+
+    runtime.navigationHeuristicHandle = window.setTimeout(run, NAVIGATION_HEURISTIC_DELAY);
   }
 
   function directiveSelector(names) {
@@ -2140,6 +3109,8 @@
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
       syncAllRuntimeStateDirectives();
+      registerViewportPrefetchTargets(document);
+      scheduleHeuristicPrefetch(document);
     }
   }
 
@@ -2583,17 +3554,18 @@
     }
 
     const html = await response.text();
-    const parser = new DOMParser();
-    const documentPayload = parser.parseFromString(html, 'text/html');
 
     return {
-      document: documentPayload,
+      html: html,
+      document: parseNavigationDocument(html),
       finalUrl: response.url || url,
     };
   }
 
   async function visit(url, options) {
     const settings = options || {};
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const cacheControl = navigationVisitCacheControl(settings);
     const requestId = runtime.navigationRequestId + 1;
     runtime.navigationRequestId = requestId;
     const previousController = runtime.navigationController;
@@ -2610,19 +3582,52 @@
 
     setNavigationState(true, settings.trigger || null);
     emitRuntimeHook('volt:request-start', requestHookDetail('navigation', requestMeta, {
-      url: url,
+      url: normalizedUrl,
       historyMode: settings.historyMode || 'push',
+      cacheMode: cacheControl.mode,
     }), document);
 
     let outcome = 'success';
 
     try {
-      const payload = await requestPage(url, controller ? controller.signal : undefined);
+      if (cacheControl.mode === 'reload' || cacheControl.mode === 'invalidate') {
+        invalidateNavigationCache(normalizedUrl, cacheControl.mode, {
+          source: 'navigate',
+        });
+      }
+
+      const cachedPayload = shouldReadNavigationCache(cacheControl)
+        ? getCachedNavigation(normalizedUrl)
+        : null;
+
+      if (cachedPayload) {
+        emitNavigationCacheEvent('volt:cache-hit', {
+          url: normalizedUrl,
+          finalUrl: cachedPayload.finalUrl,
+          source: 'navigate',
+          mode: cacheControl.mode,
+        });
+      } else {
+        emitNavigationCacheEvent('volt:cache-miss', {
+          url: normalizedUrl,
+          source: 'navigate',
+          mode: cacheControl.mode,
+        });
+      }
+
+      const payload = cachedPayload || await requestNavigationPayload(
+        normalizedUrl,
+        controller ? controller.signal : undefined,
+        'navigate',
+        {
+          cacheControl: cacheControl,
+        },
+      );
 
       if (runtime.navigationRequestId !== requestId) {
         outcome = 'stale';
         emitRuntimeHook('volt:request-stale', requestHookDetail('navigation', requestMeta, {
-          url: url,
+          url: normalizedUrl,
           finalUrl: payload.finalUrl,
           outcome: outcome,
         }), document);
@@ -2639,7 +3644,7 @@
       }
 
       emitRuntimeHook('volt:before-navigate', {
-        url: url,
+        url: normalizedUrl,
         finalUrl: payload.finalUrl,
       }, document);
 
@@ -2647,7 +3652,7 @@
         await applyDocumentPayload(payload.document);
       }, {
         type: 'navigation',
-        url: url,
+        url: normalizedUrl,
         finalUrl: payload.finalUrl,
       });
 
@@ -2662,7 +3667,7 @@
       }
 
       emitRuntimeHook('volt:navigated', {
-        url: url,
+        url: normalizedUrl,
         finalUrl: payload.finalUrl,
         historyMode: settings.historyMode || 'push',
       }, document);
@@ -2670,7 +3675,7 @@
       if (isAbortError(error)) {
         outcome = 'aborted';
         emitRuntimeHook('volt:request-abort', requestHookDetail('navigation', requestMeta, {
-          url: url,
+          url: normalizedUrl,
           outcome: outcome,
         }), document);
         return;
@@ -2678,13 +3683,13 @@
 
       outcome = 'error';
       emitRuntimeHook('volt:request-error', requestHookDetail('navigation', requestMeta, {
-        url: url,
+        url: normalizedUrl,
         message: error && error.message ? error.message : 'Navigation failed.',
         outcome: outcome,
       }), document);
 
       if (settings.fallback !== false) {
-        window.location.assign(url);
+        window.location.assign(normalizedUrl);
         return;
       }
 
@@ -2699,7 +3704,7 @@
       }
 
       emitRuntimeHook('volt:request-finish', requestHookDetail('navigation', requestMeta, {
-        url: url,
+        url: normalizedUrl,
         outcome: outcome,
       }), document);
     }
@@ -2936,6 +3941,75 @@
     });
   });
 
+  document.addEventListener('pointerenter', function (event) {
+    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+
+    if (!navigationTrigger || !navigationTrigger.href || !linkAllowsPrefetchSource(navigationTrigger, 'intent')) {
+      return;
+    }
+
+    const url = trackPrefetchInterest(navigationTrigger, navigationTrigger.href);
+
+    prefetchPage(url, {
+      cacheControl: navigationCacheControlForElement(navigationTrigger),
+    }).catch(function () {
+      return null;
+    });
+  }, true);
+
+  document.addEventListener('pointerleave', function (event) {
+    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+
+    if (!navigationTrigger) {
+      return;
+    }
+
+    releasePrefetchInterest(navigationTrigger);
+  }, true);
+
+  document.addEventListener('focusin', function (event) {
+    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+
+    if (!navigationTrigger || !navigationTrigger.href || !linkAllowsPrefetchSource(navigationTrigger, 'intent')) {
+      return;
+    }
+
+    const url = trackPrefetchInterest(navigationTrigger, navigationTrigger.href);
+
+    prefetchPage(url, {
+      cacheControl: navigationCacheControlForElement(navigationTrigger),
+    }).catch(function () {
+      return null;
+    });
+  });
+
+  document.addEventListener('volt:navigation-cache-invalidate', function (event) {
+    const detail = event && event.detail && typeof event.detail === 'object'
+      ? event.detail
+      : {};
+
+    if (typeof detail.url === 'string' && detail.url !== '') {
+      invalidateNavigationCache(detail.url, detail.reason || 'event', {
+        source: detail.source || 'event',
+      });
+      return;
+    }
+
+    clearNavigationCache(detail.reason || 'event', {
+      source: detail.source || 'event',
+    });
+  });
+
+  document.addEventListener('focusout', function (event) {
+    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+
+    if (!navigationTrigger) {
+      return;
+    }
+
+    releasePrefetchInterest(navigationTrigger);
+  });
+
   document.addEventListener('submit', function (event) {
     const form = event.target.closest('form[volt-submit], form[volt\\:submit]');
 
@@ -2975,4 +4049,6 @@
   });
 
   syncAllRuntimeStateDirectives();
+  registerViewportPrefetchTargets(document);
+  scheduleHeuristicPrefetch(document);
 })();
