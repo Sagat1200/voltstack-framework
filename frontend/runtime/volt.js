@@ -1874,9 +1874,266 @@
     });
   }
 
-  function applyDocumentPayload(doc) {
+  function currentLayoutIdentity() {
+    if (document.body) {
+      const bodyLayout = document.body.getAttribute('data-volt-layout');
+
+      if (bodyLayout) {
+        return bodyLayout;
+      }
+    }
+
+    if (document.documentElement) {
+      const documentLayout = document.documentElement.getAttribute('data-volt-layout');
+
+      if (documentLayout) {
+        return documentLayout;
+      }
+    }
+
+    return null;
+  }
+
+  function documentLayoutIdentity(doc) {
+    if (!doc || typeof doc !== 'object') {
+      return null;
+    }
+
+    if (doc.body) {
+      const bodyLayout = doc.body.getAttribute('data-volt-layout');
+
+      if (bodyLayout) {
+        return bodyLayout;
+      }
+    }
+
+    if (doc.documentElement) {
+      const documentLayout = doc.documentElement.getAttribute('data-volt-layout');
+
+      if (documentLayout) {
+        return documentLayout;
+      }
+    }
+
+    return null;
+  }
+
+  function shouldFallbackForLayoutChange(doc) {
+    const currentLayout = currentLayoutIdentity();
+    const nextLayout = documentLayoutIdentity(doc);
+
+    if (!currentLayout && !nextLayout) {
+      return false;
+    }
+
+    return currentLayout !== nextLayout;
+  }
+
+  function setElementAttributes(target, source) {
+    const nextAttributes = {};
+
+    source.getAttributeNames().forEach(function (name) {
+      nextAttributes[name] = source.getAttribute(name) || '';
+    });
+
+    target.getAttributeNames().forEach(function (name) {
+      if (!Object.prototype.hasOwnProperty.call(nextAttributes, name)) {
+        target.removeAttribute(name);
+      }
+    });
+
+    Object.keys(nextAttributes).forEach(function (name) {
+      target.setAttribute(name, nextAttributes[name]);
+    });
+  }
+
+  function managedHeadNodeKey(node) {
+    if (!node || node.nodeType !== 1) {
+      return null;
+    }
+
+    const explicitKey = node.getAttribute('data-volt-head-key');
+
+    if (explicitKey) {
+      return 'explicit:' + explicitKey;
+    }
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === 'meta') {
+      if (node.hasAttribute('name')) {
+        return 'meta:name:' + (node.getAttribute('name') || '');
+      }
+
+      if (node.hasAttribute('property')) {
+        return 'meta:property:' + (node.getAttribute('property') || '');
+      }
+
+      if (node.hasAttribute('http-equiv')) {
+        return 'meta:http-equiv:' + (node.getAttribute('http-equiv') || '');
+      }
+
+      return null;
+    }
+
+    if (tag === 'link') {
+      const rel = (node.getAttribute('rel') || '').toLowerCase();
+      const href = node.getAttribute('href') || '';
+
+      if (!rel || !href) {
+        return null;
+      }
+
+      return 'link:' + rel + ':' + href + ':' + (node.getAttribute('as') || '');
+    }
+
+    if (tag === 'script') {
+      const src = node.getAttribute('src') || '';
+
+      if (!src) {
+        return null;
+      }
+
+      return 'script:' + (node.getAttribute('type') || '') + ':' + src;
+    }
+
+    if (tag === 'style') {
+      const styleId = node.getAttribute('id') || '';
+
+      if (styleId) {
+        return 'style:id:' + styleId;
+      }
+    }
+
+    return null;
+  }
+
+  function managedHeadEntries(head) {
+    if (!head || !head.children) {
+      return [];
+    }
+
+    const entries = [];
+
+    Array.from(head.children).forEach(function (node) {
+      const key = managedHeadNodeKey(node);
+
+      if (key) {
+        entries.push({
+          key: key,
+          node: node,
+        });
+      }
+    });
+
+    return entries;
+  }
+
+  function syncManagedHeadNode(currentNode, nextNode) {
+    if (!currentNode || !nextNode) {
+      return;
+    }
+
+    setElementAttributes(currentNode, nextNode);
+
+    const tag = currentNode.tagName.toLowerCase();
+
+    if (tag === 'script' || tag === 'style') {
+      const nextContent = nextNode.textContent || '';
+
+      if (currentNode.textContent !== nextContent) {
+        currentNode.textContent = nextContent;
+      }
+    }
+  }
+
+  function waitForManagedHeadNode(node) {
+    if (!node || node.tagName.toLowerCase() !== 'link') {
+      return Promise.resolve();
+    }
+
+    const rel = (node.getAttribute('rel') || '').toLowerCase();
+
+    if (rel !== 'stylesheet') {
+      return Promise.resolve();
+    }
+
+    return new Promise(function (resolve) {
+      let settled = false;
+
+      function finish() {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        resolve();
+      }
+
+      if (node.sheet) {
+        finish();
+        return;
+      }
+
+      node.addEventListener('load', finish, { once: true });
+      node.addEventListener('error', finish, { once: true });
+      window.setTimeout(finish, 1500);
+    });
+  }
+
+  async function reconcileDocumentHead(nextHead) {
+    if (!nextHead || !document.head) {
+      return;
+    }
+
+    const nextEntries = managedHeadEntries(nextHead);
+    const currentEntries = managedHeadEntries(document.head);
+    const nextMap = new Map();
+    const currentMap = new Map();
+    const pendingLoads = [];
+    const hasManagedHead = nextEntries.length > 0;
+
+    nextEntries.forEach(function (entry) {
+      nextMap.set(entry.key, entry.node);
+    });
+
+    currentEntries.forEach(function (entry) {
+      currentMap.set(entry.key, entry.node);
+    });
+
+    if (hasManagedHead) {
+      currentEntries.forEach(function (entry) {
+        if (!nextMap.has(entry.key)) {
+          entry.node.remove();
+        }
+      });
+    }
+
+    nextEntries.forEach(function (entry) {
+      const existing = currentMap.get(entry.key);
+
+      if (existing) {
+        syncManagedHeadNode(existing, entry.node);
+        return;
+      }
+
+      const clone = entry.node.cloneNode(true);
+      document.head.appendChild(clone);
+      pendingLoads.push(waitForManagedHeadNode(clone));
+    });
+
+    if (pendingLoads.length > 0) {
+      await Promise.all(pendingLoads);
+    }
+  }
+
+  async function applyDocumentPayload(doc) {
     if (doc.title) {
       document.title = doc.title;
+    }
+
+    if (doc.head) {
+      await reconcileDocumentHead(doc.head);
     }
 
     if (doc.body) {
@@ -2372,13 +2629,22 @@
         return;
       }
 
+      if (shouldFallbackForLayoutChange(payload.document)) {
+        outcome = 'layout-fallback';
+
+        if (settings.fallback !== false) {
+          window.location.assign(payload.finalUrl);
+          return;
+        }
+      }
+
       emitRuntimeHook('volt:before-navigate', {
         url: url,
         finalUrl: payload.finalUrl,
       }, document);
 
       await withPreservedUiState(document.body, async function () {
-        applyDocumentPayload(payload.document);
+        await applyDocumentPayload(payload.document);
       }, {
         type: 'navigation',
         url: url,

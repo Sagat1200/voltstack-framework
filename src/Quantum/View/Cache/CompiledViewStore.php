@@ -15,8 +15,7 @@ final class CompiledViewStore
     public function __construct(
         private readonly ViewCompiler $compiler,
         private readonly string $compiledPath,
-    ) {
-    }
+    ) {}
 
     public function compiledPathFor(string $sourcePath): string
     {
@@ -56,6 +55,30 @@ final class CompiledViewStore
 
         if (file_put_contents($compiledPath, $header . $compiled) === false) {
             throw new RuntimeException(sprintf('Unable to write compiled view [%s].', $compiledPath));
+        }
+
+        return $compiledPath;
+    }
+
+    public function ensureCompiledString(string $contents, string $cacheKey, ?string $sourcePath = null): string
+    {
+        $compiledPath = $this->compiledPathForInline($cacheKey);
+
+        if (! $this->isInlineExpired($compiledPath, $sourcePath, $contents)) {
+            return $compiledPath;
+        }
+
+        $directory = dirname($compiledPath);
+
+        if (! is_dir($directory) && ! mkdir($directory, 0777, true) && ! is_dir($directory)) {
+            throw new RuntimeException(sprintf('Unable to create compiled view directory [%s].', $directory));
+        }
+
+        $compiled = $this->compiler->compileString($contents, $sourcePath ?? $cacheKey);
+        $header = $this->header($sourcePath ?? $cacheKey, md5($contents));
+
+        if (file_put_contents($compiledPath, $header . $compiled) === false) {
+            throw new RuntimeException(sprintf('Unable to write compiled inline view [%s].', $compiledPath));
         }
 
         return $compiledPath;
@@ -117,12 +140,41 @@ final class CompiledViewStore
         return $sourceModifiedAt >= $compiledModifiedAt;
     }
 
-    private function header(string $sourcePath): string
+    private function compiledPathForInline(string $cacheKey): string
+    {
+        return rtrim($this->compiledPath, '\\/')
+            . DIRECTORY_SEPARATOR
+            . 'inline-'
+            . md5($cacheKey . '|inline|' . $this->compiler->version())
+            . '.php';
+    }
+
+    private function isInlineExpired(string $compiledPath, ?string $sourcePath, string $contents): bool
+    {
+        if (! is_file($compiledPath)) {
+            return true;
+        }
+
+        if ($sourcePath !== null && $sourcePath !== '' && is_file($sourcePath)) {
+            return $this->isExpired($sourcePath, $compiledPath);
+        }
+
+        $compiled = file_get_contents($compiledPath);
+
+        if ($compiled === false) {
+            return true;
+        }
+
+        return ! str_contains($compiled, md5($contents));
+    }
+
+    private function header(string $sourcePath, ?string $contentHash = null): string
     {
         return sprintf(
-            "<?php\n/**\n * VoltStack Compiled View\n * Source: %s\n * Compiler: %s\n */\n?>",
+            "<?php\n/**\n * VoltStack Compiled View\n * Source: %s\n * Compiler: %s\n * Content-Hash: %s\n */\n?>",
             str_replace('\\', '\\\\', $sourcePath),
             $this->compiler->version(),
+            $contentHash ?? md5($sourcePath),
         );
     }
 }

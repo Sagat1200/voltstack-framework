@@ -22,6 +22,33 @@ final class PhpViewEngine
     public function render(string $path, array $data = [], ?ViewRuntime $runtime = null): string
     {
         $compiledPath = $this->compiledViews->ensureCompiled($path);
+        return $this->renderCompiledPath($compiledPath, $path, $data, $runtime);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function renderString(
+        string $contents,
+        array $data = [],
+        ?ViewRuntime $runtime = null,
+        ?string $cacheKey = null,
+        ?string $sourcePath = null,
+    ): string {
+        $compiledPath = $this->compiledViews->ensureCompiledString(
+            $contents,
+            $cacheKey ?? md5($contents),
+            $sourcePath,
+        );
+
+        return $this->renderCompiledPath($compiledPath, $sourcePath ?? '[inline-template]', $data, $runtime);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function renderCompiledPath(string $compiledPath, string $path, array $data = [], ?ViewRuntime $runtime = null): string
+    {
         $runtime ??= new ViewRuntime(app(ViewFactory::class), $data);
 
         ob_start();

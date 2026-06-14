@@ -6,6 +6,7 @@ namespace VoltStack\Runtime\Component;
 
 use Quantum\Http\Request;
 use Quantum\Validation\Validator;
+use Quantum\View\PhpViewEngine;
 use Quantum\View\View;
 use VoltStack\Framework\Application;
 use ReflectionClass;
@@ -33,7 +34,7 @@ abstract class Component
             ));
         }
 
-        return $this->interpolateTemplate($template) . volt_runtime_script();
+        return $this->renderInlineTemplate($template) . volt_runtime_script();
     }
 
     public function setRequest(?Request $request): void
@@ -127,6 +128,54 @@ abstract class Component
         }
 
         return substr($contents, $closeTag + 2);
+    }
+
+    private function inlineTemplateSourcePath(): ?string
+    {
+        $app = Application::getInstance();
+
+        if ($app !== null) {
+            $loader = $app->make(InlinePageLoader::class);
+            $sourcePath = $loader->sourceFileFor(static::class);
+
+            if (is_string($sourcePath) && $sourcePath !== '') {
+                return $sourcePath;
+            }
+        }
+
+        $file = (new ReflectionClass($this))->getFileName();
+
+        return is_string($file) && is_file($file) ? $file : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function inlineTemplateData(): array
+    {
+        $data = $this->viewData();
+
+        foreach (get_object_vars($this) as $key => $value) {
+            $data[$key] = $value;
+        }
+
+        return $data;
+    }
+
+    private function renderInlineTemplate(string $template): string
+    {
+        $app = Application::getInstance();
+
+        if ($app === null) {
+            return $this->interpolateTemplate($template);
+        }
+
+        return $app->make(PhpViewEngine::class)->renderString(
+            $template,
+            $this->inlineTemplateData(),
+            cacheKey: static::class,
+            sourcePath: $this->inlineTemplateSourcePath(),
+        );
     }
 
     private function interpolateTemplate(string $template): string
