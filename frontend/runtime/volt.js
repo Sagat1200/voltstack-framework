@@ -28,6 +28,7 @@
   const NAVIGATION_HEURISTIC_VIEWPORT_MARGIN = 240;
   const NAVIGATION_PREFETCH_SELECTOR = 'a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]';
   const NAVIGATION_CACHE_CONTROL_META_NAMES = ['volt-cache-control', 'volt:navigation-cache'];
+  const NAVIGATION_FRAGMENT_SELECTOR = '[data-volt-preserve], [volt-preserve], [volt\\:preserve]';
 
   function componentRequestState(component) {
     if (!component) {
@@ -2843,6 +2844,183 @@
     });
   }
 
+  function preservedFragmentAttribute(element) {
+    return directiveAttribute(element, ['data-volt-preserve', 'volt-preserve', 'volt:preserve']);
+  }
+
+  function preservedFragmentKey(element) {
+    if (!element || typeof element.getAttribute !== 'function') {
+      return null;
+    }
+
+    const attribute = preservedFragmentAttribute(element);
+
+    if (!attribute) {
+      return null;
+    }
+
+    const explicitKey = (attribute.value || '').trim();
+
+    if (explicitKey !== '') {
+      return explicitKey;
+    }
+
+    const id = (element.getAttribute('id') || '').trim();
+
+    if (id !== '') {
+      return id;
+    }
+
+    const target = (element.getAttribute('data-volt-target') || '').trim();
+
+    return target !== '' ? target : null;
+  }
+
+  function preservedFragmentCandidates(root) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+      return [];
+    }
+
+    const candidates = [];
+
+    if (typeof root.matches === 'function' && root.matches(NAVIGATION_FRAGMENT_SELECTOR)) {
+      candidates.push(root);
+    }
+
+    root.querySelectorAll(NAVIGATION_FRAGMENT_SELECTOR).forEach(function (element) {
+      candidates.push(element);
+    });
+
+    return candidates.filter(function (element) {
+      const parent = element.parentElement;
+
+      return !parent || !parent.closest(NAVIGATION_FRAGMENT_SELECTOR);
+    });
+  }
+
+  function fragmentNavigationDetail(meta, extra) {
+    return Object.assign({
+      source: meta && meta.source ? meta.source : 'navigate',
+      url: meta && meta.url ? meta.url : window.location.href,
+      finalUrl: meta && meta.finalUrl ? meta.finalUrl : null,
+    }, extra || {});
+  }
+
+  function capturePreservedFragments(root, meta) {
+    const fragments = new Map();
+
+    preservedFragmentCandidates(root).forEach(function (element) {
+      const key = preservedFragmentKey(element);
+
+      if (!key) {
+        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
+          reason: 'missing-key',
+          tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        }), document);
+        return;
+      }
+
+      if (fragments.has(key)) {
+        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
+          key: key,
+          reason: 'duplicate-source',
+          tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        }), document);
+        return;
+      }
+
+      fragments.set(key, {
+        key: key,
+        tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        element: element,
+      });
+    });
+
+    return fragments;
+  }
+
+  function preservedFragmentTargets(root, meta) {
+    const targets = new Map();
+
+    preservedFragmentCandidates(root).forEach(function (element) {
+      const key = preservedFragmentKey(element);
+
+      if (!key) {
+        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
+          reason: 'missing-target-key',
+          tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        }), document);
+        return;
+      }
+
+      if (targets.has(key)) {
+        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
+          key: key,
+          reason: 'duplicate-target',
+          tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        }), document);
+        return;
+      }
+
+      targets.set(key, element);
+    });
+
+    return targets;
+  }
+
+  function restorePreservedFragments(root, fragments, meta) {
+    if (!root || !(fragments instanceof Map) || fragments.size === 0) {
+      return {
+        preservedCount: 0,
+        discardedCount: 0,
+      };
+    }
+
+    const targets = preservedFragmentTargets(root, meta);
+    let preservedCount = 0;
+    let discardedCount = 0;
+
+    fragments.forEach(function (fragment) {
+      const target = targets.get(fragment.key);
+
+      if (!target) {
+        discardedCount += 1;
+        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
+          key: fragment.key,
+          tagName: fragment.tagName,
+          reason: 'missing-target',
+        }), document);
+        return;
+      }
+
+      const targetTagName = target.tagName ? target.tagName.toLowerCase() : null;
+
+      if (targetTagName !== fragment.tagName) {
+        discardedCount += 1;
+        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
+          key: fragment.key,
+          tagName: fragment.tagName,
+          targetTagName: targetTagName,
+          reason: 'tag-mismatch',
+        }), document);
+        return;
+      }
+
+      target.replaceWith(fragment.element);
+      preservedCount += 1;
+
+      emitRuntimeHook('volt:fragment-preserve', fragmentNavigationDetail(meta, {
+        key: fragment.key,
+        tagName: fragment.tagName,
+      }), document);
+    });
+
+    return {
+      preservedCount: preservedCount,
+      discardedCount: discardedCount,
+    };
+  }
+
   function currentLayoutIdentity() {
     if (document.body) {
       const bodyLayout = document.body.getAttribute('data-volt-layout');
@@ -3096,7 +3274,13 @@
     }
   }
 
-  async function applyDocumentPayload(doc) {
+  async function applyDocumentPayload(doc, meta) {
+    const payloadMeta = meta && typeof meta === 'object' ? meta : {};
+    const fragmentSummary = {
+      preservedCount: 0,
+      discardedCount: 0,
+    };
+
     if (doc.title) {
       document.title = doc.title;
     }
@@ -3106,12 +3290,19 @@
     }
 
     if (doc.body) {
+      const preservedFragments = capturePreservedFragments(document.body, payloadMeta);
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
+      const restoredFragments = restorePreservedFragments(document.body, preservedFragments, payloadMeta);
+
+      fragmentSummary.preservedCount = restoredFragments.preservedCount;
+      fragmentSummary.discardedCount = restoredFragments.discardedCount;
       syncAllRuntimeStateDirectives();
       registerViewportPrefetchTargets(document);
       scheduleHeuristicPrefetch(document);
     }
+
+    return fragmentSummary;
   }
 
   function resolveEffectTarget(root, effect) {
@@ -3648,8 +3839,12 @@
         finalUrl: payload.finalUrl,
       }, document);
 
-      await withPreservedUiState(document.body, async function () {
-        await applyDocumentPayload(payload.document);
+      const navigationMutation = await withPreservedUiState(document.body, async function () {
+        return applyDocumentPayload(payload.document, {
+          source: 'navigate',
+          url: normalizedUrl,
+          finalUrl: payload.finalUrl,
+        });
       }, {
         type: 'navigation',
         url: normalizedUrl,
@@ -3670,6 +3865,12 @@
         url: normalizedUrl,
         finalUrl: payload.finalUrl,
         historyMode: settings.historyMode || 'push',
+        preservedFragments: navigationMutation && typeof navigationMutation.preservedCount === 'number'
+          ? navigationMutation.preservedCount
+          : 0,
+        discardedFragments: navigationMutation && typeof navigationMutation.discardedCount === 'number'
+          ? navigationMutation.discardedCount
+          : 0,
       }, document);
     } catch (error) {
       if (isAbortError(error)) {

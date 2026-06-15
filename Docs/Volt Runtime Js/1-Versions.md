@@ -28,7 +28,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` hooks runtime base para requests y navegacion
 - `[x]` preservacion de foco y scroll basica
 - `[-]` reconciliacion de `head` y manejo de layout
-- `[-]` prefetch y preload SPA
+- `[x]` prefetch y preload SPA
 - `[ ]` client state real
 - `[ ]` shared state global real
 - `[ ]` directivas SPA avanzadas (`volt:show`, `volt:if`, `volt:for`)
@@ -50,7 +50,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` fallback por cambio de layout
 - `[x]` reconciliacion basica/selectiva de `head`
 - `[x]` prefetch por hover, viewport o heuristica
-- `[-]` preload de assets asociados a la ruta destino
+- `[x]` preload de assets asociados a la ruta destino
 - `[x]` estrategia inicial de activacion para prefetch
 - `[x]` cancelar prefetch obsoleto o redundante
 - `[x]` reusar respuesta prefetched en `visit()`
@@ -60,9 +60,9 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` preload selectivo de `head` assets criticos
 - `[x]` no reinyectar assets ya presentes en documento actual
 - `[x]` soporte declarativo inicial para `volt:prefetch`
-- `[ ]` cache de navegacion o fragment cache SPA
-- `[ ]` preservacion de formularios entre pantallas
-- `[ ]` preservacion de componentes vivos entre navegaciones
+- `[-]` fragment cache SPA opt-in por clave declarativa
+- `[-]` preservacion opt-in de formularios entre pantallas
+- `[-]` preservacion opt-in de componentes vivos entre navegaciones
 - `[ ]` politicas configurables por ruta para SPA vs full reload
 - `[ ]` transiciones de pagina enter/leave reales
 - `[x]` invalidacion/control de cache de navegacion
@@ -292,24 +292,25 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` control declarativo de cache SPA por enlace o documento
 - `[x]` invalidacion explicita de cache por evento runtime
 - `[x]` validacion tecnica HTTP del bloque de cache sobre rutas demo
+- `[-]` MVP inicial de `fragment cache SPA` por clave declarativa
 
 ## Proximo Bloque Recomendado
 
 Orden sugerido para seguir avanzando:
 
-1. `prefetch` y `preload` de navegacion
-2. pruebas manuales y automatizadas de `head` + layout fallback
-3. `client state` y `shared state`
-4. `toast` y `modal`
-5. retry system y offline base
+1. `fragment cache SPA`
+2. pruebas manuales y automatizadas de `fragment cache SPA`, `prefetch`/`preload` y `head` + layout fallback
+3. `politicas configurables por ruta para SPA vs full reload`
+4. `transiciones de pagina enter/leave reales`
+5. `client state` y `shared state`
 
-## Bloque Activo
+## Bloque Cerrado Reciente
 
 ### Prefetch Y Preload SPA
 
 Estado actual:
 
-- `[-]` en definicion e implementacion
+- `[x]` MVP implementado; validacion manual fina aun pendiente
 
 Objetivo del bloque:
 
@@ -622,6 +623,49 @@ Motivo:
 - `[x]` registrar invalidacion por TTL
 - `[x]` verificar que no se dupliquen requests
 - `[x]` probar reuso real del payload prefetched
+
+## Bloque Activo Actual
+
+### Fragment Cache SPA
+
+Estado actual:
+
+- `[-]` MVP inicial implementado y listo para validacion manual
+- `[x]` dependencias previas cubiertas: cache de navegacion, invalidacion explicita y demo UI de observabilidad
+
+Objetivo del bloque:
+
+- reutilizar partes estables de pantalla sin depender solo del documento HTML completo
+- preservar zonas o fragmentos entre navegaciones SPA compatibles
+- reducir trabajo de render y patch cuando solo cambian regiones concretas
+- preparar la base para preservacion opt-in de formularios y componentes vivos
+
+Checklist inmediato:
+
+- `[x]` definir el alcance MVP de `fragment cache SPA`
+- `[x]` decidir un primer nivel por fragmento con clave declarativa compartida
+- `[-]` definir reglas de invalidez cuando cambie `layout`, `head` o politica de ruta
+- `[x]` definir una convencion declarativa para preservar fragmentos
+- `[-]` implementar una primera preservacion opt-in de formularios entre pantallas
+- `[-]` implementar una primera preservacion opt-in de componentes vivos entre navegaciones
+- `[ ]` agregar pruebas manuales focalizadas para reuse, invalidez y fallback seguro
+
+Resultado esperado del bloque:
+
+- conservar fragmentos compatibles al navegar entre vistas afines
+- evitar reconstrucciones completas cuando no aportan valor
+- dejar una base clara para politicas de preservacion mas avanzadas
+
+Contrato MVP actual:
+
+- marcar el fragmento con `data-volt-preserve="clave"` o `volt:preserve="clave"`
+- renderizar la misma clave en la pantalla destino
+- el runtime reutiliza el nodo anterior si el `layout` sigue siendo compatible y el tag coincide
+- si no hay clave compatible o el fragmento no es reutilizable, se descarta con fallback seguro al HTML nuevo
+
+Nota:
+
+- antes de cerrar por completo el bloque anterior, aun falta la validacion manual fina en navegador para observar `preload`, `modulepreload` y eventos de cache en condiciones reales.
 
 ## Como Actualizar Este Archivo
 
