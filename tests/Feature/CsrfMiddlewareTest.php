@@ -26,7 +26,9 @@ final class CsrfMiddlewareTest extends TestCase
         $response = $kernel->handle(Request::create('/submit', 'POST'));
 
         self::assertSame(419, $response->statusCode());
-        self::assertSame('CSRF token mismatch.', $response->content());
+        self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertStringContainsString('Page Expired', $response->content());
+        self::assertStringContainsString('CSRF token mismatch.', $response->content());
     }
 
     public function test_it_allows_mutating_requests_with_a_valid_csrf_token(): void

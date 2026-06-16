@@ -26,12 +26,9 @@
     "autoload": {
         "psr-4": {
             "VoltStack\\Framework\\": "src/Platform",
-            "VoltStack\\Facade\\": "src/Facades",
             "VoltStack\\Helper\\": "src/Helper",
             "Quantum\\": "src/Quantum",
-            "VoltStack\\Runtime\\": "src/Runtime",
-            "VoltStack\\Support\\": "src/Support",
-            "VoltStack\\Testing\\": "src/Testing"
+            "VoltStack\\Runtime\\": "src/Runtime"
         },
         "files": [
             "src/Helper/helpers.php"

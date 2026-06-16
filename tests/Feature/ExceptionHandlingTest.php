@@ -61,4 +61,27 @@ final class ExceptionHandlingTest extends TestCase
         self::assertSame('The given data was invalid.', $payload['message']);
         self::assertArrayHasKey('title', $payload['errors']);
     }
+
+    public function test_it_keeps_volt_navigation_errors_as_html_responses(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/missing',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+
+        self::assertSame(404, $response->statusCode());
+        self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertStringContainsString('Page Not Found', $response->content());
+    }
 }

@@ -6,9 +6,9 @@ namespace Quantum\Middlewares;
 
 use Closure;
 use Quantum\Http\Request;
-use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Security\CsrfTokenManager;
+use Quantum\Security\Exceptions\CsrfTokenMismatchException;
 
 final class CsrfMiddleware implements MiddlewareInterface
 {
@@ -25,7 +25,7 @@ final class CsrfMiddleware implements MiddlewareInterface
         $token = $request->header('X-CSRF-TOKEN') ?? $request->post('_token');
 
         if (! is_string($token) || ! $this->tokens->verify($token)) {
-            return new Response('CSRF token mismatch.', 419);
+            throw new CsrfTokenMismatchException('CSRF token mismatch.');
         }
 
         return $next($request);

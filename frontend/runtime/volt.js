@@ -121,6 +121,12 @@
     return null;
   }
 
+  function closestFromEventTarget(event, selector) {
+    return event && event.target instanceof Element
+      ? event.target.closest(selector)
+      : null;
+  }
+
   function directiveAttribute(element, names) {
     for (let index = 0; index < names.length; index += 1) {
       if (element.hasAttribute(names[index])) {
@@ -4062,7 +4068,7 @@
   }
 
   document.addEventListener('input', function (event) {
-    const element = event.target.closest('input, textarea, select');
+    const element = closestFromEventTarget(event, 'input, textarea, select');
 
     if (!element) {
       return;
@@ -4094,7 +4100,7 @@
   });
 
   document.addEventListener('click', function (event) {
-    const actionTrigger = event.target.closest('[volt-click], [volt\\:click]');
+    const actionTrigger = closestFromEventTarget(event, '[volt-click], [volt\\:click]');
 
     if (actionTrigger) {
       const root = findRoot(actionTrigger);
@@ -4119,7 +4125,7 @@
       return;
     }
 
-    const navigationTrigger = event.target.closest('a[volt-navigate], a[volt\\:navigate]');
+    const navigationTrigger = closestFromEventTarget(event, 'a[volt-navigate], a[volt\\:navigate]');
 
     if (!shouldHandleNavigation(event, navigationTrigger)) {
       return;
@@ -4143,7 +4149,7 @@
   });
 
   document.addEventListener('pointerenter', function (event) {
-    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
 
     if (!navigationTrigger || !navigationTrigger.href || !linkAllowsPrefetchSource(navigationTrigger, 'intent')) {
       return;
@@ -4159,7 +4165,7 @@
   }, true);
 
   document.addEventListener('pointerleave', function (event) {
-    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
 
     if (!navigationTrigger) {
       return;
@@ -4169,7 +4175,7 @@
   }, true);
 
   document.addEventListener('focusin', function (event) {
-    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
 
     if (!navigationTrigger || !navigationTrigger.href || !linkAllowsPrefetchSource(navigationTrigger, 'intent')) {
       return;
@@ -4202,7 +4208,7 @@
   });
 
   document.addEventListener('focusout', function (event) {
-    const navigationTrigger = event.target.closest(NAVIGATION_PREFETCH_SELECTOR);
+    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
 
     if (!navigationTrigger) {
       return;
@@ -4212,7 +4218,7 @@
   });
 
   document.addEventListener('submit', function (event) {
-    const form = event.target.closest('form[volt-submit], form[volt\\:submit]');
+    const form = closestFromEventTarget(event, 'form[volt-submit], form[volt\\:submit]');
 
     if (!form) {
       return;

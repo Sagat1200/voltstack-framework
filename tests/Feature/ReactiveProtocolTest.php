@@ -107,7 +107,7 @@ final class ReactiveProtocolTest extends TestCase
             ],
         ));
 
-        self::assertSame(422, $response->statusCode());
+        self::assertSame(419, $response->statusCode());
 
         /** @var array<string, mixed> $payload */
         $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);

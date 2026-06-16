@@ -191,6 +191,22 @@ final class Request
         return str_contains($contentType, 'APPLICATION/JSON');
     }
 
+    public function isVoltRequest(): bool
+    {
+        return strtoupper((string) $this->header('X-Requested-With', '')) === 'VOLTSTACK';
+    }
+
+    public function isVoltNavigation(): bool
+    {
+        return strtoupper((string) $this->header('X-Volt-Navigate', '')) === 'TRUE';
+    }
+
+    public function isVoltActionRequest(): bool
+    {
+        return $this->path() === '/_volt/action'
+            || ($this->isVoltRequest() && ! $this->isVoltNavigation() && $this->isJson());
+    }
+
     public function expectsJson(): bool
     {
         $accept = strtoupper((string) $this->header('Accept', ''));
@@ -198,7 +214,7 @@ final class Request
 
         return $this->isJson()
             || str_contains($accept, 'APPLICATION/JSON')
-            || in_array($requestedWith, ['XMLHTTPREQUEST', 'VOLTSTACK'], true);
+            || $requestedWith === 'XMLHTTPREQUEST';
     }
 
     /**
