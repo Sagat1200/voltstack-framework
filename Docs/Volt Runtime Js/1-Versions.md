@@ -63,8 +63,8 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[-]` fragment cache SPA opt-in por clave declarativa
 - `[-]` preservacion opt-in de formularios entre pantallas
 - `[-]` preservacion opt-in de componentes vivos entre navegaciones
-- `[ ]` politicas configurables por ruta para SPA vs full reload
-- `[ ]` transiciones de pagina enter/leave reales
+- `[-]` politicas configurables por ruta para SPA vs full reload
+- `[-]` transiciones de pagina enter/leave reales
 - `[x]` invalidacion/control de cache de navegacion
 
 ### 2. Protocol Client
@@ -159,9 +159,9 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` `success min-duration`
 - `[x]` `error timeout`
 - `[x]` `dirty debounce`
-- `[ ]` transiciones de pagina SPA completas
-- `[ ]` leave transitions reales antes de navegar
-- `[ ]` coordinacion entre transition engine y navigation engine
+- `[-]` transiciones de pagina SPA completas
+- `[x]` leave transitions reales antes de navegar
+- `[-]` coordinacion entre transition engine y navigation engine
 - `[ ]` perfiles de transicion reutilizables
 
 ### 9. Runtime Extensibility
@@ -293,6 +293,16 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` invalidacion explicita de cache por evento runtime
 - `[x]` validacion tecnica HTTP del bloque de cache sobre rutas demo
 - `[-]` MVP inicial de `fragment cache SPA` por clave declarativa
+- `[x]` politica documental inicial para descartar fragmentos con `volt-fragment-control`
+- `[x]` demo cruzada de formulario preservado + shell vivo preservado entre `/fragmentCache` y `/formExample`
+- `[x]` ruta demo `/fragmentCacheReset` para validar descarte por politica de documento
+- `[x]` contrato inicial de `auto`, `spa` y `reload` por enlace en `volt:navigate`
+- `[x]` politica documental inicial con `<meta name="volt-navigation-mode" content="reload">`
+- `[x]` laboratorio `/navigationPolicy` y destino `/navigationDocumentReload`
+- `[-]` MVP inicial de `page transitions` SPA con `leave -> swap -> enter`
+- `[x]` politica declarativa por enlace con `data-volt-page-transition`
+- `[x]` politica documental con meta tags `volt-page-transition`
+- `[x]` demo `/navigationTransition` y destino `/navigationTransitionAlt`
 
 ## Proximo Bloque Recomendado
 
@@ -300,7 +310,7 @@ Orden sugerido para seguir avanzando:
 
 1. `fragment cache SPA`
 2. pruebas manuales y automatizadas de `fragment cache SPA`, `prefetch`/`preload` y `head` + layout fallback
-3. `politicas configurables por ruta para SPA vs full reload`
+3. validacion manual fina de `politicas configurables por ruta para SPA vs full reload`
 4. `transiciones de pagina enter/leave reales`
 5. `client state` y `shared state`
 
@@ -630,7 +640,7 @@ Motivo:
 
 Estado actual:
 
-- `[-]` MVP inicial implementado y listo para validacion manual
+- `[-]` MVP inicial implementado; contrato de preserve/reset ya aterrizado y pendiente de validacion manual final
 - `[x]` dependencias previas cubiertas: cache de navegacion, invalidacion explicita y demo UI de observabilidad
 
 Objetivo del bloque:
@@ -644,10 +654,10 @@ Checklist inmediato:
 
 - `[x]` definir el alcance MVP de `fragment cache SPA`
 - `[x]` decidir un primer nivel por fragmento con clave declarativa compartida
-- `[-]` definir reglas de invalidez cuando cambie `layout`, `head` o politica de ruta
+- `[x]` definir reglas de invalidez cuando cambie `layout`, `head` o politica de ruta
 - `[x]` definir una convencion declarativa para preservar fragmentos
-- `[-]` implementar una primera preservacion opt-in de formularios entre pantallas
-- `[-]` implementar una primera preservacion opt-in de componentes vivos entre navegaciones
+- `[x]` implementar una primera preservacion opt-in de formularios entre pantallas
+- `[x]` implementar una primera preservacion opt-in de componentes vivos entre navegaciones
 - `[ ]` agregar pruebas manuales focalizadas para reuse, invalidez y fallback seguro
 
 Resultado esperado del bloque:
@@ -661,11 +671,26 @@ Contrato MVP actual:
 - marcar el fragmento con `data-volt-preserve="clave"` o `volt:preserve="clave"`
 - renderizar la misma clave en la pantalla destino
 - el runtime reutiliza el nodo anterior si el `layout` sigue siendo compatible y el tag coincide
+- el destino puede forzar descarte global con `<meta name="volt-fragment-control" content="reset">`
+- si la navegacion usa una politica `no-store`, el runtime no reutiliza fragmentos preservados del origen
 - si no hay clave compatible o el fragmento no es reutilizable, se descarta con fallback seguro al HTML nuevo
+
+Reglas MVP de invalidez ya implementadas:
+
+- cambio de `layout`: se mantiene el fallback a full reload y no se intenta preservar
+- politica documental `reset`: el runtime emite `volt:fragment-discard` con razon `document-policy`
+- politica de navegacion `no-store`: el runtime emite `volt:fragment-discard` con razon `navigation-policy`
+- mismatch de clave o `tag`: el runtime descarta el fragmento con razones como `missing-target` o `tag-mismatch`
+
+Rutas demo actuales:
+
+- `/fragmentCache`: origen principal para editar formulario y shell vivo preservables
+- `/formExample`: destino compatible que reutiliza `draft-fragment` y `live-shell`
+- `/fragmentCacheReset`: destino con descarte forzado por politica documental
 
 Nota:
 
-- antes de cerrar por completo el bloque anterior, aun falta la validacion manual fina en navegador para observar `preload`, `modulepreload` y eventos de cache en condiciones reales.
+- aun falta la validacion manual fina en navegador para cerrar `fragment cache SPA` y revisar en una sola pasada `preload`, `modulepreload`, `volt:fragment-preserve` y `volt:fragment-discard` en condiciones reales.
 
 ## Como Actualizar Este Archivo
 

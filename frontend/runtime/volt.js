@@ -28,6 +28,11 @@
   const NAVIGATION_HEURISTIC_VIEWPORT_MARGIN = 240;
   const NAVIGATION_PREFETCH_SELECTOR = 'a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]';
   const NAVIGATION_CACHE_CONTROL_META_NAMES = ['volt-cache-control', 'volt:navigation-cache'];
+  const NAVIGATION_MODE_META_NAMES = ['volt-navigation-mode', 'volt:navigation-mode'];
+  const NAVIGATION_PAGE_TRANSITION_META_NAMES = ['volt-page-transition', 'volt:page-transition'];
+  const NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES = ['volt-page-transition-duration', 'volt:page-transition-duration'];
+  const NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES = ['volt-page-transition-mode', 'volt:page-transition-mode'];
+  const NAVIGATION_FRAGMENT_CONTROL_META_NAMES = ['volt-fragment-control', 'volt:fragment-cache'];
   const NAVIGATION_FRAGMENT_SELECTOR = '[data-volt-preserve], [volt-preserve], [volt\\:preserve]';
 
   function componentRequestState(component) {
@@ -346,6 +351,372 @@
     }
 
     return parseNavigationCacheControl('', 'default');
+  }
+
+  function parseNavigationMode(value, source) {
+    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+    if (
+      normalized === 'reload' ||
+      normalized === 'full-reload' ||
+      normalized === 'hard-reload' ||
+      normalized === 'document'
+    ) {
+      return {
+        mode: 'reload',
+        raw: normalized,
+        source: source || 'default',
+      };
+    }
+
+    if (
+      normalized === 'spa' ||
+      normalized === 'soft' ||
+      normalized === 'client'
+    ) {
+      return {
+        mode: 'spa',
+        raw: normalized,
+        source: source || 'default',
+      };
+    }
+
+    return {
+      mode: 'auto',
+      raw: normalized,
+      source: source || 'default',
+    };
+  }
+
+  function navigationModeForElement(element) {
+    if (!element || typeof element.getAttribute !== 'function') {
+      return parseNavigationMode('', 'default');
+    }
+
+    const navigateAttribute = directiveAttribute(element, ['volt-navigate', 'volt:navigate']);
+
+    if (navigateAttribute) {
+      return parseNavigationMode(navigateAttribute.value || '', navigateAttribute.name);
+    }
+
+    const modeAttribute = directiveAttribute(element, [
+      'data-volt-navigation-mode',
+      'volt-navigation-mode',
+      'volt:navigation-mode',
+    ]);
+
+    if (modeAttribute) {
+      return parseNavigationMode(modeAttribute.value || '', modeAttribute.name);
+    }
+
+    return parseNavigationMode('', 'default');
+  }
+
+  function navigationModeForDocument(doc) {
+    if (!doc || typeof doc !== 'object') {
+      return parseNavigationMode('', 'default');
+    }
+
+    if (doc.head && typeof doc.head.querySelector === 'function') {
+      for (let index = 0; index < NAVIGATION_MODE_META_NAMES.length; index += 1) {
+        const name = NAVIGATION_MODE_META_NAMES[index];
+        const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+
+        if (meta) {
+          return parseNavigationMode(meta.getAttribute('content') || '', 'document');
+        }
+      }
+    }
+
+    if (doc.body && typeof doc.body.getAttribute === 'function') {
+      const attribute = directiveAttribute(doc.body, [
+        'data-volt-navigation-mode',
+        'volt-navigation-mode',
+        'volt:navigation-mode',
+      ]);
+
+      if (attribute) {
+        return parseNavigationMode(attribute.value || '', 'body');
+      }
+    }
+
+    return parseNavigationMode('', 'default');
+  }
+
+  function shouldPrefetchForNavigationMode(mode) {
+    const navigationMode = mode && mode.mode ? mode.mode : 'auto';
+    return navigationMode !== 'reload';
+  }
+
+  function firstAttributeValue(element, names) {
+    if (!element || typeof element.getAttribute !== 'function' || !Array.isArray(names)) {
+      return null;
+    }
+
+    for (let index = 0; index < names.length; index += 1) {
+      const name = names[index];
+
+      if (element.hasAttribute(name)) {
+        return element.getAttribute(name) || '';
+      }
+    }
+
+    return null;
+  }
+
+  function firstDocumentMetaValue(doc, names) {
+    if (!doc || !doc.head || typeof doc.head.querySelector !== 'function' || !Array.isArray(names)) {
+      return null;
+    }
+
+    for (let index = 0; index < names.length; index += 1) {
+      const name = names[index];
+      const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+
+      if (meta) {
+        return meta.getAttribute('content') || '';
+      }
+    }
+
+    return null;
+  }
+
+  function normalizePageTransitionMode(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return 'out-in';
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === 'in-out') {
+      return 'in-out';
+    }
+
+    return 'out-in';
+  }
+
+  function parsePageTransition(value, source) {
+    const raw = typeof value === 'string' ? value : '';
+    const normalized = raw.trim().toLowerCase();
+    const transition = {
+      name: null,
+      duration: null,
+      mode: 'out-in',
+      raw: raw,
+      source: source || 'default',
+      declared: normalized !== '',
+    };
+
+    if (!normalized) {
+      return transition;
+    }
+
+    if (
+      normalized === 'none' ||
+      normalized === 'off' ||
+      normalized === 'false' ||
+      normalized === 'disabled'
+    ) {
+      return transition;
+    }
+
+    transition.name = normalized === 'true' || normalized === 'on'
+      ? 'default'
+      : normalized;
+
+    return transition;
+  }
+
+  function applyPageTransitionOptions(transition, durationValue, modeValue) {
+    const nextTransition = Object.assign({}, transition);
+    const parsedDuration = parseDirectiveTimeout(durationValue);
+
+    if (typeof parsedDuration === 'number' && parsedDuration >= 0) {
+      nextTransition.duration = parsedDuration;
+    }
+
+    if (typeof modeValue === 'string' && modeValue.trim() !== '') {
+      nextTransition.mode = normalizePageTransitionMode(modeValue);
+    }
+
+    return nextTransition;
+  }
+
+  function pageTransitionForElement(element) {
+    const transitionValue = firstAttributeValue(element, [
+      'data-volt-page-transition',
+      'volt-page-transition',
+      'volt:page-transition',
+    ]);
+    const durationValue = firstAttributeValue(element, [
+      'data-volt-page-transition-duration',
+      'volt-page-transition-duration',
+      'volt:page-transition-duration',
+    ]);
+    const modeValue = firstAttributeValue(element, [
+      'data-volt-page-transition-mode',
+      'volt-page-transition-mode',
+      'volt:page-transition-mode',
+    ]);
+
+    return applyPageTransitionOptions(parsePageTransition(transitionValue || '', 'link'), durationValue, modeValue);
+  }
+
+  function pageTransitionForDocument(doc) {
+    const documentTransition = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_META_NAMES);
+    const bodyTransition = firstAttributeValue(doc && doc.body ? doc.body : null, [
+      'data-volt-page-transition',
+      'volt-page-transition',
+      'volt:page-transition',
+    ]);
+    const transitionValue = documentTransition !== null ? documentTransition : (bodyTransition || '');
+    const durationValue = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES) ||
+      firstAttributeValue(doc && doc.body ? doc.body : null, [
+        'data-volt-page-transition-duration',
+        'volt-page-transition-duration',
+        'volt:page-transition-duration',
+      ]);
+    const modeValue = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES) ||
+      firstAttributeValue(doc && doc.body ? doc.body : null, [
+        'data-volt-page-transition-mode',
+        'volt-page-transition-mode',
+        'volt:page-transition-mode',
+      ]);
+    const source = documentTransition !== null ? 'document' : bodyTransition !== null ? 'body' : 'default';
+
+    return applyPageTransitionOptions(parsePageTransition(transitionValue, source), durationValue, modeValue);
+  }
+
+  function resolveNavigationPageTransition(requestedTransition, documentTransition) {
+    if (documentTransition && documentTransition.declared) {
+      return documentTransition;
+    }
+
+    if (requestedTransition && requestedTransition.declared) {
+      return requestedTransition;
+    }
+
+    return documentTransition || requestedTransition || parsePageTransition('', 'default');
+  }
+
+  function hasPageTransition(transition) {
+    return !!(transition && typeof transition.name === 'string' && transition.name !== '');
+  }
+
+  function navigationPageTransitionEffect(transition) {
+    if (!hasPageTransition(transition)) {
+      return null;
+    }
+
+    const phaseConfig = {
+      name: transition.name,
+    };
+
+    if (typeof transition.duration === 'number' && transition.duration >= 0) {
+      phaseConfig.duration = transition.duration;
+    }
+
+    return {
+      type: 'navigation-transition',
+      target: 'body',
+      transition: {
+        leave: phaseConfig,
+        enter: phaseConfig,
+      },
+      pageTransitionSource: transition.source || 'default',
+      pageTransitionMode: transition.mode || 'out-in',
+      pageTransitionName: transition.name,
+    };
+  }
+
+  async function runPageTransitionPhase(element, phase, transition) {
+    if (!element || !hasPageTransition(transition)) {
+      return false;
+    }
+
+    const effect = navigationPageTransitionEffect(transition);
+
+    if (!effect) {
+      return false;
+    }
+
+    return runElementTransition(element, element, phase, effect);
+  }
+
+  function fragmentControlTokens(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return [];
+    }
+
+    return value.trim().toLowerCase().split(/[\s,|;]+/).filter(function (token) {
+      return token !== '';
+    });
+  }
+
+  function parseFragmentControl(value, source) {
+    const tokens = fragmentControlTokens(value);
+    const control = {
+      mode: 'preserve',
+      raw: typeof value === 'string' ? value : '',
+      source: source || 'default',
+    };
+
+    tokens.forEach(function (token) {
+      if (
+        token === 'reset' ||
+        token === 'discard' ||
+        token === 'drop' ||
+        token === 'no-store' ||
+        token === 'none' ||
+        token === 'off' ||
+        token === 'false'
+      ) {
+        control.mode = 'reset';
+        return;
+      }
+
+      if (
+        token === 'preserve' ||
+        token === 'keep' ||
+        token === 'on' ||
+        token === 'true'
+      ) {
+        control.mode = 'preserve';
+      }
+    });
+
+    return control;
+  }
+
+  function fragmentControlForDocument(doc) {
+    if (!doc || typeof doc !== 'object') {
+      return parseFragmentControl('', 'default');
+    }
+
+    if (doc.head && typeof doc.head.querySelector === 'function') {
+      for (let index = 0; index < NAVIGATION_FRAGMENT_CONTROL_META_NAMES.length; index += 1) {
+        const name = NAVIGATION_FRAGMENT_CONTROL_META_NAMES[index];
+        const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+
+        if (meta) {
+          return parseFragmentControl(meta.getAttribute('content') || '', 'document');
+        }
+      }
+    }
+
+    if (doc.body && typeof doc.body.getAttribute === 'function') {
+      const attribute = directiveAttribute(doc.body, [
+        'data-volt-fragment-control',
+        'volt-fragment-control',
+        'volt:fragment-control',
+      ]);
+
+      if (attribute) {
+        return parseFragmentControl(attribute.value, 'body');
+      }
+    }
+
+    return parseFragmentControl('', 'default');
   }
 
   function shouldReadNavigationCache(control) {
@@ -808,6 +1179,9 @@
     const requestedControl = settings.cacheControl && typeof settings.cacheControl === 'object'
       ? settings.cacheControl
       : parseNavigationCacheControl('', 'default');
+    const requestedMode = settings.navigationMode && typeof settings.navigationMode === 'object'
+      ? settings.navigationMode
+      : parseNavigationMode('', 'default');
 
     if (runtime.navigationInFlight.has(normalizedUrl)) {
       const existing = runtime.navigationInFlight.get(normalizedUrl);
@@ -850,9 +1224,13 @@
     };
     const promise = requestPage(normalizedUrl, requestSignal).then(function (payload) {
       const responseControl = navigationCacheControlForDocument(payload.document);
+      const responseMode = navigationModeForDocument(payload.document);
+      const responsePageTransition = pageTransitionForDocument(payload.document);
       const effectiveControl = mergeNavigationCacheControl(requestedControl, responseControl);
       const enrichedPayload = Object.assign({}, payload, {
         cacheControl: effectiveControl,
+        navigationMode: responseMode.mode !== 'auto' ? responseMode : requestedMode,
+        pageTransition: responsePageTransition,
       });
 
       if (source === 'prefetch' && enrichedPayload.document && enrichedPayload.document.head) {
@@ -877,8 +1255,11 @@
     const cacheControl = settings.cacheControl && typeof settings.cacheControl === 'object'
       ? settings.cacheControl
       : parseNavigationCacheControl('', 'default');
+    const navigationMode = settings.navigationMode && typeof settings.navigationMode === 'object'
+      ? settings.navigationMode
+      : parseNavigationMode('', 'default');
 
-    if (!shouldPrefetchNavigation(cacheControl)) {
+    if (!shouldPrefetchNavigation(cacheControl) || !shouldPrefetchForNavigationMode(navigationMode)) {
       return Promise.resolve(null);
     }
 
@@ -911,6 +1292,7 @@
 
     return requestNavigationPayload(normalizedUrl, undefined, 'prefetch', {
       cacheControl: cacheControl,
+      navigationMode: navigationMode,
     });
   }
 
@@ -951,6 +1333,7 @@
         runtime.navigationViewportObserver.unobserve(element);
         prefetchPage(url, {
           cacheControl: navigationCacheControlForElement(element),
+          navigationMode: navigationModeForElement(element),
         }).catch(function () {
           return null;
         });
@@ -972,7 +1355,11 @@
     }
 
     root.querySelectorAll(NAVIGATION_PREFETCH_SELECTOR).forEach(function (link) {
-      if (!navigationUrlForElement(link) || !linkAllowsPrefetchSource(link, 'viewport')) {
+      if (
+        !navigationUrlForElement(link) ||
+        !linkAllowsPrefetchSource(link, 'viewport') ||
+        !shouldPrefetchForNavigationMode(navigationModeForElement(link))
+      ) {
         return;
       }
 
@@ -1022,6 +1409,7 @@
 
       if (!url ||
         !linkAllowsPrefetchSource(link, 'idle') ||
+        !shouldPrefetchForNavigationMode(navigationModeForElement(link)) ||
         normalizeNavigationUrl(url) === currentUrl ||
         hasNavigationCacheOrFlight(url)) {
         return;
@@ -1079,6 +1467,7 @@
 
       prefetchPage(url, {
         cacheControl: navigationCacheControlForElement(candidate),
+        navigationMode: navigationModeForElement(candidate),
       }).catch(function () {
         return null;
       });
@@ -2340,6 +2729,15 @@
       phase: phase,
       variant: variant,
       duration: duration,
+      transitionSource: effect && effect.pageTransitionSource
+        ? effect.pageTransitionSource
+        : null,
+      transitionMode: effect && effect.pageTransitionMode
+        ? effect.pageTransitionMode
+        : null,
+      transitionName: effect && effect.pageTransitionName
+        ? effect.pageTransitionName
+        : null,
     });
 
     emitRuntimeHook('volt:before-' + phase, detail, element);
@@ -2912,6 +3310,46 @@
     }, extra || {});
   }
 
+  function discardPreservedFragments(fragments, meta, reason, extra) {
+    if (!(fragments instanceof Map) || fragments.size === 0) {
+      return {
+        preservedCount: 0,
+        discardedCount: 0,
+      };
+    }
+
+    let discardedCount = 0;
+
+    fragments.forEach(function (fragment) {
+      discardedCount += 1;
+      emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, Object.assign({
+        key: fragment.key,
+        tagName: fragment.tagName,
+        reason: reason,
+      }, extra || {})), document);
+    });
+
+    return {
+      preservedCount: 0,
+      discardedCount: discardedCount,
+    };
+  }
+
+  function shouldRestorePreservedFragments(control, meta) {
+    const fragmentMode = control && control.mode ? control.mode : 'preserve';
+
+    if (fragmentMode === 'reset') {
+      return false;
+    }
+
+    const cacheControl = meta && meta.cacheControl && typeof meta.cacheControl === 'object'
+      ? meta.cacheControl
+      : null;
+    const cacheMode = cacheControl && cacheControl.mode ? cacheControl.mode : 'default';
+
+    return cacheMode !== 'no-store';
+  }
+
   function capturePreservedFragments(root, meta) {
     const fragments = new Map();
 
@@ -3282,6 +3720,8 @@
 
   async function applyDocumentPayload(doc, meta) {
     const payloadMeta = meta && typeof meta === 'object' ? meta : {};
+    const fragmentControl = fragmentControlForDocument(doc);
+    const pageTransition = payloadMeta.pageTransition || parsePageTransition('', 'default');
     const fragmentSummary = {
       preservedCount: 0,
       discardedCount: 0,
@@ -3296,16 +3736,33 @@
     }
 
     if (doc.body) {
-      const preservedFragments = capturePreservedFragments(document.body, payloadMeta);
+      const fragmentMeta = Object.assign({}, payloadMeta, {
+        fragmentControl: fragmentControl,
+      });
+      const preservedFragments = capturePreservedFragments(document.body, fragmentMeta);
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
-      const restoredFragments = restorePreservedFragments(document.body, preservedFragments, payloadMeta);
+      const restoredFragments = shouldRestorePreservedFragments(fragmentControl, payloadMeta)
+        ? restorePreservedFragments(document.body, preservedFragments, fragmentMeta)
+        : discardPreservedFragments(
+          preservedFragments,
+          fragmentMeta,
+          fragmentControl.mode === 'reset' ? 'document-policy' : 'navigation-policy',
+          {
+            policyMode: fragmentControl.mode,
+            policySource: fragmentControl.source,
+            cacheMode: payloadMeta.cacheControl && payloadMeta.cacheControl.mode
+              ? payloadMeta.cacheControl.mode
+              : 'default',
+          },
+        );
 
       fragmentSummary.preservedCount = restoredFragments.preservedCount;
       fragmentSummary.discardedCount = restoredFragments.discardedCount;
       syncAllRuntimeStateDirectives();
       registerViewportPrefetchTargets(document);
       scheduleHeuristicPrefetch(document);
+      await runPageTransitionPhase(document.body, 'enter', pageTransition);
     }
 
     return fragmentSummary;
@@ -3763,6 +4220,9 @@
     const settings = options || {};
     const normalizedUrl = normalizeNavigationUrl(url);
     const cacheControl = navigationVisitCacheControl(settings);
+    const requestedNavigationMode = settings.navigationMode && typeof settings.navigationMode === 'object'
+      ? settings.navigationMode
+      : parseNavigationMode('', 'default');
     const requestId = runtime.navigationRequestId + 1;
     runtime.navigationRequestId = requestId;
     const previousController = runtime.navigationController;
@@ -3782,6 +4242,7 @@
       url: normalizedUrl,
       historyMode: settings.historyMode || 'push',
       cacheMode: cacheControl.mode,
+      navigationMode: requestedNavigationMode.mode,
     }), document);
 
     let outcome = 'success';
@@ -3818,6 +4279,7 @@
         'navigate',
         {
           cacheControl: cacheControl,
+          navigationMode: requestedNavigationMode,
         },
       );
 
@@ -3840,16 +4302,40 @@
         }
       }
 
+      if (payload.navigationMode && payload.navigationMode.mode === 'reload') {
+        outcome = 'policy-reload';
+
+        if (settings.fallback !== false) {
+          window.location.assign(payload.finalUrl);
+          return;
+        }
+      }
+
       emitRuntimeHook('volt:before-navigate', {
         url: normalizedUrl,
         finalUrl: payload.finalUrl,
+        navigationMode: payload.navigationMode && payload.navigationMode.mode
+          ? payload.navigationMode.mode
+          : requestedNavigationMode.mode,
+        pageTransition: resolveNavigationPageTransition(settings.pageTransition, payload.pageTransition).name,
       }, document);
+
+      const pageTransition = resolveNavigationPageTransition(
+        settings.pageTransition,
+        payload.pageTransition,
+      );
+
+      if (pageTransition.mode === 'out-in') {
+        await runPageTransitionPhase(document.body, 'leave', pageTransition);
+      }
 
       const navigationMutation = await withPreservedUiState(document.body, async function () {
         return applyDocumentPayload(payload.document, {
           source: 'navigate',
           url: normalizedUrl,
           finalUrl: payload.finalUrl,
+          cacheControl: payload.cacheControl,
+          pageTransition: pageTransition,
         });
       }, {
         type: 'navigation',
@@ -3871,6 +4357,10 @@
         url: normalizedUrl,
         finalUrl: payload.finalUrl,
         historyMode: settings.historyMode || 'push',
+        navigationMode: payload.navigationMode && payload.navigationMode.mode
+          ? payload.navigationMode.mode
+          : requestedNavigationMode.mode,
+        pageTransition: pageTransition.name,
         preservedFragments: navigationMutation && typeof navigationMutation.preservedCount === 'number'
           ? navigationMutation.preservedCount
           : 0,
@@ -4131,9 +4621,15 @@
       return;
     }
 
+    const url = new URL(navigationTrigger.href, window.location.href);
+    const navigationMode = navigationModeForElement(navigationTrigger);
+
+    if (navigationMode.mode === 'reload') {
+      return;
+    }
+
     event.preventDefault();
 
-    const url = new URL(navigationTrigger.href, window.location.href);
     const preserveScroll = navigationTrigger.hasAttribute('volt-preserve-scroll') ||
       navigationTrigger.hasAttribute('volt:preserve-scroll');
     const replace = navigationTrigger.hasAttribute('volt-replace') ||
@@ -4143,6 +4639,8 @@
       trigger: navigationTrigger,
       preserveScroll: preserveScroll,
       historyMode: replace ? 'replace' : 'push',
+      navigationMode: navigationMode,
+      pageTransition: pageTransitionForElement(navigationTrigger),
     }).catch(function (error) {
       console.error('VoltStack navigation error:', error);
     });
@@ -4151,7 +4649,12 @@
   document.addEventListener('pointerenter', function (event) {
     const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
 
-    if (!navigationTrigger || !navigationTrigger.href || !linkAllowsPrefetchSource(navigationTrigger, 'intent')) {
+    if (
+      !navigationTrigger ||
+      !navigationTrigger.href ||
+      !linkAllowsPrefetchSource(navigationTrigger, 'intent') ||
+      !shouldPrefetchForNavigationMode(navigationModeForElement(navigationTrigger))
+    ) {
       return;
     }
 
@@ -4159,6 +4662,7 @@
 
     prefetchPage(url, {
       cacheControl: navigationCacheControlForElement(navigationTrigger),
+      navigationMode: navigationModeForElement(navigationTrigger),
     }).catch(function () {
       return null;
     });
@@ -4177,7 +4681,12 @@
   document.addEventListener('focusin', function (event) {
     const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
 
-    if (!navigationTrigger || !navigationTrigger.href || !linkAllowsPrefetchSource(navigationTrigger, 'intent')) {
+    if (
+      !navigationTrigger ||
+      !navigationTrigger.href ||
+      !linkAllowsPrefetchSource(navigationTrigger, 'intent') ||
+      !shouldPrefetchForNavigationMode(navigationModeForElement(navigationTrigger))
+    ) {
       return;
     }
 
@@ -4185,6 +4694,7 @@
 
     prefetchPage(url, {
       cacheControl: navigationCacheControlForElement(navigationTrigger),
+      navigationMode: navigationModeForElement(navigationTrigger),
     }).catch(function () {
       return null;
     });
