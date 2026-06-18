@@ -20,6 +20,13 @@
     successMinClearDelays: new Map(),
     errorTimeouts: new Map(),
     dirtyDebounces: new Map(),
+    clientStateScope: null,
+    clientStateValues: new Map(),
+    sharedStateValues: new Map(),
+    clientStateSubscribers: new Map(),
+    sharedStateSubscribers: new Map(),
+    clientStateGlobalSubscribers: new Set(),
+    sharedStateGlobalSubscribers: new Set(),
   };
 
   const NAVIGATION_CACHE_TTL = 5000;
@@ -30,10 +37,33 @@
   const NAVIGATION_CACHE_CONTROL_META_NAMES = ['volt-cache-control', 'volt:navigation-cache'];
   const NAVIGATION_MODE_META_NAMES = ['volt-navigation-mode', 'volt:navigation-mode'];
   const NAVIGATION_PAGE_TRANSITION_META_NAMES = ['volt-page-transition', 'volt:page-transition'];
+  const NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES = ['volt-page-transition-profile', 'volt:page-transition-profile'];
   const NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES = ['volt-page-transition-duration', 'volt:page-transition-duration'];
   const NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES = ['volt-page-transition-mode', 'volt:page-transition-mode'];
   const NAVIGATION_FRAGMENT_CONTROL_META_NAMES = ['volt-fragment-control', 'volt:fragment-cache'];
   const NAVIGATION_FRAGMENT_SELECTOR = '[data-volt-preserve], [volt-preserve], [volt\\:preserve]';
+  const PAGE_TRANSITION_PROFILES = Object.freeze({
+    soft: Object.freeze({
+      name: 'fade',
+      duration: 220,
+      mode: 'out-in',
+    }),
+    gentle: Object.freeze({
+      name: 'fade',
+      duration: 320,
+      mode: 'out-in',
+    }),
+    crisp: Object.freeze({
+      name: 'fade',
+      duration: 160,
+      mode: 'out-in',
+    }),
+    classic: Object.freeze({
+      name: 'default',
+      duration: 180,
+      mode: 'out-in',
+    }),
+  });
 
   function componentRequestState(component) {
     if (!component) {
@@ -151,6 +181,326 @@
     } catch (error) {
       return String(url || '');
     }
+  }
+
+  function cloneStateValue(value) {
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(value);
+      } catch (error) {
+      }
+    }
+
+    if (value === null || typeof value !== 'object') {
+      return value;
+    }
+
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+      return value;
+    }
+  }
+
+  function normalizeRuntimeStateScope(scope) {
+    return scope === 'shared' ? 'shared' : 'client';
+  }
+
+  function normalizeRuntimeStateKey(key) {
+    if (typeof key !== 'string') {
+      return null;
+    }
+
+    const normalized = key.trim();
+    return normalized !== '' ? normalized : null;
+  }
+
+  function currentClientStateScope() {
+    if (!runtime.clientStateScope) {
+      runtime.clientStateScope = normalizeNavigationUrl(window.location.href);
+    }
+
+    return runtime.clientStateScope;
+  }
+
+  function runtimeStateStore(scope) {
+    return normalizeRuntimeStateScope(scope) === 'shared'
+      ? runtime.sharedStateValues
+      : runtime.clientStateValues;
+  }
+
+  function runtimeStateSubscriberStore(scope) {
+    return normalizeRuntimeStateScope(scope) === 'shared'
+      ? runtime.sharedStateSubscribers
+      : runtime.clientStateSubscribers;
+  }
+
+  function runtimeStateGlobalSubscribers(scope) {
+    return normalizeRuntimeStateScope(scope) === 'shared'
+      ? runtime.sharedStateGlobalSubscribers
+      : runtime.clientStateGlobalSubscribers;
+  }
+
+  function runtimeStateSnapshot(scope) {
+    const snapshot = {};
+
+    runtimeStateStore(scope).forEach(function (value, key) {
+      snapshot[key] = cloneStateValue(value);
+    });
+
+    return snapshot;
+  }
+
+  function notifyRuntimeStateSubscribers(detail) {
+    const scope = normalizeRuntimeStateScope(detail && detail.scope);
+    const key = detail && detail.key ? detail.key : null;
+    const subscriberStore = runtimeStateSubscriberStore(scope);
+    const globalSubscribers = runtimeStateGlobalSubscribers(scope);
+
+    if (key && subscriberStore.has(key)) {
+      subscriberStore.get(key).forEach(function (listener) {
+        try {
+          listener(detail);
+        } catch (error) {
+          console.error('VoltStack state subscriber error:', error);
+        }
+      });
+    }
+
+    globalSubscribers.forEach(function (listener) {
+      try {
+        listener(detail);
+      } catch (error) {
+        console.error('VoltStack state subscriber error:', error);
+      }
+    });
+  }
+
+  function emitRuntimeStateChanged(scope, key, value, previousValue, action, extra) {
+    const detail = Object.assign({
+      scope: normalizeRuntimeStateScope(scope),
+      scopeId: normalizeRuntimeStateScope(scope) === 'client' ? currentClientStateScope() : 'shared',
+      key: key,
+      value: cloneStateValue(value),
+      previousValue: cloneStateValue(previousValue),
+      action: action || 'set',
+      snapshot: runtimeStateSnapshot(scope),
+    }, extra || {});
+
+    emitRuntimeHook('volt:state-changed', detail, document);
+    notifyRuntimeStateSubscribers(detail);
+  }
+
+  function emitRuntimeStateCleared(scope, keys, reason, extra) {
+    const detail = Object.assign({
+      scope: normalizeRuntimeStateScope(scope),
+      scopeId: normalizeRuntimeStateScope(scope) === 'client' ? currentClientStateScope() : 'shared',
+      keys: Array.isArray(keys) ? keys.slice() : [],
+      reason: reason || 'manual',
+      snapshot: runtimeStateSnapshot(scope),
+    }, extra || {});
+
+    emitRuntimeHook('volt:state-cleared', detail, document);
+    notifyRuntimeStateSubscribers(detail);
+  }
+
+  function getRuntimeStateValue(key, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return null;
+    }
+
+    const settings = options && typeof options === 'object' ? options : {};
+    const store = runtimeStateStore(settings.scope);
+    const fallback = Object.prototype.hasOwnProperty.call(settings, 'fallback')
+      ? settings.fallback
+      : null;
+
+    return store.has(normalizedKey)
+      ? cloneStateValue(store.get(normalizedKey))
+      : fallback;
+  }
+
+  function setRuntimeStateValue(key, value, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return null;
+    }
+
+    const settings = options && typeof options === 'object' ? options : {};
+    const scope = normalizeRuntimeStateScope(settings.scope);
+    const store = runtimeStateStore(scope);
+    const previousValue = store.has(normalizedKey) ? store.get(normalizedKey) : null;
+
+    store.set(normalizedKey, value);
+    emitRuntimeStateChanged(scope, normalizedKey, value, previousValue, settings.action || 'set');
+    return cloneStateValue(value);
+  }
+
+  function mergeRuntimeStateValue(key, value, options) {
+    const current = getRuntimeStateValue(key, options);
+    const nextValue = Object.assign(
+      {},
+      current && typeof current === 'object' && !Array.isArray(current) ? current : {},
+      value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+    );
+
+    return setRuntimeStateValue(key, nextValue, Object.assign({}, options || {}, {
+      action: 'merge',
+    }));
+  }
+
+  function updateRuntimeStateValue(key, updater, options) {
+    const current = getRuntimeStateValue(key, options);
+    const nextValue = typeof updater === 'function'
+      ? updater(current)
+      : updater;
+
+    return setRuntimeStateValue(key, nextValue, Object.assign({}, options || {}, {
+      action: 'update',
+    }));
+  }
+
+  function deleteRuntimeStateValue(key, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return false;
+    }
+
+    const settings = options && typeof options === 'object' ? options : {};
+    const scope = normalizeRuntimeStateScope(settings.scope);
+    const store = runtimeStateStore(scope);
+
+    if (!store.has(normalizedKey)) {
+      return false;
+    }
+
+    const previousValue = store.get(normalizedKey);
+    store.delete(normalizedKey);
+    emitRuntimeStateChanged(scope, normalizedKey, null, previousValue, 'delete');
+    return true;
+  }
+
+  function clearRuntimeState(scope, reason, extra) {
+    const normalizedScope = normalizeRuntimeStateScope(scope);
+    const store = runtimeStateStore(normalizedScope);
+    const keys = Array.from(store.keys());
+
+    if (keys.length === 0) {
+      return false;
+    }
+
+    store.clear();
+    emitRuntimeStateCleared(normalizedScope, keys, reason, extra);
+    return true;
+  }
+
+  function transitionClientStateScope(nextUrl, reason) {
+    const nextScope = normalizeNavigationUrl(nextUrl || window.location.href);
+    const previousScope = currentClientStateScope();
+
+    if (previousScope === nextScope) {
+      return false;
+    }
+
+    const hadValues = clearRuntimeState('client', reason || 'navigation', {
+      previousScopeId: previousScope,
+      nextScopeId: nextScope,
+    });
+
+    runtime.clientStateScope = nextScope;
+
+    emitRuntimeHook('volt:state-scope-changed', {
+      scope: 'client',
+      previousScopeId: previousScope,
+      nextScopeId: nextScope,
+      cleared: hadValues,
+      reason: reason || 'navigation',
+    }, document);
+
+    return true;
+  }
+
+  function subscribeRuntimeState(key, listener, options) {
+    if (typeof listener !== 'function') {
+      return function () {
+        return false;
+      };
+    }
+
+    const settings = options && typeof options === 'object' ? options : {};
+    const scope = normalizeRuntimeStateScope(settings.scope);
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      const listeners = runtimeStateGlobalSubscribers(scope);
+      listeners.add(listener);
+
+      return function () {
+        return listeners.delete(listener);
+      };
+    }
+
+    const subscriberStore = runtimeStateSubscriberStore(scope);
+
+    if (!subscriberStore.has(normalizedKey)) {
+      subscriberStore.set(normalizedKey, new Set());
+    }
+
+    subscriberStore.get(normalizedKey).add(listener);
+
+    return function () {
+      const listeners = subscriberStore.get(normalizedKey);
+
+      if (!listeners) {
+        return false;
+      }
+
+      const deleted = listeners.delete(listener);
+
+      if (listeners.size === 0) {
+        subscriberStore.delete(normalizedKey);
+      }
+
+      return deleted;
+    };
+  }
+
+  function createPublicStateApi() {
+    return {
+      get: function (key, options) {
+        return getRuntimeStateValue(key, options);
+      },
+      set: function (key, value, options) {
+        return setRuntimeStateValue(key, value, options);
+      },
+      merge: function (key, value, options) {
+        return mergeRuntimeStateValue(key, value, options);
+      },
+      update: function (key, updater, options) {
+        return updateRuntimeStateValue(key, updater, options);
+      },
+      delete: function (key, options) {
+        return deleteRuntimeStateValue(key, options);
+      },
+      clear: function (options) {
+        const settings = options && typeof options === 'object' ? options : {};
+        return clearRuntimeState(settings.scope, settings.reason || 'manual');
+      },
+      snapshot: function (options) {
+        const settings = options && typeof options === 'object' ? options : {};
+        return runtimeStateSnapshot(settings.scope);
+      },
+      subscribe: function (key, listener, options) {
+        return subscribeRuntimeState(key, listener, options);
+      },
+      currentScope: function () {
+        return currentClientStateScope();
+      },
+    };
   }
 
   function navigationUrlForElement(link) {
@@ -481,6 +831,35 @@
     return null;
   }
 
+  function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function firstHtmlMetaValue(html, names) {
+    if (typeof html !== 'string' || html === '' || !Array.isArray(names)) {
+      return null;
+    }
+
+    for (let index = 0; index < names.length; index += 1) {
+      const name = escapeRegExp(names[index]);
+      const nameFirst = new RegExp('<meta[^>]*name=["\']' + name + '["\'][^>]*content=["\']([^"\']*)["\'][^>]*>', 'i');
+      const contentFirst = new RegExp('<meta[^>]*content=["\']([^"\']*)["\'][^>]*name=["\']' + name + '["\'][^>]*>', 'i');
+      const nameFirstMatch = html.match(nameFirst);
+
+      if (nameFirstMatch && typeof nameFirstMatch[1] === 'string') {
+        return nameFirstMatch[1];
+      }
+
+      const contentFirstMatch = html.match(contentFirst);
+
+      if (contentFirstMatch && typeof contentFirstMatch[1] === 'string') {
+        return contentFirstMatch[1];
+      }
+    }
+
+    return null;
+  }
+
   function normalizePageTransitionMode(value) {
     if (typeof value !== 'string' || value.trim() === '') {
       return 'out-in';
@@ -493,6 +872,35 @@
     }
 
     return 'out-in';
+  }
+
+  function normalizePageTransitionProfile(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(PAGE_TRANSITION_PROFILES, normalized)
+      ? normalized
+      : null;
+  }
+
+  function resolvePageTransitionProfile(value) {
+    const profileName = normalizePageTransitionProfile(value);
+
+    if (!profileName) {
+      return null;
+    }
+
+    const profile = PAGE_TRANSITION_PROFILES[profileName];
+
+    if (!profile) {
+      return null;
+    }
+
+    return Object.assign({
+      profile: profileName,
+    }, profile);
   }
 
   function parsePageTransition(value, source) {
@@ -542,11 +950,42 @@
     return nextTransition;
   }
 
+  function createPageTransition(transitionValue, durationValue, modeValue, source, profileValue) {
+    const explicitTransition = parsePageTransition(transitionValue || '', source);
+    const profile = resolvePageTransitionProfile(profileValue);
+
+    const nextTransition = profile
+      ? {
+        name: profile.name || null,
+        duration: typeof profile.duration === 'number' ? profile.duration : null,
+        mode: profile.mode || 'out-in',
+        raw: explicitTransition.raw,
+        source: source || 'default',
+        declared: true,
+        profile: profile.profile,
+      }
+      : Object.assign({}, explicitTransition, {
+        profile: null,
+      });
+
+    if (explicitTransition.declared) {
+      nextTransition.name = explicitTransition.name;
+      nextTransition.declared = true;
+    }
+
+    return applyPageTransitionOptions(nextTransition, durationValue, modeValue);
+  }
+
   function pageTransitionForElement(element) {
     const transitionValue = firstAttributeValue(element, [
       'data-volt-page-transition',
       'volt-page-transition',
       'volt:page-transition',
+    ]);
+    const profileValue = firstAttributeValue(element, [
+      'data-volt-page-transition-profile',
+      'volt-page-transition-profile',
+      'volt:page-transition-profile',
     ]);
     const durationValue = firstAttributeValue(element, [
       'data-volt-page-transition-duration',
@@ -559,17 +998,24 @@
       'volt:page-transition-mode',
     ]);
 
-    return applyPageTransitionOptions(parsePageTransition(transitionValue || '', 'link'), durationValue, modeValue);
+    return createPageTransition(transitionValue, durationValue, modeValue, 'link', profileValue);
   }
 
   function pageTransitionForDocument(doc) {
     const documentTransition = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_META_NAMES);
+    const documentProfile = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES);
     const bodyTransition = firstAttributeValue(doc && doc.body ? doc.body : null, [
       'data-volt-page-transition',
       'volt-page-transition',
       'volt:page-transition',
     ]);
+    const bodyProfile = firstAttributeValue(doc && doc.body ? doc.body : null, [
+      'data-volt-page-transition-profile',
+      'volt-page-transition-profile',
+      'volt:page-transition-profile',
+    ]);
     const transitionValue = documentTransition !== null ? documentTransition : (bodyTransition || '');
+    const profileValue = documentProfile !== null ? documentProfile : (bodyProfile || '');
     const durationValue = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES) ||
       firstAttributeValue(doc && doc.body ? doc.body : null, [
         'data-volt-page-transition-duration',
@@ -582,9 +1028,30 @@
         'volt-page-transition-mode',
         'volt:page-transition-mode',
       ]);
-    const source = documentTransition !== null ? 'document' : bodyTransition !== null ? 'body' : 'default';
+    const source = documentTransition !== null || documentProfile !== null
+      ? 'document'
+      : bodyTransition !== null || bodyProfile !== null
+        ? 'body'
+        : 'default';
 
-    return applyPageTransitionOptions(parsePageTransition(transitionValue, source), durationValue, modeValue);
+    return createPageTransition(transitionValue, durationValue, modeValue, source, profileValue);
+  }
+
+  function pageTransitionForPayload(payload) {
+    const documentTransition = payload && payload.document
+      ? pageTransitionForDocument(payload.document)
+      : parsePageTransition('', 'default');
+
+    if (documentTransition.declared) {
+      return documentTransition;
+    }
+
+    const transitionValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_META_NAMES);
+    const profileValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES);
+    const durationValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES);
+    const modeValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES);
+
+    return createPageTransition(transitionValue || '', durationValue, modeValue, transitionValue !== null || profileValue !== null ? 'document' : 'default', profileValue);
   }
 
   function resolveNavigationPageTransition(requestedTransition, documentTransition) {
@@ -626,6 +1093,7 @@
       pageTransitionSource: transition.source || 'default',
       pageTransitionMode: transition.mode || 'out-in',
       pageTransitionName: transition.name,
+      pageTransitionProfile: transition.profile || null,
     };
   }
 
@@ -857,18 +1325,28 @@
       return null;
     }
 
+    const documentPayload = parseNavigationDocument(entry.html);
+    const cacheControl = entry.cacheControl || navigationCacheControlForDocument(documentPayload);
+    const navigationMode = entry.navigationMode || navigationModeForDocument(documentPayload);
+    const pageTransition = entry.pageTransition || pageTransitionForPayload({
+      html: entry.html,
+      document: documentPayload,
+    });
+
     return {
       url: entry.url,
       finalUrl: entry.finalUrl,
       html: entry.html,
-      document: parseNavigationDocument(entry.html),
+      document: documentPayload,
       fetchedAt: entry.fetchedAt,
       lastAccessedAt: entry.lastAccessedAt,
       expiresAt: entry.expiresAt,
       source: entry.source || 'cache',
       cacheKey: entry.cacheKey || null,
       aliases: navigationCacheAliases(entry),
-      cacheControl: entry.cacheControl || parseNavigationCacheControl('', 'default'),
+      cacheControl: cacheControl,
+      navigationMode: navigationMode,
+      pageTransition: pageTransition,
     };
   }
 
@@ -972,6 +1450,15 @@
       expiresAt: now + ttl,
       source: source || 'prefetch',
       cacheControl: cacheControl,
+      navigationMode: payload.navigationMode && typeof payload.navigationMode === 'object'
+        ? payload.navigationMode
+        : navigationModeForDocument(parseNavigationDocument(payload.html)),
+      pageTransition: payload.pageTransition && typeof payload.pageTransition === 'object'
+        ? payload.pageTransition
+        : pageTransitionForPayload({
+          html: payload.html,
+          document: parseNavigationDocument(payload.html),
+        }),
     };
 
     aliases.forEach(function (alias) {
@@ -4293,6 +4780,22 @@
         return;
       }
 
+      const resolvedPayloadNavigationMode = payload.document
+        ? navigationModeForDocument(payload.document)
+        : (payload.navigationMode && typeof payload.navigationMode === 'object'
+          ? payload.navigationMode
+          : requestedNavigationMode);
+      const payloadNavigationMode = resolvedPayloadNavigationMode.mode !== 'auto'
+        ? resolvedPayloadNavigationMode
+        : (payload.navigationMode && typeof payload.navigationMode === 'object'
+          ? payload.navigationMode
+          : requestedNavigationMode);
+      const payloadPageTransition = payload.document || (payload && typeof payload.html === 'string')
+        ? pageTransitionForPayload(payload)
+        : (payload.pageTransition && typeof payload.pageTransition === 'object'
+          ? payload.pageTransition
+          : parsePageTransition('', 'default'));
+
       if (shouldFallbackForLayoutChange(payload.document)) {
         outcome = 'layout-fallback';
 
@@ -4302,7 +4805,7 @@
         }
       }
 
-      if (payload.navigationMode && payload.navigationMode.mode === 'reload') {
+      if (payloadNavigationMode && payloadNavigationMode.mode === 'reload') {
         outcome = 'policy-reload';
 
         if (settings.fallback !== false) {
@@ -4311,19 +4814,25 @@
         }
       }
 
+      const pageTransition = resolveNavigationPageTransition(
+        settings.pageTransition,
+        payloadPageTransition,
+      );
+
       emitRuntimeHook('volt:before-navigate', {
         url: normalizedUrl,
         finalUrl: payload.finalUrl,
-        navigationMode: payload.navigationMode && payload.navigationMode.mode
-          ? payload.navigationMode.mode
+        navigationMode: payloadNavigationMode && payloadNavigationMode.mode
+          ? payloadNavigationMode.mode
           : requestedNavigationMode.mode,
-        pageTransition: resolveNavigationPageTransition(settings.pageTransition, payload.pageTransition).name,
+        pageTransition: pageTransition.name,
+        pageTransitionSource: pageTransition.source || 'default',
+        pageTransitionMode: pageTransition.mode || 'out-in',
+        pageTransitionDuration: typeof pageTransition.duration === 'number'
+          ? pageTransition.duration
+          : null,
+        pageTransitionProfile: pageTransition.profile || null,
       }, document);
-
-      const pageTransition = resolveNavigationPageTransition(
-        settings.pageTransition,
-        payload.pageTransition,
-      );
 
       if (pageTransition.mode === 'out-in') {
         await runPageTransitionPhase(document.body, 'leave', pageTransition);
@@ -4353,14 +4862,22 @@
         window.scrollTo(0, 0);
       }
 
+      transitionClientStateScope(payload.finalUrl, 'navigation');
+
       emitRuntimeHook('volt:navigated', {
         url: normalizedUrl,
         finalUrl: payload.finalUrl,
         historyMode: settings.historyMode || 'push',
-        navigationMode: payload.navigationMode && payload.navigationMode.mode
-          ? payload.navigationMode.mode
+        navigationMode: payloadNavigationMode && payloadNavigationMode.mode
+          ? payloadNavigationMode.mode
           : requestedNavigationMode.mode,
         pageTransition: pageTransition.name,
+        pageTransitionSource: pageTransition.source || 'default',
+        pageTransitionMode: pageTransition.mode || 'out-in',
+        pageTransitionDuration: typeof pageTransition.duration === 'number'
+          ? pageTransition.duration
+          : null,
+        pageTransitionProfile: pageTransition.profile || null,
         preservedFragments: navigationMutation && typeof navigationMutation.preservedCount === 'number'
           ? navigationMutation.preservedCount
           : 0,
@@ -4764,6 +5281,18 @@
       window.location.reload();
     });
   });
+
+  runtime.clientStateScope = normalizeNavigationUrl(window.location.href);
+  window.Volt = window.Volt && typeof window.Volt === 'object'
+    ? window.Volt
+    : {};
+  window.Volt.visit = function (url, options) {
+    return visit(url, options || {});
+  };
+  window.Volt.prefetch = function (url, options) {
+    return prefetchPage(url, options || {});
+  };
+  window.Volt.state = createPublicStateApi();
 
   syncAllRuntimeStateDirectives();
   registerViewportPrefetchTargets(document);

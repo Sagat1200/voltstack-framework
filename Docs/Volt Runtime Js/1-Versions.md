@@ -29,8 +29,8 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` preservacion de foco y scroll basica
 - `[-]` reconciliacion de `head` y manejo de layout
 - `[x]` prefetch y preload SPA
-- `[ ]` client state real
-- `[ ]` shared state global real
+- `[x]` client state real
+- `[x]` shared state global real
 - `[ ]` directivas SPA avanzadas (`volt:show`, `volt:if`, `volt:for`)
 - `[ ]` effects de alto nivel (`toast`, `modal`)
 - `[ ]` retry system
@@ -64,7 +64,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[-]` preservacion opt-in de formularios entre pantallas
 - `[-]` preservacion opt-in de componentes vivos entre navegaciones
 - `[-]` politicas configurables por ruta para SPA vs full reload
-- `[-]` transiciones de pagina enter/leave reales
+- `[x]` transiciones de pagina enter/leave reales
 - `[x]` invalidacion/control de cache de navegacion
 
 ### 2. Protocol Client
@@ -96,9 +96,9 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 - `[x]` estados runtime internos: `loading`, `dirty`, `success`, `error`
 - `[x]` politicas runtime por componente/target
-- `[ ]` client state real sin roundtrip al backend
-- `[ ]` shared state global entre componentes
-- `[ ]` API publica tipo `runtime.state`
+- `[x]` client state real sin roundtrip al backend
+- `[x]` shared state global entre componentes
+- `[x]` API publica tipo `runtime.state`
 - `[ ]` sincronizacion selectiva frontend/backend
 - `[ ]` stores persistentes por sesion o pestaña
 - `[ ]` multi-tab synchronization
@@ -159,10 +159,10 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` `success min-duration`
 - `[x]` `error timeout`
 - `[x]` `dirty debounce`
-- `[-]` transiciones de pagina SPA completas
+- `[x]` transiciones de pagina SPA completas
 - `[x]` leave transitions reales antes de navegar
-- `[-]` coordinacion entre transition engine y navigation engine
-- `[ ]` perfiles de transicion reutilizables
+- `[x]` coordinacion entre transition engine y navigation engine
+- `[x]` perfiles de transicion reutilizables
 
 ### 9. Runtime Extensibility
 
@@ -299,10 +299,13 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` contrato inicial de `auto`, `spa` y `reload` por enlace en `volt:navigate`
 - `[x]` politica documental inicial con `<meta name="volt-navigation-mode" content="reload">`
 - `[x]` laboratorio `/navigationPolicy` y destino `/navigationDocumentReload`
-- `[-]` MVP inicial de `page transitions` SPA con `leave -> swap -> enter`
+- `[x]` MVP inicial de `page transitions` SPA con `leave -> swap -> enter`
 - `[x]` politica declarativa por enlace con `data-volt-page-transition`
 - `[x]` politica documental con meta tags `volt-page-transition`
 - `[x]` demo `/navigationTransition` y destino `/navigationTransitionAlt`
+- `[x]` perfiles reutilizables `soft`, `gentle`, `crisp` y `classic` por enlace o documento
+- `[x]` API publica `window.Volt.state` con stores `client` y `shared`
+- `[x]` demo `/runtimeState` y `/runtimeStateAlt` para validar reset por URL y persistencia global
 
 ## Proximo Bloque Recomendado
 
@@ -311,8 +314,8 @@ Orden sugerido para seguir avanzando:
 1. `fragment cache SPA`
 2. pruebas manuales y automatizadas de `fragment cache SPA`, `prefetch`/`preload` y `head` + layout fallback
 3. validacion manual fina de `politicas configurables por ruta para SPA vs full reload`
-4. `transiciones de pagina enter/leave reales`
-5. `client state` y `shared state`
+4. directivas SPA avanzadas (`volt:show`, `volt:if`, `volt:for`)
+5. sincronizacion selectiva frontend/backend
 
 ## Bloque Cerrado Reciente
 
@@ -691,6 +694,80 @@ Rutas demo actuales:
 Nota:
 
 - aun falta la validacion manual fina en navegador para cerrar `fragment cache SPA` y revisar en una sola pasada `preload`, `modulepreload`, `volt:fragment-preserve` y `volt:fragment-discard` en condiciones reales.
+
+## Contrato Actual: Perfiles De Transicion Reutilizables
+
+Estado actual:
+
+- `[x]` disponible en MVP actual
+
+Perfiles iniciales soportados:
+
+- `soft`: resuelve `fade`, `220ms`, `out-in`
+- `gentle`: resuelve `fade`, `320ms`, `out-in`
+- `crisp`: resuelve `fade`, `160ms`, `out-in`
+- `classic`: resuelve `default`, `180ms`, `out-in`
+
+Declaracion por enlace:
+
+```html
+<a
+  href="/navigationTransitionProfile"
+  volt:navigate
+  data-volt-page-transition-profile="soft"
+>
+```
+
+Declaracion por documento destino:
+
+```html
+<meta name="volt-page-transition-profile" content="gentle">
+```
+
+Reglas actuales:
+
+- el perfil aporta `name`, `duration` y `mode` por defecto
+- `data-volt-page-transition`, `data-volt-page-transition-duration` y `data-volt-page-transition-mode` pueden seguir sobrescribiendo partes del perfil
+- el runtime expone `pageTransitionProfile`, `pageTransitionSource`, `pageTransitionMode` y `pageTransitionDuration` en `volt:before-navigate`, `volt:navigated`, `volt:before-enter` y `volt:after-enter` cuando aplica
+- la demo separa un destino neutro (`/navigationTransitionProfile`) para validar perfil por enlace y un destino documental (`/navigationTransitionAlt`) para validar perfil por meta
+
+## Contrato Actual: Client State Y Shared State
+
+Estado actual:
+
+- `[x]` disponible en MVP actual
+
+API publica:
+
+```js
+window.Volt.state.get(key, { scope: 'client' | 'shared' })
+window.Volt.state.set(key, value, { scope: 'client' | 'shared' })
+window.Volt.state.merge(key, partial, { scope: 'client' | 'shared' })
+window.Volt.state.update(key, updater, { scope: 'client' | 'shared' })
+window.Volt.state.delete(key, { scope: 'client' | 'shared' })
+window.Volt.state.clear({ scope: 'client' | 'shared', reason: 'manual' })
+window.Volt.state.snapshot({ scope: 'client' | 'shared' })
+window.Volt.state.subscribe(key, listener, { scope: 'client' | 'shared' })
+window.Volt.state.currentScope()
+```
+
+Reglas actuales:
+
+- `scope: 'client'` vive en memoria del runtime y queda ligado a la URL SPA actual
+- al navegar a otra pantalla SPA compatible, el runtime cambia el `currentScope()` del cliente y limpia el store `client`
+- `scope: 'shared'` permanece disponible entre pantallas SPA mientras la pestaña siga viva
+- ambos stores son puramente frontend; no hacen roundtrip al backend ni persisten todavia entre recargas completas
+
+Eventos emitidos:
+
+- `volt:state-changed`
+- `volt:state-cleared`
+- `volt:state-scope-changed`
+
+Rutas demo:
+
+- `/runtimeState`: origen para mutar `client` y `shared`
+- `/runtimeStateAlt`: destino para confirmar que `client` se reinicia y `shared` persiste
 
 ## Como Actualizar Este Archivo
 
