@@ -27,6 +27,7 @@
     sharedStateSubscribers: new Map(),
     clientStateGlobalSubscribers: new Set(),
     sharedStateGlobalSubscribers: new Set(),
+    directiveSequence: 0,
   };
 
   const NAVIGATION_CACHE_TTL = 5000;
@@ -251,6 +252,96 @@
     return snapshot;
   }
 
+  function hasRuntimeStateValue(key, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return false;
+    }
+
+    return runtimeStateStore(options && options.scope).has(normalizedKey);
+  }
+
+  function normalizeStatePathSegments(path) {
+    if (typeof path !== 'string' || path.trim() === '') {
+      return [];
+    }
+
+    return path.split('.').map(function (segment) {
+      return segment.trim();
+    }).filter(function (segment) {
+      return segment !== '';
+    });
+  }
+
+  function resolveValueBySegments(value, segments) {
+    let current = value;
+
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index];
+
+      if (Array.isArray(current)) {
+        const numericIndex = Number(segment);
+
+        if (!Number.isInteger(numericIndex) || numericIndex < 0 || numericIndex >= current.length) {
+          return {
+            found: false,
+            value: null,
+          };
+        }
+
+        current = current[numericIndex];
+        continue;
+      }
+
+      if (current === null || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, segment)) {
+        return {
+          found: false,
+          value: null,
+        };
+      }
+
+      current = current[segment];
+    }
+
+    return {
+      found: true,
+      value: current,
+    };
+  }
+
+  function runtimeStateValueByPath(scope, path) {
+    const segments = normalizeStatePathSegments(path);
+
+    if (segments.length === 0) {
+      return {
+        found: false,
+        value: null,
+      };
+    }
+
+    const stateKey = segments.shift();
+
+    if (!hasRuntimeStateValue(stateKey, {
+      scope: scope,
+    })) {
+      return {
+        found: false,
+        value: null,
+      };
+    }
+
+    let value = getRuntimeStateValue(stateKey, {
+      scope: scope,
+    });
+    const nested = resolveValueBySegments(value, segments);
+
+    return {
+      found: nested.found,
+      value: nested.found ? cloneStateValue(nested.value) : null,
+    };
+  }
+
   function notifyRuntimeStateSubscribers(detail) {
     const scope = normalizeRuntimeStateScope(detail && detail.scope);
     const key = detail && detail.key ? detail.key : null;
@@ -335,6 +426,7 @@
     const previousValue = store.has(normalizedKey) ? store.get(normalizedKey) : null;
 
     store.set(normalizedKey, value);
+    syncAllRuntimeStateDirectives();
     emitRuntimeStateChanged(scope, normalizedKey, value, previousValue, settings.action || 'set');
     return cloneStateValue(value);
   }
@@ -380,6 +472,7 @@
 
     const previousValue = store.get(normalizedKey);
     store.delete(normalizedKey);
+    syncAllRuntimeStateDirectives();
     emitRuntimeStateChanged(scope, normalizedKey, null, previousValue, 'delete');
     return true;
   }
@@ -394,6 +487,7 @@
     }
 
     store.clear();
+    syncAllRuntimeStateDirectives();
     emitRuntimeStateCleared(normalizedScope, keys, reason, extra);
     return true;
   }
@@ -500,6 +594,681 @@
       currentScope: function () {
         return currentClientStateScope();
       },
+    };
+  }
+
+  function storeDirectiveNames(state, suffix) {
+    const parts = [state];
+
+    if (suffix) {
+      parts.push(suffix);
+    }
+
+    const dashed = 'volt-' + parts.join('-');
+    const colon = 'volt:' + parts.join('.');
+
+    return [dashed, colon];
+  }
+
+  function showDirectiveNames(suffix) {
+    return storeDirectiveNames('show', suffix);
+  }
+
+  function classDirectiveNames(suffix) {
+    return storeDirectiveNames('class', suffix);
+  }
+
+  function attrDirectiveNames(suffix) {
+    return storeDirectiveNames('attr', suffix);
+  }
+
+  function styleDirectiveNames(suffix) {
+    return storeDirectiveNames('style', suffix);
+  }
+
+  function ifDirectiveNames(suffix) {
+    return storeDirectiveNames('if', suffix);
+  }
+
+  function forDirectiveNames(suffix) {
+    return storeDirectiveNames('for', suffix);
+  }
+
+  function textDirectiveNames(suffix) {
+    return storeDirectiveNames('text', suffix);
+  }
+
+  function parseStoreDirectiveExpression(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return null;
+    }
+
+    const matches = value.trim().match(/^(!)?\s*(client|shared):([A-Za-z0-9_.-]+)$/i);
+
+    if (!matches) {
+      return null;
+    }
+
+    return {
+      negate: matches[1] === '!',
+      scope: normalizeRuntimeStateScope(matches[2]),
+      path: matches[3],
+      raw: value.trim(),
+    };
+  }
+
+  function resolveStoreDirectiveActive(value) {
+    const expression = parseStoreDirectiveExpression(value);
+
+    if (!expression) {
+      return false;
+    }
+
+    const result = runtimeStateValueByPath(expression.scope, expression.path);
+    const active = result.found ? !!result.value : false;
+
+    return expression.negate ? !active : active;
+  }
+
+  function resolveStoreDirectiveValue(value) {
+    const expression = parseStoreDirectiveExpression(value);
+
+    if (!expression) {
+      return {
+        found: false,
+        value: null,
+      };
+    }
+
+    return runtimeStateValueByPath(expression.scope, expression.path);
+  }
+
+  function formatStoreDirectiveTextValue(value) {
+    if (value === null || typeof value === 'undefined') {
+      return '';
+    }
+
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value);
+      } catch (error) {
+        return '';
+      }
+    }
+
+    return String(value);
+  }
+
+  function parseForDirectiveExpression(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return null;
+    }
+
+    const matches = value.trim().match(/^([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*,\s*([A-Za-z_$][A-Za-z0-9_$]*))?\s+in\s+(client|shared):([A-Za-z0-9_.-]+)$/i);
+
+    if (!matches) {
+      return null;
+    }
+
+    return {
+      itemAlias: matches[1],
+      indexAlias: matches[2] || 'index',
+      scope: normalizeRuntimeStateScope(matches[3]),
+      path: matches[4],
+      raw: value.trim(),
+    };
+  }
+
+  function parseStoreClassDirectiveExpression(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return null;
+    }
+
+    const separator = value.indexOf('->');
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const expression = parseStoreDirectiveExpression(value.slice(0, separator).trim());
+    const classValue = value.slice(separator + 2).trim();
+
+    if (!expression || classValue === '') {
+      return null;
+    }
+
+    return {
+      expression: expression,
+      classValue: classValue,
+      raw: value.trim(),
+    };
+  }
+
+  function parseStoreAttrDirectiveExpression(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return null;
+    }
+
+    const separator = value.indexOf('->');
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const expression = parseStoreDirectiveExpression(value.slice(0, separator).trim());
+    const attributes = parseDirectiveAttributes(value.slice(separator + 2).trim());
+
+    if (!expression || attributes.length === 0) {
+      return null;
+    }
+
+    return {
+      expression: expression,
+      attributes: attributes,
+      raw: value.trim(),
+    };
+  }
+
+  function parseStoreStyleDirectiveExpression(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return null;
+    }
+
+    const separator = value.indexOf('->');
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const expression = parseStoreDirectiveExpression(value.slice(0, separator).trim());
+    const styles = parseDirectiveStyles(value.slice(separator + 2).trim());
+
+    if (!expression || styles.length === 0) {
+      return null;
+    }
+
+    return {
+      expression: expression,
+      styles: styles,
+      raw: value.trim(),
+    };
+  }
+
+  function createDirectivePlaceholder(type) {
+    const placeholder = document.createElement('template');
+    const id = 'volt-' + type + '-' + String(runtime.directiveSequence + 1);
+
+    runtime.directiveSequence += 1;
+    placeholder.setAttribute('data-volt-' + type + '-placeholder', id);
+
+    return placeholder;
+  }
+
+  function createIfDirectivePlaceholder() {
+    return createDirectivePlaceholder('if');
+  }
+
+  function createForDirectivePlaceholder() {
+    return createDirectivePlaceholder('for');
+  }
+
+  function removeDirectiveAttributes(element, names) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE || !Array.isArray(names)) {
+      return;
+    }
+
+    names.forEach(function (name) {
+      element.removeAttribute(name);
+    });
+  }
+
+  function resolveForInterpolationValue(expression, context) {
+    if (typeof expression !== 'string' || expression.trim() === '') {
+      return '';
+    }
+
+    const normalized = expression.trim();
+    const aliases = [context.itemAlias, context.indexAlias];
+
+    for (let index = 0; index < aliases.length; index += 1) {
+      const alias = aliases[index];
+
+      if (!alias) {
+        continue;
+      }
+
+      if (normalized === alias) {
+        return context[alias];
+      }
+
+      if (normalized.indexOf(alias + '.') === 0) {
+        const nested = resolveValueBySegments(context[alias], normalizeStatePathSegments(normalized.slice(alias.length + 1)));
+        return nested.found ? nested.value : '';
+      }
+    }
+
+    return '';
+  }
+
+  function interpolateForTemplateString(template, context) {
+    if (typeof template !== 'string' || template.indexOf('{{') === -1) {
+      return template;
+    }
+
+    return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, function (_, expression) {
+      const value = resolveForInterpolationValue(expression, context);
+
+      if (value === null || typeof value === 'undefined') {
+        return '';
+      }
+
+      if (typeof value === 'object') {
+        try {
+          return JSON.stringify(value);
+        } catch (error) {
+          return '';
+        }
+      }
+
+      return String(value);
+    });
+  }
+
+  function applyForTemplateInterpolation(node, context) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    const elements = [node].concat(Array.prototype.slice.call(node.querySelectorAll('*')));
+
+    elements.forEach(function (element) {
+      element.getAttributeNames().forEach(function (name) {
+        element.setAttribute(name, interpolateForTemplateString(element.getAttribute(name) || '', context));
+      });
+    });
+
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    let textNode = walker.nextNode();
+
+    while (textNode) {
+      textNode.textContent = interpolateForTemplateString(textNode.textContent || '', context);
+      textNode = walker.nextNode();
+    }
+  }
+
+  function ensureIfDirectiveBinding(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+      return null;
+    }
+
+    if (element.__voltIfBinding) {
+      return element.__voltIfBinding;
+    }
+
+    const placeholder = createIfDirectivePlaceholder();
+    const binding = {
+      id: placeholder.getAttribute('data-volt-if-placeholder'),
+      placeholder: placeholder,
+      templateNode: element.cloneNode(true),
+      currentNode: element,
+    };
+
+    placeholder.__voltIfBinding = binding;
+    element.__voltIfBinding = binding;
+    element.parentNode.insertBefore(placeholder, element);
+    return binding;
+  }
+
+  function ensureForDirectiveBinding(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+      return null;
+    }
+
+    if (element.__voltForBinding) {
+      return element.__voltForBinding;
+    }
+
+    const expression = parseForDirectiveExpression(directiveValue(element, forDirectiveNames()));
+
+    if (!expression || !element.parentNode) {
+      return null;
+    }
+
+    const placeholder = createForDirectivePlaceholder();
+    const templateNode = element.cloneNode(true);
+    removeDirectiveAttributes(templateNode, forDirectiveNames());
+
+    const binding = {
+      id: placeholder.getAttribute('data-volt-for-placeholder'),
+      expression: expression,
+      placeholder: placeholder,
+      templateNode: templateNode,
+      currentNodes: [],
+    };
+
+    placeholder.__voltForBinding = binding;
+    element.__voltForBinding = binding;
+    element.parentNode.insertBefore(placeholder, element);
+    element.remove();
+
+    return binding;
+  }
+
+  function syncIfBinding(binding) {
+    if (!binding || !binding.placeholder || !binding.templateNode) {
+      return false;
+    }
+
+    const active = resolveStoreDirectiveActive(directiveValue(binding.templateNode, ifDirectiveNames()));
+    const currentNode = binding.currentNode && binding.currentNode.isConnected
+      ? binding.currentNode
+      : null;
+
+    if (active) {
+      if (currentNode) {
+        currentNode.__voltIfBinding = binding;
+        binding.currentNode = currentNode;
+        return false;
+      }
+
+      const nextNode = binding.templateNode.cloneNode(true);
+      nextNode.__voltIfBinding = binding;
+      binding.currentNode = nextNode;
+      binding.placeholder.parentNode.insertBefore(nextNode, binding.placeholder.nextSibling);
+      return true;
+    }
+
+    if (!currentNode) {
+      binding.currentNode = null;
+      return false;
+    }
+
+    currentNode.remove();
+    binding.currentNode = null;
+    return true;
+  }
+
+  function syncIfDirectives(root) {
+    if (!root) {
+      return false;
+    }
+
+    let mutated = false;
+
+    collectElementsWithDirectiveAttributes(root, ifDirectiveNames()).forEach(function (element) {
+      ensureIfDirectiveBinding(element);
+    });
+
+    collectElementsWithDirectiveAttributes(root, ['data-volt-if-placeholder']).forEach(function (placeholder) {
+      if (syncIfBinding(placeholder.__voltIfBinding || null)) {
+        mutated = true;
+      }
+    });
+
+    return mutated;
+  }
+
+  function syncForBinding(binding) {
+    if (!binding || !binding.placeholder || !binding.templateNode || !binding.expression) {
+      return;
+    }
+
+    const result = runtimeStateValueByPath(binding.expression.scope, binding.expression.path);
+    const items = result.found && Array.isArray(result.value) ? result.value : [];
+    const fragment = document.createDocumentFragment();
+
+    binding.currentNodes.forEach(function (node) {
+      if (node && node.isConnected) {
+        node.remove();
+      }
+    });
+
+    binding.currentNodes = [];
+
+    items.forEach(function (item, index) {
+      const node = binding.templateNode.cloneNode(true);
+      const context = {
+        itemAlias: binding.expression.itemAlias,
+        indexAlias: binding.expression.indexAlias,
+      };
+
+      context[binding.expression.itemAlias] = cloneStateValue(item);
+      context[binding.expression.indexAlias] = index;
+
+      applyForTemplateInterpolation(node, context);
+      binding.currentNodes.push(node);
+      fragment.appendChild(node);
+    });
+
+    binding.placeholder.parentNode.insertBefore(fragment, binding.placeholder.nextSibling);
+  }
+
+  function syncForDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, forDirectiveNames()).forEach(function (element) {
+      ensureForDirectiveBinding(element);
+    });
+
+    collectElementsWithDirectiveAttributes(root, ['data-volt-for-placeholder']).forEach(function (placeholder) {
+      syncForBinding(placeholder.__voltForBinding || null);
+    });
+  }
+
+  function syncShowDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, showDirectiveNames()).forEach(function (element) {
+      applyDirectiveVisibility(
+        element,
+        'show',
+        resolveStoreDirectiveActive(directiveValue(element, showDirectiveNames())),
+        false
+      );
+    });
+
+    collectElementsWithDirectiveAttributes(root, showDirectiveNames('hide')).forEach(function (element) {
+      applyDirectiveVisibility(
+        element,
+        'show',
+        resolveStoreDirectiveActive(directiveValue(element, showDirectiveNames('hide'))),
+        true
+      );
+    });
+  }
+
+  function syncTextDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, textDirectiveNames()).forEach(function (element) {
+      const result = resolveStoreDirectiveValue(directiveValue(element, textDirectiveNames()));
+      element.textContent = result.found ? formatStoreDirectiveTextValue(result.value) : '';
+    });
+  }
+
+  function syncAttrDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, attrDirectiveNames()).forEach(function (element) {
+      const directive = parseStoreAttrDirectiveExpression(directiveValue(element, attrDirectiveNames()));
+
+      if (!directive) {
+        return;
+      }
+
+      const result = runtimeStateValueByPath(directive.expression.scope, directive.expression.path);
+      const resolvedValue = result.found ? !!result.value : false;
+      const active = directive.expression.negate ? !resolvedValue : resolvedValue;
+
+      applyDirectiveAttributes(
+        element,
+        'store:' + directive.expression.raw + '->' + directive.raw,
+        active,
+        directive.attributes
+      );
+    });
+  }
+
+  function syncStyleDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, styleDirectiveNames()).forEach(function (element) {
+      const directive = parseStoreStyleDirectiveExpression(directiveValue(element, styleDirectiveNames()));
+
+      if (!directive) {
+        return;
+      }
+
+      const result = runtimeStateValueByPath(directive.expression.scope, directive.expression.path);
+      const resolvedValue = result.found ? !!result.value : false;
+      const active = directive.expression.negate ? !resolvedValue : resolvedValue;
+
+      applyDirectiveStyles(
+        element,
+        active,
+        directive.styles,
+        'store:' + directive.expression.raw + '->' + directive.raw
+      );
+    });
+  }
+
+  function syncAllStoreDirectives() {
+    document.querySelectorAll('[data-volt-root="true"]').forEach(function (root) {
+      syncForDirectives(root);
+
+      let iterations = 0;
+
+      while (syncIfDirectives(root) && iterations < 5) {
+        iterations += 1;
+      }
+
+      syncTextDirectives(root);
+      syncClassDirectives(root);
+      syncAttrDirectives(root);
+      syncStyleDirectives(root);
+      syncShowDirectives(root);
+    });
+  }
+
+  function parseStateSyncRuleValue(entry) {
+    if (typeof entry !== 'string') {
+      return null;
+    }
+
+    const matches = entry.trim().match(/^(client|shared):([A-Za-z0-9_.-]+)\s*->\s*(params|updates)\.([A-Za-z_][A-Za-z0-9_]*)$/i);
+
+    if (!matches) {
+      return null;
+    }
+
+    return {
+      scope: normalizeRuntimeStateScope(matches[1]),
+      sourcePath: matches[2],
+      destination: matches[3].toLowerCase(),
+      field: matches[4],
+      raw: entry.trim(),
+    };
+  }
+
+  function parseStateSyncRules(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return [];
+    }
+
+    return value.split(',').map(function (entry) {
+      return parseStateSyncRuleValue(entry);
+    }).filter(function (rule) {
+      return rule !== null;
+    });
+  }
+
+  function stateSyncRulesForElement(element) {
+    if (!element || !element.getAttribute) {
+      return [];
+    }
+
+    const value = directiveValue(element, ['data-volt-state-sync', 'volt-state-sync', 'volt:state-sync']);
+    return parseStateSyncRules(value || '');
+  }
+
+  function collectStateSyncRules(root, trigger) {
+    const rules = [];
+
+    stateSyncRulesForElement(root).forEach(function (rule) {
+      rules.push(rule);
+    });
+
+    if (trigger && trigger !== root) {
+      stateSyncRulesForElement(trigger).forEach(function (rule) {
+        rules.push(rule);
+      });
+    }
+
+    return rules;
+  }
+
+  function applySelectiveStateSync(root, trigger, params, updates, requestMeta) {
+    const nextParams = Object.assign({}, params || {});
+    const nextUpdates = Object.assign({}, updates || {});
+    const rules = collectStateSyncRules(root, trigger);
+    const applied = [];
+    const skipped = [];
+
+    rules.forEach(function (rule) {
+      const result = runtimeStateValueByPath(rule.scope, rule.sourcePath);
+
+      if (!result.found) {
+        skipped.push({
+          rule: rule.raw,
+          scope: rule.scope,
+          sourcePath: rule.sourcePath,
+          destination: rule.destination,
+          field: rule.field,
+          reason: 'missing-source',
+        });
+        return;
+      }
+
+      if (rule.destination === 'updates') {
+        nextUpdates[rule.field] = result.value;
+      } else {
+        nextParams[rule.field] = result.value;
+      }
+
+      applied.push({
+        rule: rule.raw,
+        scope: rule.scope,
+        sourcePath: rule.sourcePath,
+        destination: rule.destination,
+        field: rule.field,
+        value: cloneStateValue(result.value),
+      });
+    });
+
+    if (applied.length > 0 || skipped.length > 0) {
+      emitRuntimeHook('volt:state-sync', requestHookDetail('action', requestMeta, {
+        applied: applied,
+        skipped: skipped,
+        params: cloneStateValue(nextParams),
+        updates: cloneStateValue(nextUpdates),
+      }), resolveRuntimeRoot(root, requestMeta.component) || root || document);
+    }
+
+    return {
+      params: nextParams,
+      updates: nextUpdates,
+      applied: applied,
+      skipped: skipped,
     };
   }
 
@@ -2029,6 +2798,8 @@
       element.__voltRuntimeDirectiveStore = {
         visibility: {},
         attributes: {},
+        classes: {},
+        styles: {},
       };
     }
 
@@ -2143,6 +2914,7 @@
       store.visibility[storeKey] = {
         hidden: !!element.hidden,
         ariaHidden: element.getAttribute('aria-hidden'),
+        display: element.style.display || '',
       };
     }
 
@@ -2152,10 +2924,17 @@
     if (shouldHide) {
       element.hidden = true;
       element.setAttribute('aria-hidden', 'true');
+      element.style.setProperty('display', 'none', 'important');
       return;
     }
 
     element.hidden = initialState.hidden;
+
+    if (initialState.display === '') {
+      element.style.removeProperty('display');
+    } else {
+      element.style.display = initialState.display;
+    }
 
     if (initialState.ariaHidden === null) {
       element.removeAttribute('aria-hidden');
@@ -2195,6 +2974,33 @@
     });
   }
 
+  function parseDirectiveStyles(value) {
+    if (typeof value !== 'string' || value.trim() === '') {
+      return [];
+    }
+
+    return value.split(';').map(function (token) {
+      const entry = token.trim();
+
+      if (!entry) {
+        return null;
+      }
+
+      const separator = entry.indexOf(':');
+
+      if (separator === -1) {
+        return null;
+      }
+
+      return {
+        name: entry.slice(0, separator).trim(),
+        value: entry.slice(separator + 1).trim(),
+      };
+    }).filter(function (entry) {
+      return entry && entry.name && entry.value;
+    });
+  }
+
   function applyDirectiveAttributes(element, state, active, attributes) {
     if (!Array.isArray(attributes) || attributes.length === 0) {
       return;
@@ -2230,9 +3036,52 @@
     });
   }
 
-  function applyDirectiveClasses(element, active, value) {
+  function applyDirectiveStyles(element, active, styles, storeKey) {
+    if (!Array.isArray(styles) || styles.length === 0) {
+      return;
+    }
+
+    const store = runtimeDirectiveStore(element);
+    const styleStoreKey = storeKey || 'runtime:style';
+
+    if (!store.styles[styleStoreKey]) {
+      store.styles[styleStoreKey] = {};
+    }
+
+    styles.forEach(function (entry) {
+      if (!Object.prototype.hasOwnProperty.call(store.styles[styleStoreKey], entry.name)) {
+        store.styles[styleStoreKey][entry.name] = {
+          value: element.style.getPropertyValue(entry.name),
+          priority: element.style.getPropertyPriority(entry.name),
+        };
+      }
+
+      if (active) {
+        element.style.setProperty(entry.name, entry.value);
+        return;
+      }
+
+      const initialState = store.styles[styleStoreKey][entry.name];
+
+      if (!initialState || initialState.value === '') {
+        element.style.removeProperty(entry.name);
+        return;
+      }
+
+      element.style.setProperty(entry.name, initialState.value, initialState.priority || '');
+    });
+  }
+
+  function applyDirectiveClasses(element, active, value, storeKey) {
     if (typeof value !== 'string' || value.trim() === '') {
       return;
+    }
+
+    const store = runtimeDirectiveStore(element);
+    const classStoreKey = storeKey || 'runtime:class';
+
+    if (!store.classes[classStoreKey]) {
+      store.classes[classStoreKey] = {};
     }
 
     value.split(/\s+/).forEach(function (className) {
@@ -2240,7 +3089,43 @@
         return;
       }
 
+      if (!Object.prototype.hasOwnProperty.call(store.classes[classStoreKey], className)) {
+        store.classes[classStoreKey][className] = element.classList.contains(className);
+      }
+
+      const initialValue = store.classes[classStoreKey][className];
+
+      if (!active && initialValue) {
+        element.classList.add(className);
+        return;
+      }
+
       element.classList.toggle(className, active);
+    });
+  }
+
+  function syncClassDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, classDirectiveNames()).forEach(function (element) {
+      const directive = parseStoreClassDirectiveExpression(directiveValue(element, classDirectiveNames()));
+
+      if (!directive) {
+        return;
+      }
+
+      const result = runtimeStateValueByPath(directive.expression.scope, directive.expression.path);
+      const resolvedValue = result.found ? !!result.value : false;
+      const active = directive.expression.negate ? !resolvedValue : resolvedValue;
+
+      applyDirectiveClasses(
+        element,
+        active,
+        directive.classValue,
+        'store:' + directive.expression.raw + '->' + directive.classValue
+      );
     });
   }
 
@@ -2707,7 +3592,8 @@
       applyDirectiveClasses(
         element,
         stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
-        directiveValue(element, stateDirectiveNames(state, 'class'))
+        directiveValue(element, stateDirectiveNames(state, 'class')),
+        'state:' + state + ':class'
       );
     });
 
@@ -2726,10 +3612,23 @@
       return;
     }
 
+    syncForDirectives(root);
+
+    let iterations = 0;
+
+    while (syncIfDirectives(root) && iterations < 5) {
+      iterations += 1;
+    }
+
     syncRuntimeStateDirective(root, 'loading', root.getAttribute('data-volt-loading') === 'true');
     syncRuntimeStateDirective(root, 'error', root.getAttribute('data-volt-error') === 'true');
     syncRuntimeStateDirective(root, 'dirty', root.getAttribute('data-volt-dirty') === 'true');
     syncRuntimeStateDirective(root, 'success', root.getAttribute('data-volt-success') === 'true');
+    syncTextDirectives(root);
+    syncClassDirectives(root);
+    syncAttrDirectives(root);
+    syncStyleDirectives(root);
+    syncShowDirectives(root);
   }
 
   function syncAllRuntimeStateDirectives() {
@@ -4639,6 +5538,38 @@
           );
         }
 
+      case 'state.set':
+        if (typeof effect.key === 'string' && effect.key !== '') {
+          setRuntimeStateValue(effect.key, effect.value, {
+            scope: effect.scope,
+            action: 'effect',
+          });
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case 'state.merge':
+        if (typeof effect.key === 'string' && effect.key !== '') {
+          mergeRuntimeStateValue(effect.key, effect.value, {
+            scope: effect.scope,
+          });
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case 'state.delete':
+        if (typeof effect.key === 'string' && effect.key !== '') {
+          deleteRuntimeStateValue(effect.key, {
+            scope: effect.scope,
+          });
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case 'state.clear':
+        clearRuntimeState(effect.scope, effect.reason || 'effect');
+        return createEffectResult(root, effect, target, true, false);
+
       case 'navigate':
         if (typeof effect.url === 'string' && effect.url !== '') {
           await visit(effect.url, {
@@ -4944,6 +5875,7 @@
       requestId: requestId,
       trigger: triggerDescriptor(trigger),
     };
+    const syncedPayload = applySelectiveStateSync(root, trigger, params, updates, requestMeta);
 
     if (state) {
       state.requestId = requestId;
@@ -4982,8 +5914,8 @@
         body: JSON.stringify({
           component: component,
           action: action,
-          params: params || {},
-          updates: updates || {},
+          params: syncedPayload.params,
+          updates: syncedPayload.updates,
           snapshot: JSON.parse(snapshot),
         }),
       });
@@ -5294,7 +6226,17 @@
   };
   window.Volt.state = createPublicStateApi();
 
-  syncAllRuntimeStateDirectives();
-  registerViewportPrefetchTargets(document);
-  scheduleHeuristicPrefetch(document);
+  function bootRuntimeDocumentFeatures() {
+    syncAllRuntimeStateDirectives();
+    registerViewportPrefetchTargets(document);
+    scheduleHeuristicPrefetch(document);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootRuntimeDocumentFeatures, {
+      once: true,
+    });
+  }
+
+  bootRuntimeDocumentFeatures();
 })();

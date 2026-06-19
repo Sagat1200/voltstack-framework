@@ -229,6 +229,34 @@ final class ActionManualEffectBuilder
         return $this;
     }
 
+    public function stateSet(string $scope, string $key, mixed $value): self
+    {
+        $this->options->stateSet($scope, $key, $value);
+
+        return $this;
+    }
+
+    public function stateMerge(string $scope, string $key, mixed $value): self
+    {
+        $this->options->stateMerge($scope, $key, $value);
+
+        return $this;
+    }
+
+    public function stateDelete(string $scope, string $key): self
+    {
+        $this->options->stateDelete($scope, $key);
+
+        return $this;
+    }
+
+    public function stateClear(string $scope, ?string $reason = null): self
+    {
+        $this->options->stateClear($scope, $reason);
+
+        return $this;
+    }
+
     public function loadingPolicy(
         string|int|float|null $delay = null,
         string|int|float|null $minDuration = null,

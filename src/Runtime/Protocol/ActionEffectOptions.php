@@ -404,6 +404,40 @@ final class ActionEffectOptions
         return $this->effect('runtime.policy', $payload);
     }
 
+    public function stateSet(string $scope, string $key, mixed $value): self
+    {
+        return $this->effect('state.set', [
+            'scope' => $scope,
+            'key' => $key,
+            'value' => $value,
+        ]);
+    }
+
+    public function stateMerge(string $scope, string $key, mixed $value): self
+    {
+        return $this->effect('state.merge', [
+            'scope' => $scope,
+            'key' => $key,
+            'value' => $value,
+        ]);
+    }
+
+    public function stateDelete(string $scope, string $key): self
+    {
+        return $this->effect('state.delete', [
+            'scope' => $scope,
+            'key' => $key,
+        ]);
+    }
+
+    public function stateClear(string $scope, ?string $reason = null): self
+    {
+        return $this->effect('state.clear', array_filter([
+            'scope' => $scope,
+            'reason' => $reason,
+        ], static fn (mixed $value): bool => $value !== null));
+    }
+
     public function loadingPolicy(
         string|int|float|null $delay = null,
         string|int|float|null $minDuration = null,

@@ -31,7 +31,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` prefetch y preload SPA
 - `[x]` client state real
 - `[x]` shared state global real
-- `[ ]` directivas SPA avanzadas (`volt:show`, `volt:if`, `volt:for`)
+- `[~]` directivas SPA avanzadas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`, `volt:for`)
 - `[ ]` effects de alto nivel (`toast`, `modal`)
 - `[ ]` retry system
 - `[ ]` offline mode
@@ -99,7 +99,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` client state real sin roundtrip al backend
 - `[x]` shared state global entre componentes
 - `[x]` API publica tipo `runtime.state`
-- `[ ]` sincronizacion selectiva frontend/backend
+- `[x]` sincronizacion selectiva frontend/backend
 - `[ ]` stores persistentes por sesion o pestaña
 - `[ ]` multi-tab synchronization
 
@@ -144,10 +144,14 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` `volt:dirty`
 - `[x]` `volt:success`
 - `[x]` `volt:error`
-- `[ ]` `volt:show`
-- `[ ]` `volt:if`
-- `[ ]` `volt:for`
-- `[ ]` directivas runtime personalizadas
+- `[x]` `volt:text`
+- `[x]` `volt:class`
+- `[x]` `volt:attr`
+- `[x]` `volt:style`
+- `[x]` `volt:show`
+- `[x]` `volt:if`
+- `[x]` `volt:for`
+- `[~]` directivas runtime personalizadas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`)
 - `[ ]` parser extensible de directivas frontend
 
 ### 8. Transition Engine
@@ -306,6 +310,15 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` perfiles reutilizables `soft`, `gentle`, `crisp` y `classic` por enlace o documento
 - `[x]` API publica `window.Volt.state` con stores `client` y `shared`
 - `[x]` demo `/runtimeState` y `/runtimeStateAlt` para validar reset por URL y persistencia global
+- `[x]` sincronizacion selectiva desde `client/shared state` hacia `params` o `updates`
+- `[x]` effects backend -> frontend para `state.set`, `state.merge`, `state.delete` y `state.clear`
+- `[x]` MVP de `volt:show` con expresiones `client:path` y `shared:path`
+- `[x]` MVP de `volt:if` con mount/unmount por `client:path` y `shared:path`
+- `[x]` MVP de `volt:for` con repeticion sobre arreglos `client/shared` y placeholders simples
+- `[x]` MVP de `volt:text` para escribir texto desde `client/shared state`
+- `[x]` MVP de `volt:class` para alternar clases CSS desde `client/shared state`
+- `[x]` MVP de `volt:attr` para alternar atributos HTML desde `client/shared state`
+- `[x]` MVP de `volt:style` para alternar estilos inline desde `client/shared state`
 
 ## Proximo Bloque Recomendado
 
@@ -314,8 +327,8 @@ Orden sugerido para seguir avanzando:
 1. `fragment cache SPA`
 2. pruebas manuales y automatizadas de `fragment cache SPA`, `prefetch`/`preload` y `head` + layout fallback
 3. validacion manual fina de `politicas configurables por ruta para SPA vs full reload`
-4. directivas SPA avanzadas (`volt:show`, `volt:if`, `volt:for`)
-5. sincronizacion selectiva frontend/backend
+4. sincronizacion selectiva frontend/backend
+5. expresiones compuestas para directivas runtime
 
 ## Bloque Cerrado Reciente
 
@@ -768,6 +781,295 @@ Rutas demo:
 
 - `/runtimeState`: origen para mutar `client` y `shared`
 - `/runtimeStateAlt`: destino para confirmar que `client` se reinicia y `shared` persiste
+
+## Contrato Actual: Sincronizacion Selectiva Frontend/Backend
+
+Estado actual:
+
+- `[x]` disponible en MVP actual
+
+Declaracion en el trigger o formulario:
+
+```html
+<form
+  volt-submit="captureSelectiveSync"
+  data-volt-state-sync="client:draft.note->params.clientNote, shared:draft.note->params.sharedNote, shared:counter->updates.sharedCounterMirror">
+</form>
+```
+
+Reglas actuales:
+
+- cada regla usa el formato `scope:path->destination.field`
+- `scope` acepta `client` o `shared`
+- `destination` acepta `params` o `updates`
+- la lectura del origen soporta rutas con punto como `draft.note`
+- el destino actual es plano, por ejemplo `params.clientNote` o `updates.title`
+- solo las claves declaradas viajan al backend en la accion reactiva
+
+Backend -> frontend:
+
+- `ActionEffectOptions` y `ActionManualEffectBuilder` soportan:
+  - `stateSet(scope, key, value)`
+  - `stateMerge(scope, key, value)`
+  - `stateDelete(scope, key)`
+  - `stateClear(scope, reason)`
+
+Eventos runtime:
+
+- `volt:state-sync`
+- `volt:state-changed`
+- `volt:state-cleared`
+- `volt:state-scope-changed`
+
+Rutas demo:
+
+- `/runtimeState`: muta stores, envia sync selectivo y recibe `shared.serverSync` desde el backend
+
+## Contrato Actual: Volt Show
+
+Estado actual:
+
+- `[x]` disponible en MVP inicial
+
+Declaracion actual:
+
+```html
+<section volt:show="client:ui.showClientPanel"></section>
+<section volt:show="shared:ui.showSharedPanel"></section>
+<section volt:show.hide="shared:ui.showSharedPanel"></section>
+```
+
+Reglas actuales:
+
+- acepta expresiones simples con `client:path` o `shared:path`
+- soporta negacion con `!`, por ejemplo `volt:show="!shared:ui.showSharedPanel"`
+- el `path` soporta acceso con punto como `draft.note` o `ui.showSharedPanel`
+- un valor truthy muestra el elemento en `volt:show`
+- un valor truthy oculta el elemento en `volt:show.hide`
+- el DOM se resincroniza al mutar `window.Volt.state`, al aplicar effects y despues de navegar por SPA
+
+Limitaciones actuales:
+
+- no evalua expresiones arbitrarias
+- no soporta todavia comparaciones, operadores logicos ni lectura directa de snapshot backend
+- `volt:show` ya cubre visibilidad basada en state; los siguientes pasos quedan en directivas mas expresivas
+
+Rutas demo:
+
+- `/runtimeState`: origen para alternar paneles visibles por `client` y `shared`
+- `/runtimeStateAlt`: destino para validar que `client` se limpia por URL y `shared` persiste
+
+## Contrato Actual: Volt If
+
+Estado actual:
+
+- `[x]` disponible en MVP inicial
+
+Declaracion actual:
+
+```html
+<section volt:if="client:ui.mountClientPanel"></section>
+<section volt:if="shared:ui.mountSharedPanel"></section>
+```
+
+Reglas actuales:
+
+- acepta expresiones simples con `client:path` o `shared:path`
+- soporta negacion con `!`, por ejemplo `volt:if="!shared:ui.mountSharedPanel"`
+- el `path` soporta acceso con punto como `ui.mountSharedPanel`
+- cuando la expresion es falsy, el nodo se desmonta del DOM
+- cuando la expresion vuelve a ser truthy, el runtime vuelve a montar una clonacion fresca del nodo original
+- el DOM se resincroniza al mutar `window.Volt.state`, al aplicar effects y despues de navegar por SPA
+
+Limitaciones actuales:
+
+- no preserva estado interno efimero del nodo montado al desmontar; al volver a montar se crea desde el markup original
+- no soporta todavia bloques `else`
+- `volt:for` ya cubre el siguiente MVP estructural del bloque
+
+Rutas demo:
+
+- `/runtimeState`: origen para alternar nodos montados por `client` y `shared`
+- `/runtimeStateAlt`: destino para validar que `client` se desmonta por URL y `shared` puede seguir montado
+
+## Contrato Actual: Volt For
+
+Estado actual:
+
+- `[x]` disponible en MVP inicial
+
+Declaracion actual:
+
+```html
+<article volt:for="card, index in client:list.items">
+  <strong>{{ index }}. {{ card.title }}</strong>
+  <p>{{ card.detail }}</p>
+</article>
+
+<article volt:for="card, index in shared:list.items">
+  <strong>{{ index }}. {{ card.title }}</strong>
+</article>
+```
+
+Reglas actuales:
+
+- acepta expresiones con formato `alias in scope:path` o `alias, index in scope:path`
+- `scope` puede ser `client` o `shared`
+- el `path` soporta acceso con punto y debe resolver a un arreglo
+- en el clon se soportan placeholders simples `{{ alias }}`, `{{ alias.prop }}` y `{{ index }}`
+- el runtime vuelve a renderizar la lista completa al mutar `window.Volt.state`, al aplicar effects y despues de navegar por SPA
+- la lista `client` cambia de scope con la URL; la lista `shared` permanece en memoria de la pestaña
+
+Limitaciones actuales:
+
+- solo soporta arreglos; no itera todavia objetos o rangos
+- no hay diff granular por item; el MVP vuelve a renderizar la lista completa
+- no soporta todavia `key`, reordenamiento optimizado ni plantillas condicionales por item
+- no evalua expresiones arbitrarias dentro de `{{ }}`
+
+Rutas demo:
+
+- `/runtimeState`: origen para agregar y quitar items en `client:list.items` y `shared:list.items`
+- `/runtimeStateAlt`: destino para validar que la lista `client` se reinicia por URL y la `shared` persiste
+
+## Contrato Actual: Volt Text
+
+Estado actual:
+
+- `[x]` disponible en MVP inicial
+
+Declaracion actual:
+
+```html
+<span volt:text="client:draft.note"></span>
+<span volt:text="shared:draft.note"></span>
+<span volt:text="shared:serverSync.syncedAt"></span>
+```
+
+Reglas actuales:
+
+- acepta expresiones simples con `client:path` o `shared:path`
+- el `path` soporta acceso con punto como `draft.note` o `serverSync.syncedAt`
+- escribe el resultado en `textContent` del nodo destino
+- si el valor es `null`, `undefined` o no existe, el texto queda vacio
+- si el valor es un objeto o arreglo, el MVP lo serializa con `JSON.stringify`
+- el DOM se resincroniza al mutar `window.Volt.state`, al aplicar effects y despues de navegar por SPA
+
+Limitaciones actuales:
+
+- no soporta todavia fallback textual declarativo
+- no evalua expresiones arbitrarias ni concatenaciones
+- no distingue todavia entre `textContent` y `innerText`; siempre usa `textContent`
+
+Rutas demo:
+
+- `/runtimeState`: origen para ver texto desde `client.draft.note`, `shared.draft.note` y `shared.serverSync.syncedAt`
+- `/runtimeStateAlt`: destino para validar que el texto `client` se reinicia por URL y el `shared` persiste
+
+## Contrato Actual: Volt Class
+
+Estado actual:
+
+- `[x]` disponible en MVP inicial
+
+Declaracion actual:
+
+```html
+<article volt:class="client:ui.highlightClientCard -> ring-4 ring-cyan-400"></article>
+<article volt:class="shared:ui.highlightSharedCard -> ring-4 ring-fuchsia-400"></article>
+<article volt:class="!shared:ui.highlightSharedCard -> opacity-60"></article>
+```
+
+Reglas actuales:
+
+- acepta expresiones con formato `scope:path -> clases`
+- `scope` puede ser `client` o `shared`
+- soporta negacion con `!`, por ejemplo `!shared:ui.highlightSharedCard -> opacity-60`
+- la lista de clases se separa por espacios y se aplica con `classList`
+- si la condicion pasa a falsy, el runtime quita solo las clases controladas por esa directiva
+- si el elemento ya tenia una clase originalmente, el runtime la restaura al desactivar la directiva
+- el DOM se resincroniza al mutar `window.Volt.state`, al aplicar effects y despues de navegar por SPA
+
+Limitaciones actuales:
+
+- no evalua expresiones arbitrarias ni objetos estilo `{ active: condition }`
+- no soporta todavia combinaciones declarativas con multiples reglas en un mismo atributo
+- no hace diff semantico de utilidades CSS; solo alterna la lista literal declarada
+
+Rutas demo:
+
+- `/runtimeState`: origen para alternar resaltado en tarjetas cliente y compartida
+- `/runtimeStateAlt`: destino para validar que el resaltado `client` se reinicia por URL y el `shared` persiste
+
+## Contrato Actual: Volt Attr
+
+Estado actual:
+
+- `[x]` disponible en MVP inicial
+
+Declaracion actual:
+
+```html
+<button volt:attr="client:ui.lockClientAction -> disabled=disabled, aria-disabled=true"></button>
+<button volt:attr="shared:ui.lockSharedAction -> disabled=disabled, data-lock=shared"></button>
+<div volt:attr="!shared:ui.lockSharedAction -> data-state=ready"></div>
+```
+
+Reglas actuales:
+
+- acepta expresiones con formato `scope:path -> atributo=valor, otro=valor`
+- `scope` puede ser `client` o `shared`
+- soporta negacion con `!`, por ejemplo `!shared:ui.lockSharedAction -> data-state=ready`
+- la lista de atributos se separa por comas
+- si la condicion es truthy, el runtime aplica cada atributo con `setAttribute`
+- si la condicion vuelve a falsy, el runtime restaura el valor original de cada atributo o lo elimina si no existia
+- el DOM se resincroniza al mutar `window.Volt.state`, al aplicar effects y despues de navegar por SPA
+
+Limitaciones actuales:
+
+- no soporta todavia sintaxis booleana especial distinta de la presencia normal del atributo
+- no evalua expresiones arbitrarias ni objetos tipo `{ disabled: condition }`
+- no soporta multiples reglas independientes dentro del mismo atributo `volt:attr`
+
+Rutas demo:
+
+- `/runtimeState`: origen para bloquear acciones cliente y compartida desde atributos
+- `/runtimeStateAlt`: destino para validar que los atributos `client` se reinician por URL y los `shared` persisten
+
+## Contrato Actual: Volt Style
+
+Estado actual:
+
+- `[x]` disponible en MVP inicial
+
+Declaracion actual:
+
+```html
+<article volt:style="client:ui.softenClientCard -> opacity:0.55; transform:scale(0.98)"></article>
+<article volt:style="shared:ui.softenSharedCard -> opacity:0.7; box-shadow:0 18px 40px rgba(217,70,239,0.22)"></article>
+<div volt:style="!shared:ui.softenSharedCard -> opacity:1"></div>
+```
+
+Reglas actuales:
+
+- acepta expresiones con formato `scope:path -> propiedad:valor; otra-propiedad:valor`
+- `scope` puede ser `client` o `shared`
+- soporta negacion con `!`, por ejemplo `!shared:ui.softenSharedCard -> opacity:1`
+- la lista de declaraciones se separa por `;`
+- si la condicion es truthy, el runtime aplica cada declaracion con `style.setProperty`
+- si la condicion vuelve a falsy, el runtime restaura el valor inline original de cada propiedad o la elimina si no existia
+- el DOM se resincroniza al mutar `window.Volt.state`, al aplicar effects y despues de navegar por SPA
+
+Limitaciones actuales:
+
+- no soporta todavia objetos estilo `{ opacity: condition }`
+- no evalua expresiones arbitrarias ni calculos dinamicos dentro del valor
+- no soporta multiples reglas independientes dentro del mismo atributo `volt:style`
+
+Rutas demo:
+
+- `/runtimeState`: origen para alternar estilos inline cliente y compartidos
+- `/runtimeStateAlt`: destino para validar que los estilos `client` se reinician por URL y los `shared` persisten
 
 ## Como Actualizar Este Archivo
 
