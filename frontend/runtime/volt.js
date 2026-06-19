@@ -34,35 +34,58 @@
   const NAVIGATION_CACHE_MAX_ENTRIES = 10;
   const NAVIGATION_HEURISTIC_DELAY = 180;
   const NAVIGATION_HEURISTIC_VIEWPORT_MARGIN = 240;
-  const NAVIGATION_PREFETCH_SELECTOR = 'a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]';
-  const NAVIGATION_CACHE_CONTROL_META_NAMES = ['volt-cache-control', 'volt:navigation-cache'];
-  const NAVIGATION_MODE_META_NAMES = ['volt-navigation-mode', 'volt:navigation-mode'];
-  const NAVIGATION_PAGE_TRANSITION_META_NAMES = ['volt-page-transition', 'volt:page-transition'];
-  const NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES = ['volt-page-transition-profile', 'volt:page-transition-profile'];
-  const NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES = ['volt-page-transition-duration', 'volt:page-transition-duration'];
-  const NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES = ['volt-page-transition-mode', 'volt:page-transition-mode'];
-  const NAVIGATION_FRAGMENT_CONTROL_META_NAMES = ['volt-fragment-control', 'volt:fragment-cache'];
-  const NAVIGATION_FRAGMENT_SELECTOR = '[data-volt-preserve], [volt-preserve], [volt\\:preserve]';
+  const NAVIGATION_PREFETCH_SELECTOR =
+    "a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]";
+  const NAVIGATION_CACHE_CONTROL_META_NAMES = [
+    "volt-cache-control",
+    "volt:navigation-cache",
+  ];
+  const NAVIGATION_MODE_META_NAMES = [
+    "volt-navigation-mode",
+    "volt:navigation-mode",
+  ];
+  const NAVIGATION_PAGE_TRANSITION_META_NAMES = [
+    "volt-page-transition",
+    "volt:page-transition",
+  ];
+  const NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES = [
+    "volt-page-transition-profile",
+    "volt:page-transition-profile",
+  ];
+  const NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES = [
+    "volt-page-transition-duration",
+    "volt:page-transition-duration",
+  ];
+  const NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES = [
+    "volt-page-transition-mode",
+    "volt:page-transition-mode",
+  ];
+  const NAVIGATION_FRAGMENT_CONTROL_META_NAMES = [
+    "volt-fragment-control",
+    "volt:fragment-cache",
+  ];
+  const NAVIGATION_FRAGMENT_SELECTOR =
+    "[data-volt-preserve], [volt-preserve], [volt\\:preserve]";
   const PAGE_TRANSITION_PROFILES = Object.freeze({
     soft: Object.freeze({
-      name: 'fade',
+      name: "fade",
       duration: 220,
-      mode: 'out-in',
+      mode: "out-in",
     }),
     gentle: Object.freeze({
-      name: 'fade',
+      name: "fade",
       duration: 320,
-      mode: 'out-in',
+      mode: "out-in",
     }),
     crisp: Object.freeze({
-      name: 'fade',
+      name: "fade",
       duration: 160,
-      mode: 'out-in',
+      mode: "out-in",
     }),
     classic: Object.freeze({
-      name: 'default',
+      name: "default",
       duration: 180,
-      mode: 'out-in',
+      mode: "out-in",
     }),
   });
 
@@ -89,7 +112,7 @@
     const roots = document.querySelectorAll('[data-volt-root="true"]');
 
     for (let index = 0; index < roots.length; index += 1) {
-      if (roots[index].getAttribute('data-volt-component') === componentName) {
+      if (roots[index].getAttribute("data-volt-component") === componentName) {
         return roots[index];
       }
     }
@@ -98,7 +121,7 @@
   }
 
   function readSnapshot(root) {
-    const snapshot = root.getAttribute('data-volt-snapshot');
+    const snapshot = root.getAttribute("data-volt-snapshot");
 
     return snapshot ? JSON.parse(snapshot) : null;
   }
@@ -106,20 +129,22 @@
   function collectModelUpdates(root) {
     const updates = {};
 
-    root.querySelectorAll('[volt-model], [volt\\:model]').forEach(function (element) {
-      const key = directiveValue(element, ['volt-model', 'volt:model']);
+    root
+      .querySelectorAll("[volt-model], [volt\\:model]")
+      .forEach(function (element) {
+        const key = directiveValue(element, ["volt-model", "volt:model"]);
 
-      if (!key) {
-        return;
-      }
+        if (!key) {
+          return;
+        }
 
-      if (element.type === 'checkbox') {
-        updates[key] = !!element.checked;
-        return;
-      }
+        if (element.type === "checkbox") {
+          updates[key] = !!element.checked;
+          return;
+        }
 
-      updates[key] = element.value;
-    });
+        updates[key] = element.value;
+      });
 
     return updates;
   }
@@ -129,7 +154,7 @@
     const formData = new FormData(form);
 
     formData.forEach(function (value, key) {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         data[key] = value;
       }
     });
@@ -138,18 +163,18 @@
   }
 
   function cssEscape(value) {
-    if (window.CSS && typeof window.CSS.escape === 'function') {
+    if (window.CSS && typeof window.CSS.escape === "function") {
       return window.CSS.escape(value);
     }
 
-    return String(value).replace(/[^a-zA-Z0-9\-_]/g, '\\$&');
+    return String(value).replace(/[^a-zA-Z0-9\-_]/g, "\\$&");
   }
 
   function directiveValue(element, names) {
     for (let index = 0; index < names.length; index += 1) {
       const value = element.getAttribute(names[index]);
 
-      if (value !== null && value !== '') {
+      if (value !== null && value !== "") {
         return value;
       }
     }
@@ -168,7 +193,7 @@
       if (element.hasAttribute(names[index])) {
         return {
           name: names[index],
-          value: element.getAttribute(names[index]) || '',
+          value: element.getAttribute(names[index]) || "",
         };
       }
     }
@@ -180,19 +205,18 @@
     try {
       return new URL(url, window.location.href).toString();
     } catch (error) {
-      return String(url || '');
+      return String(url || "");
     }
   }
 
   function cloneStateValue(value) {
-    if (typeof structuredClone === 'function') {
+    if (typeof structuredClone === "function") {
       try {
         return structuredClone(value);
-      } catch (error) {
-      }
+      } catch (error) {}
     }
 
-    if (value === null || typeof value !== 'object') {
+    if (value === null || typeof value !== "object") {
       return value;
     }
 
@@ -204,16 +228,16 @@
   }
 
   function normalizeRuntimeStateScope(scope) {
-    return scope === 'shared' ? 'shared' : 'client';
+    return scope === "shared" ? "shared" : "client";
   }
 
   function normalizeRuntimeStateKey(key) {
-    if (typeof key !== 'string') {
+    if (typeof key !== "string") {
       return null;
     }
 
     const normalized = key.trim();
-    return normalized !== '' ? normalized : null;
+    return normalized !== "" ? normalized : null;
   }
 
   function currentClientStateScope() {
@@ -225,19 +249,19 @@
   }
 
   function runtimeStateStore(scope) {
-    return normalizeRuntimeStateScope(scope) === 'shared'
+    return normalizeRuntimeStateScope(scope) === "shared"
       ? runtime.sharedStateValues
       : runtime.clientStateValues;
   }
 
   function runtimeStateSubscriberStore(scope) {
-    return normalizeRuntimeStateScope(scope) === 'shared'
+    return normalizeRuntimeStateScope(scope) === "shared"
       ? runtime.sharedStateSubscribers
       : runtime.clientStateSubscribers;
   }
 
   function runtimeStateGlobalSubscribers(scope) {
-    return normalizeRuntimeStateScope(scope) === 'shared'
+    return normalizeRuntimeStateScope(scope) === "shared"
       ? runtime.sharedStateGlobalSubscribers
       : runtime.clientStateGlobalSubscribers;
   }
@@ -263,15 +287,18 @@
   }
 
   function normalizeStatePathSegments(path) {
-    if (typeof path !== 'string' || path.trim() === '') {
+    if (typeof path !== "string" || path.trim() === "") {
       return [];
     }
 
-    return path.split('.').map(function (segment) {
-      return segment.trim();
-    }).filter(function (segment) {
-      return segment !== '';
-    });
+    return path
+      .split(".")
+      .map(function (segment) {
+        return segment.trim();
+      })
+      .filter(function (segment) {
+        return segment !== "";
+      });
   }
 
   function resolveValueBySegments(value, segments) {
@@ -283,7 +310,11 @@
       if (Array.isArray(current)) {
         const numericIndex = Number(segment);
 
-        if (!Number.isInteger(numericIndex) || numericIndex < 0 || numericIndex >= current.length) {
+        if (
+          !Number.isInteger(numericIndex) ||
+          numericIndex < 0 ||
+          numericIndex >= current.length
+        ) {
           return {
             found: false,
             value: null,
@@ -294,7 +325,11 @@
         continue;
       }
 
-      if (current === null || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, segment)) {
+      if (
+        current === null ||
+        typeof current !== "object" ||
+        !Object.prototype.hasOwnProperty.call(current, segment)
+      ) {
         return {
           found: false,
           value: null,
@@ -322,9 +357,11 @@
 
     const stateKey = segments.shift();
 
-    if (!hasRuntimeStateValue(stateKey, {
-      scope: scope,
-    })) {
+    if (
+      !hasRuntimeStateValue(stateKey, {
+        scope: scope,
+      })
+    ) {
       return {
         found: false,
         value: null,
@@ -353,7 +390,7 @@
         try {
           listener(detail);
         } catch (error) {
-          console.error('VoltStack state subscriber error:', error);
+          console.error("VoltStack state subscriber error:", error);
         }
       });
     }
@@ -362,36 +399,55 @@
       try {
         listener(detail);
       } catch (error) {
-        console.error('VoltStack state subscriber error:', error);
+        console.error("VoltStack state subscriber error:", error);
       }
     });
   }
 
-  function emitRuntimeStateChanged(scope, key, value, previousValue, action, extra) {
-    const detail = Object.assign({
-      scope: normalizeRuntimeStateScope(scope),
-      scopeId: normalizeRuntimeStateScope(scope) === 'client' ? currentClientStateScope() : 'shared',
-      key: key,
-      value: cloneStateValue(value),
-      previousValue: cloneStateValue(previousValue),
-      action: action || 'set',
-      snapshot: runtimeStateSnapshot(scope),
-    }, extra || {});
+  function emitRuntimeStateChanged(
+    scope,
+    key,
+    value,
+    previousValue,
+    action,
+    extra,
+  ) {
+    const detail = Object.assign(
+      {
+        scope: normalizeRuntimeStateScope(scope),
+        scopeId:
+          normalizeRuntimeStateScope(scope) === "client"
+            ? currentClientStateScope()
+            : "shared",
+        key: key,
+        value: cloneStateValue(value),
+        previousValue: cloneStateValue(previousValue),
+        action: action || "set",
+        snapshot: runtimeStateSnapshot(scope),
+      },
+      extra || {},
+    );
 
-    emitRuntimeHook('volt:state-changed', detail, document);
+    emitRuntimeHook("volt:state-changed", detail, document);
     notifyRuntimeStateSubscribers(detail);
   }
 
   function emitRuntimeStateCleared(scope, keys, reason, extra) {
-    const detail = Object.assign({
-      scope: normalizeRuntimeStateScope(scope),
-      scopeId: normalizeRuntimeStateScope(scope) === 'client' ? currentClientStateScope() : 'shared',
-      keys: Array.isArray(keys) ? keys.slice() : [],
-      reason: reason || 'manual',
-      snapshot: runtimeStateSnapshot(scope),
-    }, extra || {});
+    const detail = Object.assign(
+      {
+        scope: normalizeRuntimeStateScope(scope),
+        scopeId:
+          normalizeRuntimeStateScope(scope) === "client"
+            ? currentClientStateScope()
+            : "shared",
+        keys: Array.isArray(keys) ? keys.slice() : [],
+        reason: reason || "manual",
+        snapshot: runtimeStateSnapshot(scope),
+      },
+      extra || {},
+    );
 
-    emitRuntimeHook('volt:state-cleared', detail, document);
+    emitRuntimeHook("volt:state-cleared", detail, document);
     notifyRuntimeStateSubscribers(detail);
   }
 
@@ -402,9 +458,9 @@
       return null;
     }
 
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings = options && typeof options === "object" ? options : {};
     const store = runtimeStateStore(settings.scope);
-    const fallback = Object.prototype.hasOwnProperty.call(settings, 'fallback')
+    const fallback = Object.prototype.hasOwnProperty.call(settings, "fallback")
       ? settings.fallback
       : null;
 
@@ -420,14 +476,22 @@
       return null;
     }
 
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings = options && typeof options === "object" ? options : {};
     const scope = normalizeRuntimeStateScope(settings.scope);
     const store = runtimeStateStore(scope);
-    const previousValue = store.has(normalizedKey) ? store.get(normalizedKey) : null;
+    const previousValue = store.has(normalizedKey)
+      ? store.get(normalizedKey)
+      : null;
 
     store.set(normalizedKey, value);
     syncAllRuntimeStateDirectives();
-    emitRuntimeStateChanged(scope, normalizedKey, value, previousValue, settings.action || 'set');
+    emitRuntimeStateChanged(
+      scope,
+      normalizedKey,
+      value,
+      previousValue,
+      settings.action || "set",
+    );
     return cloneStateValue(value);
   }
 
@@ -435,24 +499,33 @@
     const current = getRuntimeStateValue(key, options);
     const nextValue = Object.assign(
       {},
-      current && typeof current === 'object' && !Array.isArray(current) ? current : {},
-      value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+      current && typeof current === "object" && !Array.isArray(current)
+        ? current
+        : {},
+      value && typeof value === "object" && !Array.isArray(value) ? value : {},
     );
 
-    return setRuntimeStateValue(key, nextValue, Object.assign({}, options || {}, {
-      action: 'merge',
-    }));
+    return setRuntimeStateValue(
+      key,
+      nextValue,
+      Object.assign({}, options || {}, {
+        action: "merge",
+      }),
+    );
   }
 
   function updateRuntimeStateValue(key, updater, options) {
     const current = getRuntimeStateValue(key, options);
-    const nextValue = typeof updater === 'function'
-      ? updater(current)
-      : updater;
+    const nextValue =
+      typeof updater === "function" ? updater(current) : updater;
 
-    return setRuntimeStateValue(key, nextValue, Object.assign({}, options || {}, {
-      action: 'update',
-    }));
+    return setRuntimeStateValue(
+      key,
+      nextValue,
+      Object.assign({}, options || {}, {
+        action: "update",
+      }),
+    );
   }
 
   function deleteRuntimeStateValue(key, options) {
@@ -462,7 +535,7 @@
       return false;
     }
 
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings = options && typeof options === "object" ? options : {};
     const scope = normalizeRuntimeStateScope(settings.scope);
     const store = runtimeStateStore(scope);
 
@@ -473,7 +546,13 @@
     const previousValue = store.get(normalizedKey);
     store.delete(normalizedKey);
     syncAllRuntimeStateDirectives();
-    emitRuntimeStateChanged(scope, normalizedKey, null, previousValue, 'delete');
+    emitRuntimeStateChanged(
+      scope,
+      normalizedKey,
+      null,
+      previousValue,
+      "delete",
+    );
     return true;
   }
 
@@ -500,32 +579,36 @@
       return false;
     }
 
-    const hadValues = clearRuntimeState('client', reason || 'navigation', {
+    const hadValues = clearRuntimeState("client", reason || "navigation", {
       previousScopeId: previousScope,
       nextScopeId: nextScope,
     });
 
     runtime.clientStateScope = nextScope;
 
-    emitRuntimeHook('volt:state-scope-changed', {
-      scope: 'client',
-      previousScopeId: previousScope,
-      nextScopeId: nextScope,
-      cleared: hadValues,
-      reason: reason || 'navigation',
-    }, document);
+    emitRuntimeHook(
+      "volt:state-scope-changed",
+      {
+        scope: "client",
+        previousScopeId: previousScope,
+        nextScopeId: nextScope,
+        cleared: hadValues,
+        reason: reason || "navigation",
+      },
+      document,
+    );
 
     return true;
   }
 
   function subscribeRuntimeState(key, listener, options) {
-    if (typeof listener !== 'function') {
+    if (typeof listener !== "function") {
       return function () {
         return false;
       };
     }
 
-    const settings = options && typeof options === 'object' ? options : {};
+    const settings = options && typeof options === "object" ? options : {};
     const scope = normalizeRuntimeStateScope(settings.scope);
     const normalizedKey = normalizeRuntimeStateKey(key);
 
@@ -581,11 +664,11 @@
         return deleteRuntimeStateValue(key, options);
       },
       clear: function (options) {
-        const settings = options && typeof options === 'object' ? options : {};
-        return clearRuntimeState(settings.scope, settings.reason || 'manual');
+        const settings = options && typeof options === "object" ? options : {};
+        return clearRuntimeState(settings.scope, settings.reason || "manual");
       },
       snapshot: function (options) {
-        const settings = options && typeof options === 'object' ? options : {};
+        const settings = options && typeof options === "object" ? options : {};
         return runtimeStateSnapshot(settings.scope);
       },
       subscribe: function (key, listener, options) {
@@ -604,74 +687,848 @@
       parts.push(suffix);
     }
 
-    const dashed = 'volt-' + parts.join('-');
-    const colon = 'volt:' + parts.join('.');
+    const dashed = "volt-" + parts.join("-");
+    const colon = "volt:" + parts.join(".");
 
     return [dashed, colon];
   }
 
   function showDirectiveNames(suffix) {
-    return storeDirectiveNames('show', suffix);
+    return storeDirectiveNames("show", suffix);
   }
 
   function classDirectiveNames(suffix) {
-    return storeDirectiveNames('class', suffix);
+    return storeDirectiveNames("class", suffix);
   }
 
   function attrDirectiveNames(suffix) {
-    return storeDirectiveNames('attr', suffix);
+    return storeDirectiveNames("attr", suffix);
   }
 
   function styleDirectiveNames(suffix) {
-    return storeDirectiveNames('style', suffix);
+    return storeDirectiveNames("style", suffix);
   }
 
   function ifDirectiveNames(suffix) {
-    return storeDirectiveNames('if', suffix);
+    return storeDirectiveNames("if", suffix);
   }
 
   function forDirectiveNames(suffix) {
-    return storeDirectiveNames('for', suffix);
+    return storeDirectiveNames("for", suffix);
   }
 
   function textDirectiveNames(suffix) {
-    return storeDirectiveNames('text', suffix);
+    return storeDirectiveNames("text", suffix);
   }
 
   function parseStoreDirectiveExpression(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
-    const matches = value.trim().match(/^(!)?\s*(client|shared):([A-Za-z0-9_.-]+)$/i);
+    const matches = value
+      .trim()
+      .match(/^(!)?\s*(client|shared):([A-Za-z0-9_.-]+)$/i);
 
     if (!matches) {
       return null;
     }
 
     return {
-      negate: matches[1] === '!',
+      negate: matches[1] === "!",
       scope: normalizeRuntimeStateScope(matches[2]),
       path: matches[3],
       raw: value.trim(),
     };
   }
 
+  function tokenizeStoreConditionExpression(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const tokens = [];
+    let index = 0;
+
+    while (index < value.length) {
+      const character = value[index];
+
+      if (/\s/.test(character)) {
+        index += 1;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "&&") {
+        tokens.push({
+          type: "and",
+          value: "&&",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "||") {
+        tokens.push({
+          type: "or",
+          value: "||",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 3) === "===") {
+        tokens.push({
+          type: "comparison",
+          operator: "===",
+          value: "===",
+        });
+        index += 3;
+        continue;
+      }
+
+      if (value.slice(index, index + 3) === "!==") {
+        tokens.push({
+          type: "comparison",
+          operator: "!==",
+          value: "!==",
+        });
+        index += 3;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "==") {
+        tokens.push({
+          type: "comparison",
+          operator: "==",
+          value: "==",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "!=") {
+        tokens.push({
+          type: "comparison",
+          operator: "!=",
+          value: "!=",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === ">=") {
+        tokens.push({
+          type: "comparison",
+          operator: ">=",
+          value: ">=",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "<=") {
+        tokens.push({
+          type: "comparison",
+          operator: "<=",
+          value: "<=",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (character === "!") {
+        tokens.push({
+          type: "not",
+          value: "!",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === "(") {
+        tokens.push({
+          type: "lparen",
+          value: "(",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === ")") {
+        tokens.push({
+          type: "rparen",
+          value: ")",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === ">") {
+        tokens.push({
+          type: "comparison",
+          operator: ">",
+          value: ">",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === "<") {
+        tokens.push({
+          type: "comparison",
+          operator: "<",
+          value: "<",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === "'" || character === '"') {
+        let endIndex = index + 1;
+        let escaping = false;
+
+        while (endIndex < value.length) {
+          const currentCharacter = value[endIndex];
+
+          if (escaping) {
+            escaping = false;
+            endIndex += 1;
+            continue;
+          }
+
+          if (currentCharacter === "\\") {
+            escaping = true;
+            endIndex += 1;
+            continue;
+          }
+
+          if (currentCharacter === character) {
+            break;
+          }
+
+          endIndex += 1;
+        }
+
+        if (endIndex >= value.length || value[endIndex] !== character) {
+          return null;
+        }
+
+        const rawLiteral = value.slice(index, endIndex + 1);
+        const parsedLiteral = parseDirectiveStringLiteral(rawLiteral);
+
+        if (parsedLiteral === null) {
+          return null;
+        }
+
+        tokens.push({
+          type: "literal",
+          value: parsedLiteral,
+          raw: rawLiteral,
+        });
+        index = endIndex + 1;
+        continue;
+      }
+
+      const referenceMatches = value
+        .slice(index)
+        .match(/^(client|shared):([A-Za-z0-9_.-]+)/i);
+
+      if (referenceMatches) {
+        tokens.push({
+          type: "ref",
+          value: referenceMatches[0],
+          scope: normalizeRuntimeStateScope(referenceMatches[1]),
+          path: referenceMatches[2],
+        });
+        index += referenceMatches[0].length;
+        continue;
+      }
+
+      const literalMatches = value.slice(index).match(/^(true|false)\b/i);
+
+      if (literalMatches) {
+        tokens.push({
+          type: "literal",
+          value: literalMatches[0].toLowerCase() === "true",
+          raw: literalMatches[0],
+        });
+        index += literalMatches[0].length;
+        continue;
+      }
+
+      const nullMatches = value.slice(index).match(/^null\b/i);
+
+      if (nullMatches) {
+        tokens.push({
+          type: "literal",
+          value: null,
+          raw: nullMatches[0],
+        });
+        index += nullMatches[0].length;
+        continue;
+      }
+
+      const numberMatches = value.slice(index).match(/^-?\d+(?:\.\d+)?\b/);
+
+      if (numberMatches) {
+        tokens.push({
+          type: "literal",
+          value: Number(numberMatches[0]),
+          raw: numberMatches[0],
+        });
+        index += numberMatches[0].length;
+        continue;
+      }
+
+      return null;
+    }
+
+    return tokens;
+  }
+
+  function parseStoreConditionPrimary(tokens, state) {
+    const token = tokens[state.index];
+
+    if (!token) {
+      return null;
+    }
+
+    if (token.type === "literal") {
+      state.index += 1;
+      return {
+        type: "literal",
+        value: token.value,
+      };
+    }
+
+    if (token.type === "ref") {
+      state.index += 1;
+      return {
+        type: "ref",
+        scope: token.scope,
+        path: token.path,
+      };
+    }
+
+    if (token.type === "lparen") {
+      state.index += 1;
+      const expression = parseStoreConditionOr(tokens, state);
+
+      if (
+        !expression ||
+        !tokens[state.index] ||
+        tokens[state.index].type !== "rparen"
+      ) {
+        return null;
+      }
+
+      state.index += 1;
+      return expression;
+    }
+
+    return null;
+  }
+
+  function parseStoreConditionUnary(tokens, state) {
+    const token = tokens[state.index];
+
+    if (token && token.type === "not") {
+      state.index += 1;
+      const argument = parseStoreConditionUnary(tokens, state);
+
+      if (!argument) {
+        return null;
+      }
+
+      return {
+        type: "not",
+        argument: argument,
+      };
+    }
+
+    return parseStoreConditionPrimary(tokens, state);
+  }
+
+  function parseStoreConditionComparison(tokens, state) {
+    let left = parseStoreConditionUnary(tokens, state);
+
+    if (!left) {
+      return null;
+    }
+
+    while (
+      tokens[state.index] &&
+      tokens[state.index].type === "comparison"
+    ) {
+      const operator = tokens[state.index].operator;
+      state.index += 1;
+      const right = parseStoreConditionUnary(tokens, state);
+
+      if (!right) {
+        return null;
+      }
+
+      left = {
+        type: "comparison",
+        operator: operator,
+        left: left,
+        right: right,
+      };
+    }
+
+    return left;
+  }
+
+  function parseStoreConditionAnd(tokens, state) {
+    let left = parseStoreConditionComparison(tokens, state);
+
+    if (!left) {
+      return null;
+    }
+
+    while (tokens[state.index] && tokens[state.index].type === "and") {
+      state.index += 1;
+      const right = parseStoreConditionComparison(tokens, state);
+
+      if (!right) {
+        return null;
+      }
+
+      left = {
+        type: "and",
+        left: left,
+        right: right,
+      };
+    }
+
+    return left;
+  }
+
+  function parseStoreConditionOr(tokens, state) {
+    let left = parseStoreConditionAnd(tokens, state);
+
+    if (!left) {
+      return null;
+    }
+
+    while (tokens[state.index] && tokens[state.index].type === "or") {
+      state.index += 1;
+      const right = parseStoreConditionAnd(tokens, state);
+
+      if (!right) {
+        return null;
+      }
+
+      left = {
+        type: "or",
+        left: left,
+        right: right,
+      };
+    }
+
+    return left;
+  }
+
+  function parseStoreConditionExpression(value) {
+    const tokens = tokenizeStoreConditionExpression(value);
+
+    if (!tokens || tokens.length === 0) {
+      return null;
+    }
+
+    const state = {
+      index: 0,
+    };
+    const ast = parseStoreConditionOr(tokens, state);
+
+    if (!ast || state.index !== tokens.length) {
+      return null;
+    }
+
+    return {
+      ast: ast,
+      raw: value.trim(),
+    };
+  }
+
+  function resolveStoreConditionNodeValue(node) {
+    if (!node) {
+      return undefined;
+    }
+
+    if (node.type === "literal") {
+      return node.value;
+    }
+
+    if (node.type === "ref") {
+      const result = runtimeStateValueByPath(node.scope, node.path);
+      return result.found ? result.value : undefined;
+    }
+
+    if (node.type === "comparison") {
+      return evaluateStoreConditionComparison(
+        node.operator,
+        resolveStoreConditionNodeValue(node.left),
+        resolveStoreConditionNodeValue(node.right),
+      );
+    }
+
+    return evaluateStoreConditionNode(node);
+  }
+
+  function evaluateStoreConditionComparison(operator, leftValue, rightValue) {
+    switch (operator) {
+      case "===":
+        return leftValue === rightValue;
+      case "!==":
+        return leftValue !== rightValue;
+      case "==":
+        return leftValue == rightValue;
+      case "!=":
+        return leftValue != rightValue;
+      case ">":
+        return leftValue > rightValue;
+      case "<":
+        return leftValue < rightValue;
+      case ">=":
+        return leftValue >= rightValue;
+      case "<=":
+        return leftValue <= rightValue;
+      default:
+        return false;
+    }
+  }
+
+  function evaluateStoreConditionNode(node) {
+    if (!node) {
+      return false;
+    }
+
+    if (node.type === "literal") {
+      return !!resolveStoreConditionNodeValue(node);
+    }
+
+    if (node.type === "ref") {
+      return !!resolveStoreConditionNodeValue(node);
+    }
+
+    if (node.type === "comparison") {
+      return !!resolveStoreConditionNodeValue(node);
+    }
+
+    if (node.type === "not") {
+      return !evaluateStoreConditionNode(node.argument);
+    }
+
+    if (node.type === "and") {
+      return (
+        evaluateStoreConditionNode(node.left) &&
+        evaluateStoreConditionNode(node.right)
+      );
+    }
+
+    if (node.type === "or") {
+      return (
+        evaluateStoreConditionNode(node.left) ||
+        evaluateStoreConditionNode(node.right)
+      );
+    }
+
+    return false;
+  }
+
+  function parseDirectiveStringLiteral(value) {
+    if (typeof value !== "string" || value.length < 2) {
+      return null;
+    }
+
+    const quote = value[0];
+
+    if ((quote !== "'" && quote !== '"') || value[value.length - 1] !== quote) {
+      return null;
+    }
+
+    let result = "";
+    let escaping = false;
+
+    for (let index = 1; index < value.length - 1; index += 1) {
+      const character = value[index];
+
+      if (escaping) {
+        switch (character) {
+          case "n":
+            result += "\n";
+            break;
+          case "r":
+            result += "\r";
+            break;
+          case "t":
+            result += "\t";
+            break;
+          case "\\":
+          case "'":
+          case '"':
+            result += character;
+            break;
+          default:
+            result += character;
+            break;
+        }
+
+        escaping = false;
+        continue;
+      }
+
+      if (character === "\\") {
+        escaping = true;
+        continue;
+      }
+
+      result += character;
+    }
+
+    if (escaping) {
+      result += "\\";
+    }
+
+    return result;
+  }
+
+  function matchesTopLevelSplitOperator(value, index, operator) {
+    if (operator === "??") {
+      return value.slice(index, index + 2) === "??";
+    }
+
+    if (operator === "|") {
+      return (
+        value[index] === "|" &&
+        value[index - 1] !== "|" &&
+        value[index + 1] !== "|"
+      );
+    }
+
+    return false;
+  }
+
+  function splitTopLevelDirectiveEntries(value, operator) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    const entries = [];
+    let current = "";
+    let depth = 0;
+    let quote = null;
+    let escaping = false;
+
+    for (let index = 0; index < value.length; index += 1) {
+      const character = value[index];
+
+      if (quote !== null) {
+        current += character;
+
+        if (escaping) {
+          escaping = false;
+          continue;
+        }
+
+        if (character === "\\") {
+          escaping = true;
+          continue;
+        }
+
+        if (character === quote) {
+          quote = null;
+        }
+
+        continue;
+      }
+
+      if (character === "'" || character === '"') {
+        quote = character;
+        current += character;
+        continue;
+      }
+
+      if (character === "(") {
+        depth += 1;
+        current += character;
+        continue;
+      }
+
+      if (character === ")") {
+        depth = Math.max(0, depth - 1);
+        current += character;
+        continue;
+      }
+
+      if (depth === 0 && matchesTopLevelSplitOperator(value, index, operator)) {
+        if (current.trim() !== "") {
+          entries.push(current.trim());
+        }
+
+        current = "";
+        index += operator.length - 1;
+        continue;
+      }
+
+      current += character;
+    }
+
+    if (current.trim() !== "") {
+      entries.push(current.trim());
+    }
+
+    return entries;
+  }
+
+  function findTopLevelArrow(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return -1;
+    }
+
+    let depth = 0;
+    let quote = null;
+    let escaping = false;
+
+    for (let index = 0; index < value.length; index += 1) {
+      const character = value[index];
+
+      if (quote !== null) {
+        if (escaping) {
+          escaping = false;
+          continue;
+        }
+
+        if (character === "\\") {
+          escaping = true;
+          continue;
+        }
+
+        if (character === quote) {
+          quote = null;
+        }
+
+        continue;
+      }
+
+      if (character === "'" || character === '"') {
+        quote = character;
+        continue;
+      }
+
+      if (character === "(") {
+        depth += 1;
+        continue;
+      }
+
+      if (character === ")") {
+        depth = Math.max(0, depth - 1);
+        continue;
+      }
+
+      if (depth === 0 && character === "-" && value[index + 1] === ">") {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
+  function parseStoreTextDirectiveSegment(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    const literal = parseDirectiveStringLiteral(trimmed);
+
+    if (literal !== null) {
+      return {
+        type: "literal",
+        value: literal,
+        raw: trimmed,
+      };
+    }
+
+    if (/^(true|false)$/i.test(trimmed)) {
+      return {
+        type: "literal",
+        value: trimmed.toLowerCase() === "true",
+        raw: trimmed,
+      };
+    }
+
+    if (/^null$/i.test(trimmed)) {
+      return {
+        type: "literal",
+        value: null,
+        raw: trimmed,
+      };
+    }
+
+    if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+      return {
+        type: "literal",
+        value: Number(trimmed),
+        raw: trimmed,
+      };
+    }
+
+    const expression = parseStoreDirectiveExpression(trimmed);
+
+    if (!expression) {
+      return null;
+    }
+
+    return {
+      type: "ref",
+      expression: expression,
+      raw: trimmed,
+    };
+  }
+
+  function parseStoreTextDirectiveExpression(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const entries = splitTopLevelDirectiveEntries(value, "??");
+
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const segments = entries.map(function (entry) {
+      return parseStoreTextDirectiveSegment(entry);
+    });
+
+    if (
+      segments.some(function (segment) {
+        return !segment;
+      })
+    ) {
+      return null;
+    }
+
+    return {
+      segments: segments,
+      raw: value.trim(),
+    };
+  }
+
   function resolveStoreDirectiveActive(value) {
-    const expression = parseStoreDirectiveExpression(value);
+    const expression = parseStoreConditionExpression(value);
 
     if (!expression) {
       return false;
     }
 
-    const result = runtimeStateValueByPath(expression.scope, expression.path);
-    const active = result.found ? !!result.value : false;
-
-    return expression.negate ? !active : active;
+    return evaluateStoreConditionNode(expression.ast);
   }
 
   function resolveStoreDirectiveValue(value) {
-    const expression = parseStoreDirectiveExpression(value);
+    const expression = parseStoreTextDirectiveExpression(value);
 
     if (!expression) {
       return {
@@ -680,19 +1537,59 @@
       };
     }
 
-    return runtimeStateValueByPath(expression.scope, expression.path);
+    if (
+      expression.segments.length === 1 &&
+      expression.segments[0] &&
+      expression.segments[0].type === "ref"
+    ) {
+      return runtimeStateValueByPath(
+        expression.segments[0].expression.scope,
+        expression.segments[0].expression.path,
+      );
+    }
+
+    for (let index = 0; index < expression.segments.length; index += 1) {
+      const segment = expression.segments[index];
+
+      if (segment.type === "literal") {
+        return {
+          found: true,
+          value: segment.value,
+        };
+      }
+
+      if (segment.type === "ref") {
+        const result = runtimeStateValueByPath(
+          segment.expression.scope,
+          segment.expression.path,
+        );
+
+        if (
+          result.found &&
+          result.value !== null &&
+          typeof result.value !== "undefined"
+        ) {
+          return result;
+        }
+      }
+    }
+
+    return {
+      found: false,
+      value: null,
+    };
   }
 
   function formatStoreDirectiveTextValue(value) {
-    if (value === null || typeof value === 'undefined') {
-      return '';
+    if (value === null || typeof value === "undefined") {
+      return "";
     }
 
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       try {
         return JSON.stringify(value);
       } catch (error) {
-        return '';
+        return "";
       }
     }
 
@@ -700,11 +1597,15 @@
   }
 
   function parseForDirectiveExpression(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
-    const matches = value.trim().match(/^([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*,\s*([A-Za-z_$][A-Za-z0-9_$]*))?\s+in\s+(client|shared):([A-Za-z0-9_.-]+)$/i);
+    const matches = value
+      .trim()
+      .match(
+        /^([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*,\s*([A-Za-z_$][A-Za-z0-9_$]*))?\s+in\s+(client|shared):([A-Za-z0-9_.-]+)$/i,
+      );
 
     if (!matches) {
       return null;
@@ -712,28 +1613,30 @@
 
     return {
       itemAlias: matches[1],
-      indexAlias: matches[2] || 'index',
+      indexAlias: matches[2] || "index",
       scope: normalizeRuntimeStateScope(matches[3]),
       path: matches[4],
       raw: value.trim(),
     };
   }
 
-  function parseStoreClassDirectiveExpression(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+  function parseStoreClassDirectiveRule(value) {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
-    const separator = value.indexOf('->');
+    const separator = findTopLevelArrow(value);
 
     if (separator === -1) {
       return null;
     }
 
-    const expression = parseStoreDirectiveExpression(value.slice(0, separator).trim());
+    const expression = parseStoreConditionExpression(
+      value.slice(0, separator).trim(),
+    );
     const classValue = value.slice(separator + 2).trim();
 
-    if (!expression || classValue === '') {
+    if (!expression || classValue === "") {
       return null;
     }
 
@@ -744,19 +1647,37 @@
     };
   }
 
-  function parseStoreAttrDirectiveExpression(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+  function parseStoreClassDirectiveRules(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry) {
+        return parseStoreClassDirectiveRule(entry);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function parseStoreAttrDirectiveRule(value) {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
-    const separator = value.indexOf('->');
+    const separator = findTopLevelArrow(value);
 
     if (separator === -1) {
       return null;
     }
 
-    const expression = parseStoreDirectiveExpression(value.slice(0, separator).trim());
-    const attributes = parseDirectiveAttributes(value.slice(separator + 2).trim());
+    const expression = parseStoreConditionExpression(
+      value.slice(0, separator).trim(),
+    );
+    const attributes = parseDirectiveAttributes(
+      value.slice(separator + 2).trim(),
+    );
 
     if (!expression || attributes.length === 0) {
       return null;
@@ -769,18 +1690,34 @@
     };
   }
 
-  function parseStoreStyleDirectiveExpression(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+  function parseStoreAttrDirectiveRules(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry) {
+        return parseStoreAttrDirectiveRule(entry);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function parseStoreStyleDirectiveRule(value) {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
-    const separator = value.indexOf('->');
+    const separator = findTopLevelArrow(value);
 
     if (separator === -1) {
       return null;
     }
 
-    const expression = parseStoreDirectiveExpression(value.slice(0, separator).trim());
+    const expression = parseStoreConditionExpression(
+      value.slice(0, separator).trim(),
+    );
     const styles = parseDirectiveStyles(value.slice(separator + 2).trim());
 
     if (!expression || styles.length === 0) {
@@ -794,26 +1731,44 @@
     };
   }
 
+  function parseStoreStyleDirectiveRules(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry) {
+        return parseStoreStyleDirectiveRule(entry);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
   function createDirectivePlaceholder(type) {
-    const placeholder = document.createElement('template');
-    const id = 'volt-' + type + '-' + String(runtime.directiveSequence + 1);
+    const placeholder = document.createElement("template");
+    const id = "volt-" + type + "-" + String(runtime.directiveSequence + 1);
 
     runtime.directiveSequence += 1;
-    placeholder.setAttribute('data-volt-' + type + '-placeholder', id);
+    placeholder.setAttribute("data-volt-" + type + "-placeholder", id);
 
     return placeholder;
   }
 
   function createIfDirectivePlaceholder() {
-    return createDirectivePlaceholder('if');
+    return createDirectivePlaceholder("if");
   }
 
   function createForDirectivePlaceholder() {
-    return createDirectivePlaceholder('for');
+    return createDirectivePlaceholder("for");
   }
 
   function removeDirectiveAttributes(element, names) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE || !Array.isArray(names)) {
+    if (
+      !element ||
+      element.nodeType !== Node.ELEMENT_NODE ||
+      !Array.isArray(names)
+    ) {
       return;
     }
 
@@ -823,8 +1778,8 @@
   }
 
   function resolveForInterpolationValue(expression, context) {
-    if (typeof expression !== 'string' || expression.trim() === '') {
-      return '';
+    if (typeof expression !== "string" || expression.trim() === "") {
+      return "";
     }
 
     const normalized = expression.trim();
@@ -841,32 +1796,35 @@
         return context[alias];
       }
 
-      if (normalized.indexOf(alias + '.') === 0) {
-        const nested = resolveValueBySegments(context[alias], normalizeStatePathSegments(normalized.slice(alias.length + 1)));
-        return nested.found ? nested.value : '';
+      if (normalized.indexOf(alias + ".") === 0) {
+        const nested = resolveValueBySegments(
+          context[alias],
+          normalizeStatePathSegments(normalized.slice(alias.length + 1)),
+        );
+        return nested.found ? nested.value : "";
       }
     }
 
-    return '';
+    return "";
   }
 
   function interpolateForTemplateString(template, context) {
-    if (typeof template !== 'string' || template.indexOf('{{') === -1) {
+    if (typeof template !== "string" || template.indexOf("{{") === -1) {
       return template;
     }
 
     return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, function (_, expression) {
       const value = resolveForInterpolationValue(expression, context);
 
-      if (value === null || typeof value === 'undefined') {
-        return '';
+      if (value === null || typeof value === "undefined") {
+        return "";
       }
 
-      if (typeof value === 'object') {
+      if (typeof value === "object") {
         try {
           return JSON.stringify(value);
         } catch (error) {
-          return '';
+          return "";
         }
       }
 
@@ -879,11 +1837,19 @@
       return;
     }
 
-    const elements = [node].concat(Array.prototype.slice.call(node.querySelectorAll('*')));
+    const elements = [node].concat(
+      Array.prototype.slice.call(node.querySelectorAll("*")),
+    );
 
     elements.forEach(function (element) {
       element.getAttributeNames().forEach(function (name) {
-        element.setAttribute(name, interpolateForTemplateString(element.getAttribute(name) || '', context));
+        element.setAttribute(
+          name,
+          interpolateForTemplateString(
+            element.getAttribute(name) || "",
+            context,
+          ),
+        );
       });
     });
 
@@ -891,7 +1857,10 @@
     let textNode = walker.nextNode();
 
     while (textNode) {
-      textNode.textContent = interpolateForTemplateString(textNode.textContent || '', context);
+      textNode.textContent = interpolateForTemplateString(
+        textNode.textContent || "",
+        context,
+      );
       textNode = walker.nextNode();
     }
   }
@@ -907,7 +1876,7 @@
 
     const placeholder = createIfDirectivePlaceholder();
     const binding = {
-      id: placeholder.getAttribute('data-volt-if-placeholder'),
+      id: placeholder.getAttribute("data-volt-if-placeholder"),
       placeholder: placeholder,
       templateNode: element.cloneNode(true),
       currentNode: element,
@@ -928,7 +1897,9 @@
       return element.__voltForBinding;
     }
 
-    const expression = parseForDirectiveExpression(directiveValue(element, forDirectiveNames()));
+    const expression = parseForDirectiveExpression(
+      directiveValue(element, forDirectiveNames()),
+    );
 
     if (!expression || !element.parentNode) {
       return null;
@@ -939,7 +1910,7 @@
     removeDirectiveAttributes(templateNode, forDirectiveNames());
 
     const binding = {
-      id: placeholder.getAttribute('data-volt-for-placeholder'),
+      id: placeholder.getAttribute("data-volt-for-placeholder"),
       expression: expression,
       placeholder: placeholder,
       templateNode: templateNode,
@@ -959,10 +1930,13 @@
       return false;
     }
 
-    const active = resolveStoreDirectiveActive(directiveValue(binding.templateNode, ifDirectiveNames()));
-    const currentNode = binding.currentNode && binding.currentNode.isConnected
-      ? binding.currentNode
-      : null;
+    const active = resolveStoreDirectiveActive(
+      directiveValue(binding.templateNode, ifDirectiveNames()),
+    );
+    const currentNode =
+      binding.currentNode && binding.currentNode.isConnected
+        ? binding.currentNode
+        : null;
 
     if (active) {
       if (currentNode) {
@@ -974,7 +1948,10 @@
       const nextNode = binding.templateNode.cloneNode(true);
       nextNode.__voltIfBinding = binding;
       binding.currentNode = nextNode;
-      binding.placeholder.parentNode.insertBefore(nextNode, binding.placeholder.nextSibling);
+      binding.placeholder.parentNode.insertBefore(
+        nextNode,
+        binding.placeholder.nextSibling,
+      );
       return true;
     }
 
@@ -995,11 +1972,15 @@
 
     let mutated = false;
 
-    collectElementsWithDirectiveAttributes(root, ifDirectiveNames()).forEach(function (element) {
-      ensureIfDirectiveBinding(element);
-    });
+    collectElementsWithDirectiveAttributes(root, ifDirectiveNames()).forEach(
+      function (element) {
+        ensureIfDirectiveBinding(element);
+      },
+    );
 
-    collectElementsWithDirectiveAttributes(root, ['data-volt-if-placeholder']).forEach(function (placeholder) {
+    collectElementsWithDirectiveAttributes(root, [
+      "data-volt-if-placeholder",
+    ]).forEach(function (placeholder) {
       if (syncIfBinding(placeholder.__voltIfBinding || null)) {
         mutated = true;
       }
@@ -1009,12 +1990,21 @@
   }
 
   function syncForBinding(binding) {
-    if (!binding || !binding.placeholder || !binding.templateNode || !binding.expression) {
+    if (
+      !binding ||
+      !binding.placeholder ||
+      !binding.templateNode ||
+      !binding.expression
+    ) {
       return;
     }
 
-    const result = runtimeStateValueByPath(binding.expression.scope, binding.expression.path);
-    const items = result.found && Array.isArray(result.value) ? result.value : [];
+    const result = runtimeStateValueByPath(
+      binding.expression.scope,
+      binding.expression.path,
+    );
+    const items =
+      result.found && Array.isArray(result.value) ? result.value : [];
     const fragment = document.createDocumentFragment();
 
     binding.currentNodes.forEach(function (node) {
@@ -1040,7 +2030,10 @@
       fragment.appendChild(node);
     });
 
-    binding.placeholder.parentNode.insertBefore(fragment, binding.placeholder.nextSibling);
+    binding.placeholder.parentNode.insertBefore(
+      fragment,
+      binding.placeholder.nextSibling,
+    );
   }
 
   function syncForDirectives(root) {
@@ -1048,11 +2041,15 @@
       return;
     }
 
-    collectElementsWithDirectiveAttributes(root, forDirectiveNames()).forEach(function (element) {
-      ensureForDirectiveBinding(element);
-    });
+    collectElementsWithDirectiveAttributes(root, forDirectiveNames()).forEach(
+      function (element) {
+        ensureForDirectiveBinding(element);
+      },
+    );
 
-    collectElementsWithDirectiveAttributes(root, ['data-volt-for-placeholder']).forEach(function (placeholder) {
+    collectElementsWithDirectiveAttributes(root, [
+      "data-volt-for-placeholder",
+    ]).forEach(function (placeholder) {
       syncForBinding(placeholder.__voltForBinding || null);
     });
   }
@@ -1062,21 +2059,30 @@
       return;
     }
 
-    collectElementsWithDirectiveAttributes(root, showDirectiveNames()).forEach(function (element) {
-      applyDirectiveVisibility(
-        element,
-        'show',
-        resolveStoreDirectiveActive(directiveValue(element, showDirectiveNames())),
-        false
-      );
-    });
+    collectElementsWithDirectiveAttributes(root, showDirectiveNames()).forEach(
+      function (element) {
+        applyDirectiveVisibility(
+          element,
+          "show",
+          resolveStoreDirectiveActive(
+            directiveValue(element, showDirectiveNames()),
+          ),
+          false,
+        );
+      },
+    );
 
-    collectElementsWithDirectiveAttributes(root, showDirectiveNames('hide')).forEach(function (element) {
+    collectElementsWithDirectiveAttributes(
+      root,
+      showDirectiveNames("hide"),
+    ).forEach(function (element) {
       applyDirectiveVisibility(
         element,
-        'show',
-        resolveStoreDirectiveActive(directiveValue(element, showDirectiveNames('hide'))),
-        true
+        "show",
+        resolveStoreDirectiveActive(
+          directiveValue(element, showDirectiveNames("hide")),
+        ),
+        true,
       );
     });
   }
@@ -1086,10 +2092,16 @@
       return;
     }
 
-    collectElementsWithDirectiveAttributes(root, textDirectiveNames()).forEach(function (element) {
-      const result = resolveStoreDirectiveValue(directiveValue(element, textDirectiveNames()));
-      element.textContent = result.found ? formatStoreDirectiveTextValue(result.value) : '';
-    });
+    collectElementsWithDirectiveAttributes(root, textDirectiveNames()).forEach(
+      function (element) {
+        const result = resolveStoreDirectiveValue(
+          directiveValue(element, textDirectiveNames()),
+        );
+        element.textContent = result.found
+          ? formatStoreDirectiveTextValue(result.value)
+          : "";
+      },
+    );
   }
 
   function syncAttrDirectives(root) {
@@ -1097,24 +2109,26 @@
       return;
     }
 
-    collectElementsWithDirectiveAttributes(root, attrDirectiveNames()).forEach(function (element) {
-      const directive = parseStoreAttrDirectiveExpression(directiveValue(element, attrDirectiveNames()));
+    collectElementsWithDirectiveAttributes(root, attrDirectiveNames()).forEach(
+      function (element) {
+        const directives = parseStoreAttrDirectiveRules(
+          directiveValue(element, attrDirectiveNames()),
+        );
 
-      if (!directive) {
-        return;
-      }
+        if (directives.length === 0) {
+          return;
+        }
 
-      const result = runtimeStateValueByPath(directive.expression.scope, directive.expression.path);
-      const resolvedValue = result.found ? !!result.value : false;
-      const active = directive.expression.negate ? !resolvedValue : resolvedValue;
-
-      applyDirectiveAttributes(
-        element,
-        'store:' + directive.expression.raw + '->' + directive.raw,
-        active,
-        directive.attributes
-      );
-    });
+        directives.forEach(function (directive) {
+          applyDirectiveAttributes(
+            element,
+            "store:" + directive.expression.raw + "->" + directive.raw,
+            evaluateStoreConditionNode(directive.expression.ast),
+            directive.attributes,
+          );
+        });
+      },
+    );
   }
 
   function syncStyleDirectives(root) {
@@ -1122,50 +2136,58 @@
       return;
     }
 
-    collectElementsWithDirectiveAttributes(root, styleDirectiveNames()).forEach(function (element) {
-      const directive = parseStoreStyleDirectiveExpression(directiveValue(element, styleDirectiveNames()));
+    collectElementsWithDirectiveAttributes(root, styleDirectiveNames()).forEach(
+      function (element) {
+        const directives = parseStoreStyleDirectiveRules(
+          directiveValue(element, styleDirectiveNames()),
+        );
 
-      if (!directive) {
-        return;
-      }
+        if (directives.length === 0) {
+          return;
+        }
 
-      const result = runtimeStateValueByPath(directive.expression.scope, directive.expression.path);
-      const resolvedValue = result.found ? !!result.value : false;
-      const active = directive.expression.negate ? !resolvedValue : resolvedValue;
-
-      applyDirectiveStyles(
-        element,
-        active,
-        directive.styles,
-        'store:' + directive.expression.raw + '->' + directive.raw
-      );
-    });
+        directives.forEach(function (directive) {
+          applyDirectiveStyles(
+            element,
+            evaluateStoreConditionNode(directive.expression.ast),
+            directive.styles,
+            "store:" + directive.expression.raw + "->" + directive.raw,
+          );
+        });
+      },
+    );
   }
 
   function syncAllStoreDirectives() {
-    document.querySelectorAll('[data-volt-root="true"]').forEach(function (root) {
-      syncForDirectives(root);
+    document
+      .querySelectorAll('[data-volt-root="true"]')
+      .forEach(function (root) {
+        syncForDirectives(root);
 
-      let iterations = 0;
+        let iterations = 0;
 
-      while (syncIfDirectives(root) && iterations < 5) {
-        iterations += 1;
-      }
+        while (syncIfDirectives(root) && iterations < 5) {
+          iterations += 1;
+        }
 
-      syncTextDirectives(root);
-      syncClassDirectives(root);
-      syncAttrDirectives(root);
-      syncStyleDirectives(root);
-      syncShowDirectives(root);
-    });
+        syncTextDirectives(root);
+        syncClassDirectives(root);
+        syncAttrDirectives(root);
+        syncStyleDirectives(root);
+        syncShowDirectives(root);
+      });
   }
 
   function parseStateSyncRuleValue(entry) {
-    if (typeof entry !== 'string') {
+    if (typeof entry !== "string") {
       return null;
     }
 
-    const matches = entry.trim().match(/^(client|shared):([A-Za-z0-9_.-]+)\s*->\s*(params|updates)\.([A-Za-z_][A-Za-z0-9_]*)$/i);
+    const matches = entry
+      .trim()
+      .match(
+        /^(client|shared):([A-Za-z0-9_.-]+)\s*->\s*(params|updates)\.([A-Za-z_][A-Za-z0-9_]*)$/i,
+      );
 
     if (!matches) {
       return null;
@@ -1181,15 +2203,18 @@
   }
 
   function parseStateSyncRules(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return [];
     }
 
-    return value.split(',').map(function (entry) {
-      return parseStateSyncRuleValue(entry);
-    }).filter(function (rule) {
-      return rule !== null;
-    });
+    return value
+      .split(",")
+      .map(function (entry) {
+        return parseStateSyncRuleValue(entry);
+      })
+      .filter(function (rule) {
+        return rule !== null;
+      });
   }
 
   function stateSyncRulesForElement(element) {
@@ -1197,8 +2222,12 @@
       return [];
     }
 
-    const value = directiveValue(element, ['data-volt-state-sync', 'volt-state-sync', 'volt:state-sync']);
-    return parseStateSyncRules(value || '');
+    const value = directiveValue(element, [
+      "data-volt-state-sync",
+      "volt-state-sync",
+      "volt:state-sync",
+    ]);
+    return parseStateSyncRules(value || "");
   }
 
   function collectStateSyncRules(root, trigger) {
@@ -1217,7 +2246,13 @@
     return rules;
   }
 
-  function applySelectiveStateSync(root, trigger, params, updates, requestMeta) {
+  function applySelectiveStateSync(
+    root,
+    trigger,
+    params,
+    updates,
+    requestMeta,
+  ) {
     const nextParams = Object.assign({}, params || {});
     const nextUpdates = Object.assign({}, updates || {});
     const rules = collectStateSyncRules(root, trigger);
@@ -1234,12 +2269,12 @@
           sourcePath: rule.sourcePath,
           destination: rule.destination,
           field: rule.field,
-          reason: 'missing-source',
+          reason: "missing-source",
         });
         return;
       }
 
-      if (rule.destination === 'updates') {
+      if (rule.destination === "updates") {
         nextUpdates[rule.field] = result.value;
       } else {
         nextParams[rule.field] = result.value;
@@ -1256,12 +2291,16 @@
     });
 
     if (applied.length > 0 || skipped.length > 0) {
-      emitRuntimeHook('volt:state-sync', requestHookDetail('action', requestMeta, {
-        applied: applied,
-        skipped: skipped,
-        params: cloneStateValue(nextParams),
-        updates: cloneStateValue(nextUpdates),
-      }), resolveRuntimeRoot(root, requestMeta.component) || root || document);
+      emitRuntimeHook(
+        "volt:state-sync",
+        requestHookDetail("action", requestMeta, {
+          applied: applied,
+          skipped: skipped,
+          params: cloneStateValue(nextParams),
+          updates: cloneStateValue(nextUpdates),
+        }),
+        resolveRuntimeRoot(root, requestMeta.component) || root || document,
+      );
     }
 
     return {
@@ -1277,9 +2316,9 @@
       return null;
     }
 
-    const href = link.getAttribute('href');
+    const href = link.getAttribute("href");
 
-    if (!href || href.startsWith('#')) {
+    if (!href || href.startsWith("#")) {
       return null;
     }
 
@@ -1297,44 +2336,60 @@
   }
 
   function prefetchModeTokensForElement(link) {
-    const attribute = directiveAttribute(link, ['volt-prefetch', 'volt:prefetch']);
+    const attribute = directiveAttribute(link, [
+      "volt-prefetch",
+      "volt:prefetch",
+    ]);
 
     if (!attribute) {
-      return ['auto'];
+      return ["auto"];
     }
 
-    const value = (attribute.value || '').trim().toLowerCase();
+    const value = (attribute.value || "").trim().toLowerCase();
 
-    if (value === '') {
-      return ['auto'];
+    if (value === "") {
+      return ["auto"];
     }
 
     return value.split(/[\s,|]+/).filter(function (token) {
-      return token !== '';
+      return token !== "";
     });
   }
 
   function linkAllowsPrefetchSource(link, source) {
     const tokens = prefetchModeTokensForElement(link);
 
-    if (tokens.includes('none') || tokens.includes('off') || tokens.includes('false')) {
+    if (
+      tokens.includes("none") ||
+      tokens.includes("off") ||
+      tokens.includes("false")
+    ) {
       return false;
     }
 
-    if (tokens.includes('auto') || tokens.includes('all') || tokens.includes('eager') || tokens.includes('true')) {
+    if (
+      tokens.includes("auto") ||
+      tokens.includes("all") ||
+      tokens.includes("eager") ||
+      tokens.includes("true")
+    ) {
       return true;
     }
 
-    if (source === 'intent') {
-      return tokens.includes('hover') || tokens.includes('focus') || tokens.includes('intent');
+    if (source === "intent") {
+      return (
+        tokens.includes("hover") ||
+        tokens.includes("focus") ||
+        tokens.includes("intent")
+      );
     }
 
-    if (source === 'viewport') {
-      return tokens.includes('viewport') || tokens.includes('visible');
+    if (source === "viewport") {
+      return tokens.includes("viewport") || tokens.includes("visible");
     }
 
-    if (source === 'idle') {
-      return tokens.includes('idle') || tokens.includes('heuristic');
+    if (source === "idle") {
+      return tokens.includes("idle") || tokens.includes("heuristic");
     }
 
     return false;
@@ -1342,7 +2397,7 @@
 
   function normalizeHeadAssetUrl(url) {
     if (!url) {
-      return '';
+      return "";
     }
 
     try {
@@ -1354,72 +2409,82 @@
 
   function parseNavigationDocument(html) {
     const parser = new DOMParser();
-    return parser.parseFromString(html, 'text/html');
+    return parser.parseFromString(html, "text/html");
   }
 
   function navigationCacheControlTokens(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return [];
     }
 
-    return value.trim().toLowerCase().split(/[\s,|;]+/).filter(function (token) {
-      return token !== '';
-    });
+    return value
+      .trim()
+      .toLowerCase()
+      .split(/[\s,|;]+/)
+      .filter(function (token) {
+        return token !== "";
+      });
   }
 
   function mergeNavigationCacheControl(baseControl, overrideControl) {
-    const base = baseControl && typeof baseControl === 'object'
-      ? baseControl
-      : {};
-    const override = overrideControl && typeof overrideControl === 'object'
-      ? overrideControl
-      : {};
+    const base =
+      baseControl && typeof baseControl === "object" ? baseControl : {};
+    const override =
+      overrideControl && typeof overrideControl === "object"
+        ? overrideControl
+        : {};
 
     return {
-      mode: override.mode && override.mode !== 'default'
-        ? override.mode
-        : (base.mode || 'default'),
-      ttl: override.ttl !== null && typeof override.ttl !== 'undefined'
-        ? override.ttl
-        : (typeof base.ttl === 'number' ? base.ttl : null),
-      raw: override.raw || base.raw || '',
-      source: override.source || base.source || 'default',
+      mode:
+        override.mode && override.mode !== "default"
+          ? override.mode
+          : base.mode || "default",
+      ttl:
+        override.ttl !== null && typeof override.ttl !== "undefined"
+          ? override.ttl
+          : typeof base.ttl === "number"
+            ? base.ttl
+            : null,
+      raw: override.raw || base.raw || "",
+      source: override.source || base.source || "default",
     };
   }
 
   function parseNavigationCacheControl(value, source) {
     const tokens = navigationCacheControlTokens(value);
     const control = {
-      mode: 'default',
+      mode: "default",
       ttl: null,
-      raw: typeof value === 'string' ? value : '',
-      source: source || 'default',
+      raw: typeof value === "string" ? value : "",
+      source: source || "default",
     };
 
     tokens.forEach(function (token) {
-      if (token === 'no-store' || token === 'store=none') {
-        control.mode = 'no-store';
+      if (token === "no-store" || token === "store=none") {
+        control.mode = "no-store";
         return;
       }
 
-      if (control.mode !== 'no-store' && (
-        token === 'reload' ||
-        token === 'refresh' ||
-        token === 'network-only' ||
-        token === 'no-cache' ||
-        token === 'revalidate' ||
-        token === 'bypass'
-      )) {
-        control.mode = 'reload';
+      if (
+        control.mode !== "no-store" &&
+        (token === "reload" ||
+          token === "refresh" ||
+          token === "network-only" ||
+          token === "no-cache" ||
+          token === "revalidate" ||
+          token === "bypass")
+      ) {
+        control.mode = "reload";
         return;
       }
 
-      if (control.mode === 'default' && (
-        token === 'invalidate' ||
-        token === 'reset' ||
-        token === 'refresh-cache'
-      )) {
-        control.mode = 'invalidate';
+      if (
+        control.mode === "default" &&
+        (token === "invalidate" ||
+          token === "reset" ||
+          token === "refresh-cache")
+      ) {
+        control.mode = "invalidate";
         return;
       }
 
@@ -1442,133 +2507,166 @@
   }
 
   function navigationCacheControlForElement(element) {
-    if (!element || typeof element.getAttribute !== 'function') {
-      return parseNavigationCacheControl('', 'default');
+    if (!element || typeof element.getAttribute !== "function") {
+      return parseNavigationCacheControl("", "default");
     }
 
-    const attribute = directiveAttribute(element, ['volt-cache', 'volt:cache', 'data-volt-cache']);
+    const attribute = directiveAttribute(element, [
+      "volt-cache",
+      "volt:cache",
+      "data-volt-cache",
+    ]);
 
     if (!attribute) {
-      return parseNavigationCacheControl('', 'default');
+      return parseNavigationCacheControl("", "default");
     }
 
-    return parseNavigationCacheControl(attribute.value, 'element');
+    return parseNavigationCacheControl(attribute.value, "element");
   }
 
   function navigationCacheControlForDocument(doc) {
-    if (!doc || !doc.head || typeof doc.head.querySelector !== 'function') {
-      return parseNavigationCacheControl('', 'default');
+    if (!doc || !doc.head || typeof doc.head.querySelector !== "function") {
+      return parseNavigationCacheControl("", "default");
     }
 
-    for (let index = 0; index < NAVIGATION_CACHE_CONTROL_META_NAMES.length; index += 1) {
+    for (
+      let index = 0;
+      index < NAVIGATION_CACHE_CONTROL_META_NAMES.length;
+      index += 1
+    ) {
       const name = NAVIGATION_CACHE_CONTROL_META_NAMES[index];
-      const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+      const meta = doc.head.querySelector(
+        'meta[name="' + cssEscape(name) + '"]',
+      );
 
       if (meta) {
-        return parseNavigationCacheControl(meta.getAttribute('content') || '', 'document');
+        return parseNavigationCacheControl(
+          meta.getAttribute("content") || "",
+          "document",
+        );
       }
     }
 
-    return parseNavigationCacheControl('', 'default');
+    return parseNavigationCacheControl("", "default");
   }
 
   function parseNavigationMode(value, source) {
-    const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    const normalized =
+      typeof value === "string" ? value.trim().toLowerCase() : "";
 
     if (
-      normalized === 'reload' ||
-      normalized === 'full-reload' ||
-      normalized === 'hard-reload' ||
-      normalized === 'document'
+      normalized === "reload" ||
+      normalized === "full-reload" ||
+      normalized === "hard-reload" ||
+      normalized === "document"
     ) {
       return {
-        mode: 'reload',
+        mode: "reload",
         raw: normalized,
-        source: source || 'default',
+        source: source || "default",
       };
     }
 
     if (
-      normalized === 'spa' ||
-      normalized === 'soft' ||
-      normalized === 'client'
+      normalized === "spa" ||
+      normalized === "soft" ||
+      normalized === "client"
     ) {
       return {
-        mode: 'spa',
+        mode: "spa",
         raw: normalized,
-        source: source || 'default',
+        source: source || "default",
       };
     }
 
     return {
-      mode: 'auto',
+      mode: "auto",
       raw: normalized,
-      source: source || 'default',
+      source: source || "default",
     };
   }
 
   function navigationModeForElement(element) {
-    if (!element || typeof element.getAttribute !== 'function') {
-      return parseNavigationMode('', 'default');
+    if (!element || typeof element.getAttribute !== "function") {
+      return parseNavigationMode("", "default");
     }
 
-    const navigateAttribute = directiveAttribute(element, ['volt-navigate', 'volt:navigate']);
+    const navigateAttribute = directiveAttribute(element, [
+      "volt-navigate",
+      "volt:navigate",
+    ]);
 
     if (navigateAttribute) {
-      return parseNavigationMode(navigateAttribute.value || '', navigateAttribute.name);
+      return parseNavigationMode(
+        navigateAttribute.value || "",
+        navigateAttribute.name,
+      );
     }
 
     const modeAttribute = directiveAttribute(element, [
-      'data-volt-navigation-mode',
-      'volt-navigation-mode',
-      'volt:navigation-mode',
+      "data-volt-navigation-mode",
+      "volt-navigation-mode",
+      "volt:navigation-mode",
     ]);
 
     if (modeAttribute) {
-      return parseNavigationMode(modeAttribute.value || '', modeAttribute.name);
+      return parseNavigationMode(modeAttribute.value || "", modeAttribute.name);
     }
 
-    return parseNavigationMode('', 'default');
+    return parseNavigationMode("", "default");
   }
 
   function navigationModeForDocument(doc) {
-    if (!doc || typeof doc !== 'object') {
-      return parseNavigationMode('', 'default');
+    if (!doc || typeof doc !== "object") {
+      return parseNavigationMode("", "default");
     }
 
-    if (doc.head && typeof doc.head.querySelector === 'function') {
-      for (let index = 0; index < NAVIGATION_MODE_META_NAMES.length; index += 1) {
+    if (doc.head && typeof doc.head.querySelector === "function") {
+      for (
+        let index = 0;
+        index < NAVIGATION_MODE_META_NAMES.length;
+        index += 1
+      ) {
         const name = NAVIGATION_MODE_META_NAMES[index];
-        const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+        const meta = doc.head.querySelector(
+          'meta[name="' + cssEscape(name) + '"]',
+        );
 
         if (meta) {
-          return parseNavigationMode(meta.getAttribute('content') || '', 'document');
+          return parseNavigationMode(
+            meta.getAttribute("content") || "",
+            "document",
+          );
         }
       }
     }
 
-    if (doc.body && typeof doc.body.getAttribute === 'function') {
+    if (doc.body && typeof doc.body.getAttribute === "function") {
       const attribute = directiveAttribute(doc.body, [
-        'data-volt-navigation-mode',
-        'volt-navigation-mode',
-        'volt:navigation-mode',
+        "data-volt-navigation-mode",
+        "volt-navigation-mode",
+        "volt:navigation-mode",
       ]);
 
       if (attribute) {
-        return parseNavigationMode(attribute.value || '', 'body');
+        return parseNavigationMode(attribute.value || "", "body");
       }
     }
 
-    return parseNavigationMode('', 'default');
+    return parseNavigationMode("", "default");
   }
 
   function shouldPrefetchForNavigationMode(mode) {
-    const navigationMode = mode && mode.mode ? mode.mode : 'auto';
-    return navigationMode !== 'reload';
+    const navigationMode = mode && mode.mode ? mode.mode : "auto";
+    return navigationMode !== "reload";
   }
 
   function firstAttributeValue(element, names) {
-    if (!element || typeof element.getAttribute !== 'function' || !Array.isArray(names)) {
+    if (
+      !element ||
+      typeof element.getAttribute !== "function" ||
+      !Array.isArray(names)
+    ) {
       return null;
     }
 
@@ -1576,7 +2674,7 @@
       const name = names[index];
 
       if (element.hasAttribute(name)) {
-        return element.getAttribute(name) || '';
+        return element.getAttribute(name) || "";
       }
     }
 
@@ -1584,16 +2682,23 @@
   }
 
   function firstDocumentMetaValue(doc, names) {
-    if (!doc || !doc.head || typeof doc.head.querySelector !== 'function' || !Array.isArray(names)) {
+    if (
+      !doc ||
+      !doc.head ||
+      typeof doc.head.querySelector !== "function" ||
+      !Array.isArray(names)
+    ) {
       return null;
     }
 
     for (let index = 0; index < names.length; index += 1) {
       const name = names[index];
-      const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+      const meta = doc.head.querySelector(
+        'meta[name="' + cssEscape(name) + '"]',
+      );
 
       if (meta) {
-        return meta.getAttribute('content') || '';
+        return meta.getAttribute("content") || "";
       }
     }
 
@@ -1601,27 +2706,37 @@
   }
 
   function escapeRegExp(value) {
-    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   function firstHtmlMetaValue(html, names) {
-    if (typeof html !== 'string' || html === '' || !Array.isArray(names)) {
+    if (typeof html !== "string" || html === "" || !Array.isArray(names)) {
       return null;
     }
 
     for (let index = 0; index < names.length; index += 1) {
       const name = escapeRegExp(names[index]);
-      const nameFirst = new RegExp('<meta[^>]*name=["\']' + name + '["\'][^>]*content=["\']([^"\']*)["\'][^>]*>', 'i');
-      const contentFirst = new RegExp('<meta[^>]*content=["\']([^"\']*)["\'][^>]*name=["\']' + name + '["\'][^>]*>', 'i');
+      const nameFirst = new RegExp(
+        "<meta[^>]*name=[\"']" +
+          name +
+          "[\"'][^>]*content=[\"']([^\"']*)[\"'][^>]*>",
+        "i",
+      );
+      const contentFirst = new RegExp(
+        "<meta[^>]*content=[\"']([^\"']*)[\"'][^>]*name=[\"']" +
+          name +
+          "[\"'][^>]*>",
+        "i",
+      );
       const nameFirstMatch = html.match(nameFirst);
 
-      if (nameFirstMatch && typeof nameFirstMatch[1] === 'string') {
+      if (nameFirstMatch && typeof nameFirstMatch[1] === "string") {
         return nameFirstMatch[1];
       }
 
       const contentFirstMatch = html.match(contentFirst);
 
-      if (contentFirstMatch && typeof contentFirstMatch[1] === 'string') {
+      if (contentFirstMatch && typeof contentFirstMatch[1] === "string") {
         return contentFirstMatch[1];
       }
     }
@@ -1630,26 +2745,29 @@
   }
 
   function normalizePageTransitionMode(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
-      return 'out-in';
+    if (typeof value !== "string" || value.trim() === "") {
+      return "out-in";
     }
 
     const normalized = value.trim().toLowerCase();
 
-    if (normalized === 'in-out') {
-      return 'in-out';
+    if (normalized === "in-out") {
+      return "in-out";
     }
 
-    return 'out-in';
+    return "out-in";
   }
 
   function normalizePageTransitionProfile(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
     const normalized = value.trim().toLowerCase();
-    return Object.prototype.hasOwnProperty.call(PAGE_TRANSITION_PROFILES, normalized)
+    return Object.prototype.hasOwnProperty.call(
+      PAGE_TRANSITION_PROFILES,
+      normalized,
+    )
       ? normalized
       : null;
   }
@@ -1667,21 +2785,24 @@
       return null;
     }
 
-    return Object.assign({
-      profile: profileName,
-    }, profile);
+    return Object.assign(
+      {
+        profile: profileName,
+      },
+      profile,
+    );
   }
 
   function parsePageTransition(value, source) {
-    const raw = typeof value === 'string' ? value : '';
+    const raw = typeof value === "string" ? value : "";
     const normalized = raw.trim().toLowerCase();
     const transition = {
       name: null,
       duration: null,
-      mode: 'out-in',
+      mode: "out-in",
       raw: raw,
-      source: source || 'default',
-      declared: normalized !== '',
+      source: source || "default",
+      declared: normalized !== "",
     };
 
     if (!normalized) {
@@ -1689,17 +2810,16 @@
     }
 
     if (
-      normalized === 'none' ||
-      normalized === 'off' ||
-      normalized === 'false' ||
-      normalized === 'disabled'
+      normalized === "none" ||
+      normalized === "off" ||
+      normalized === "false" ||
+      normalized === "disabled"
     ) {
       return transition;
     }
 
-    transition.name = normalized === 'true' || normalized === 'on'
-      ? 'default'
-      : normalized;
+    transition.name =
+      normalized === "true" || normalized === "on" ? "default" : normalized;
 
     return transition;
   }
@@ -1708,34 +2828,44 @@
     const nextTransition = Object.assign({}, transition);
     const parsedDuration = parseDirectiveTimeout(durationValue);
 
-    if (typeof parsedDuration === 'number' && parsedDuration >= 0) {
+    if (typeof parsedDuration === "number" && parsedDuration >= 0) {
       nextTransition.duration = parsedDuration;
     }
 
-    if (typeof modeValue === 'string' && modeValue.trim() !== '') {
+    if (typeof modeValue === "string" && modeValue.trim() !== "") {
       nextTransition.mode = normalizePageTransitionMode(modeValue);
     }
 
     return nextTransition;
   }
 
-  function createPageTransition(transitionValue, durationValue, modeValue, source, profileValue) {
-    const explicitTransition = parsePageTransition(transitionValue || '', source);
+  function createPageTransition(
+    transitionValue,
+    durationValue,
+    modeValue,
+    source,
+    profileValue,
+  ) {
+    const explicitTransition = parsePageTransition(
+      transitionValue || "",
+      source,
+    );
     const profile = resolvePageTransitionProfile(profileValue);
 
     const nextTransition = profile
       ? {
-        name: profile.name || null,
-        duration: typeof profile.duration === 'number' ? profile.duration : null,
-        mode: profile.mode || 'out-in',
-        raw: explicitTransition.raw,
-        source: source || 'default',
-        declared: true,
-        profile: profile.profile,
-      }
+          name: profile.name || null,
+          duration:
+            typeof profile.duration === "number" ? profile.duration : null,
+          mode: profile.mode || "out-in",
+          raw: explicitTransition.raw,
+          source: source || "default",
+          declared: true,
+          profile: profile.profile,
+        }
       : Object.assign({}, explicitTransition, {
-        profile: null,
-      });
+          profile: null,
+        });
 
     if (explicitTransition.declared) {
       nextTransition.name = explicitTransition.name;
@@ -1747,83 +2877,136 @@
 
   function pageTransitionForElement(element) {
     const transitionValue = firstAttributeValue(element, [
-      'data-volt-page-transition',
-      'volt-page-transition',
-      'volt:page-transition',
+      "data-volt-page-transition",
+      "volt-page-transition",
+      "volt:page-transition",
     ]);
     const profileValue = firstAttributeValue(element, [
-      'data-volt-page-transition-profile',
-      'volt-page-transition-profile',
-      'volt:page-transition-profile',
+      "data-volt-page-transition-profile",
+      "volt-page-transition-profile",
+      "volt:page-transition-profile",
     ]);
     const durationValue = firstAttributeValue(element, [
-      'data-volt-page-transition-duration',
-      'volt-page-transition-duration',
-      'volt:page-transition-duration',
+      "data-volt-page-transition-duration",
+      "volt-page-transition-duration",
+      "volt:page-transition-duration",
     ]);
     const modeValue = firstAttributeValue(element, [
-      'data-volt-page-transition-mode',
-      'volt-page-transition-mode',
-      'volt:page-transition-mode',
+      "data-volt-page-transition-mode",
+      "volt-page-transition-mode",
+      "volt:page-transition-mode",
     ]);
 
-    return createPageTransition(transitionValue, durationValue, modeValue, 'link', profileValue);
+    return createPageTransition(
+      transitionValue,
+      durationValue,
+      modeValue,
+      "link",
+      profileValue,
+    );
   }
 
   function pageTransitionForDocument(doc) {
-    const documentTransition = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_META_NAMES);
-    const documentProfile = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES);
-    const bodyTransition = firstAttributeValue(doc && doc.body ? doc.body : null, [
-      'data-volt-page-transition',
-      'volt-page-transition',
-      'volt:page-transition',
-    ]);
+    const documentTransition = firstDocumentMetaValue(
+      doc,
+      NAVIGATION_PAGE_TRANSITION_META_NAMES,
+    );
+    const documentProfile = firstDocumentMetaValue(
+      doc,
+      NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES,
+    );
+    const bodyTransition = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      [
+        "data-volt-page-transition",
+        "volt-page-transition",
+        "volt:page-transition",
+      ],
+    );
     const bodyProfile = firstAttributeValue(doc && doc.body ? doc.body : null, [
-      'data-volt-page-transition-profile',
-      'volt-page-transition-profile',
-      'volt:page-transition-profile',
+      "data-volt-page-transition-profile",
+      "volt-page-transition-profile",
+      "volt:page-transition-profile",
     ]);
-    const transitionValue = documentTransition !== null ? documentTransition : (bodyTransition || '');
-    const profileValue = documentProfile !== null ? documentProfile : (bodyProfile || '');
-    const durationValue = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES) ||
+    const transitionValue =
+      documentTransition !== null ? documentTransition : bodyTransition || "";
+    const profileValue =
+      documentProfile !== null ? documentProfile : bodyProfile || "";
+    const durationValue =
+      firstDocumentMetaValue(
+        doc,
+        NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES,
+      ) ||
       firstAttributeValue(doc && doc.body ? doc.body : null, [
-        'data-volt-page-transition-duration',
-        'volt-page-transition-duration',
-        'volt:page-transition-duration',
+        "data-volt-page-transition-duration",
+        "volt-page-transition-duration",
+        "volt:page-transition-duration",
       ]);
-    const modeValue = firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES) ||
+    const modeValue =
+      firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES) ||
       firstAttributeValue(doc && doc.body ? doc.body : null, [
-        'data-volt-page-transition-mode',
-        'volt-page-transition-mode',
-        'volt:page-transition-mode',
+        "data-volt-page-transition-mode",
+        "volt-page-transition-mode",
+        "volt:page-transition-mode",
       ]);
-    const source = documentTransition !== null || documentProfile !== null
-      ? 'document'
-      : bodyTransition !== null || bodyProfile !== null
-        ? 'body'
-        : 'default';
+    const source =
+      documentTransition !== null || documentProfile !== null
+        ? "document"
+        : bodyTransition !== null || bodyProfile !== null
+          ? "body"
+          : "default";
 
-    return createPageTransition(transitionValue, durationValue, modeValue, source, profileValue);
+    return createPageTransition(
+      transitionValue,
+      durationValue,
+      modeValue,
+      source,
+      profileValue,
+    );
   }
 
   function pageTransitionForPayload(payload) {
-    const documentTransition = payload && payload.document
-      ? pageTransitionForDocument(payload.document)
-      : parsePageTransition('', 'default');
+    const documentTransition =
+      payload && payload.document
+        ? pageTransitionForDocument(payload.document)
+        : parsePageTransition("", "default");
 
     if (documentTransition.declared) {
       return documentTransition;
     }
 
-    const transitionValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_META_NAMES);
-    const profileValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES);
-    const durationValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES);
-    const modeValue = firstHtmlMetaValue(payload && typeof payload.html === 'string' ? payload.html : '', NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES);
+    const transitionValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_META_NAMES,
+    );
+    const profileValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES,
+    );
+    const durationValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES,
+    );
+    const modeValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES,
+    );
 
-    return createPageTransition(transitionValue || '', durationValue, modeValue, transitionValue !== null || profileValue !== null ? 'document' : 'default', profileValue);
+    return createPageTransition(
+      transitionValue || "",
+      durationValue,
+      modeValue,
+      transitionValue !== null || profileValue !== null
+        ? "document"
+        : "default",
+      profileValue,
+    );
   }
 
-  function resolveNavigationPageTransition(requestedTransition, documentTransition) {
+  function resolveNavigationPageTransition(
+    requestedTransition,
+    documentTransition,
+  ) {
     if (documentTransition && documentTransition.declared) {
       return documentTransition;
     }
@@ -1832,11 +3015,19 @@
       return requestedTransition;
     }
 
-    return documentTransition || requestedTransition || parsePageTransition('', 'default');
+    return (
+      documentTransition ||
+      requestedTransition ||
+      parsePageTransition("", "default")
+    );
   }
 
   function hasPageTransition(transition) {
-    return !!(transition && typeof transition.name === 'string' && transition.name !== '');
+    return !!(
+      transition &&
+      typeof transition.name === "string" &&
+      transition.name !== ""
+    );
   }
 
   function navigationPageTransitionEffect(transition) {
@@ -1848,19 +3039,19 @@
       name: transition.name,
     };
 
-    if (typeof transition.duration === 'number' && transition.duration >= 0) {
+    if (typeof transition.duration === "number" && transition.duration >= 0) {
       phaseConfig.duration = transition.duration;
     }
 
     return {
-      type: 'navigation-transition',
-      target: 'body',
+      type: "navigation-transition",
+      target: "body",
       transition: {
         leave: phaseConfig,
         enter: phaseConfig,
       },
-      pageTransitionSource: transition.source || 'default',
-      pageTransitionMode: transition.mode || 'out-in',
+      pageTransitionSource: transition.source || "default",
+      pageTransitionMode: transition.mode || "out-in",
       pageTransitionName: transition.name,
       pageTransitionProfile: transition.profile || null,
     };
@@ -1881,44 +3072,48 @@
   }
 
   function fragmentControlTokens(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return [];
     }
 
-    return value.trim().toLowerCase().split(/[\s,|;]+/).filter(function (token) {
-      return token !== '';
-    });
+    return value
+      .trim()
+      .toLowerCase()
+      .split(/[\s,|;]+/)
+      .filter(function (token) {
+        return token !== "";
+      });
   }
 
   function parseFragmentControl(value, source) {
     const tokens = fragmentControlTokens(value);
     const control = {
-      mode: 'preserve',
-      raw: typeof value === 'string' ? value : '',
-      source: source || 'default',
+      mode: "preserve",
+      raw: typeof value === "string" ? value : "",
+      source: source || "default",
     };
 
     tokens.forEach(function (token) {
       if (
-        token === 'reset' ||
-        token === 'discard' ||
-        token === 'drop' ||
-        token === 'no-store' ||
-        token === 'none' ||
-        token === 'off' ||
-        token === 'false'
+        token === "reset" ||
+        token === "discard" ||
+        token === "drop" ||
+        token === "no-store" ||
+        token === "none" ||
+        token === "off" ||
+        token === "false"
       ) {
-        control.mode = 'reset';
+        control.mode = "reset";
         return;
       }
 
       if (
-        token === 'preserve' ||
-        token === 'keep' ||
-        token === 'on' ||
-        token === 'true'
+        token === "preserve" ||
+        token === "keep" ||
+        token === "on" ||
+        token === "true"
       ) {
-        control.mode = 'preserve';
+        control.mode = "preserve";
       }
     });
 
@@ -1926,53 +3121,62 @@
   }
 
   function fragmentControlForDocument(doc) {
-    if (!doc || typeof doc !== 'object') {
-      return parseFragmentControl('', 'default');
+    if (!doc || typeof doc !== "object") {
+      return parseFragmentControl("", "default");
     }
 
-    if (doc.head && typeof doc.head.querySelector === 'function') {
-      for (let index = 0; index < NAVIGATION_FRAGMENT_CONTROL_META_NAMES.length; index += 1) {
+    if (doc.head && typeof doc.head.querySelector === "function") {
+      for (
+        let index = 0;
+        index < NAVIGATION_FRAGMENT_CONTROL_META_NAMES.length;
+        index += 1
+      ) {
         const name = NAVIGATION_FRAGMENT_CONTROL_META_NAMES[index];
-        const meta = doc.head.querySelector('meta[name="' + cssEscape(name) + '"]');
+        const meta = doc.head.querySelector(
+          'meta[name="' + cssEscape(name) + '"]',
+        );
 
         if (meta) {
-          return parseFragmentControl(meta.getAttribute('content') || '', 'document');
+          return parseFragmentControl(
+            meta.getAttribute("content") || "",
+            "document",
+          );
         }
       }
     }
 
-    if (doc.body && typeof doc.body.getAttribute === 'function') {
+    if (doc.body && typeof doc.body.getAttribute === "function") {
       const attribute = directiveAttribute(doc.body, [
-        'data-volt-fragment-control',
-        'volt-fragment-control',
-        'volt:fragment-control',
+        "data-volt-fragment-control",
+        "volt-fragment-control",
+        "volt:fragment-control",
       ]);
 
       if (attribute) {
-        return parseFragmentControl(attribute.value, 'body');
+        return parseFragmentControl(attribute.value, "body");
       }
     }
 
-    return parseFragmentControl('', 'default');
+    return parseFragmentControl("", "default");
   }
 
   function shouldReadNavigationCache(control) {
-    const mode = control && control.mode ? control.mode : 'default';
-    return mode !== 'reload' && mode !== 'no-store' && mode !== 'invalidate';
+    const mode = control && control.mode ? control.mode : "default";
+    return mode !== "reload" && mode !== "no-store" && mode !== "invalidate";
   }
 
   function shouldStoreNavigationCache(control) {
-    const mode = control && control.mode ? control.mode : 'default';
-    return mode !== 'no-store';
+    const mode = control && control.mode ? control.mode : "default";
+    return mode !== "no-store";
   }
 
   function shouldPrefetchNavigation(control) {
-    const mode = control && control.mode ? control.mode : 'default';
-    return mode !== 'no-store';
+    const mode = control && control.mode ? control.mode : "default";
+    return mode !== "no-store";
   }
 
   function navigationCacheTtlForControl(control) {
-    if (control && typeof control.ttl === 'number' && control.ttl >= 0) {
+    if (control && typeof control.ttl === "number" && control.ttl >= 0) {
       return control.ttl;
     }
 
@@ -1992,7 +3196,7 @@
       aliases.push(normalized);
     }
 
-    if (entryOrUrl && typeof entryOrUrl === 'object') {
+    if (entryOrUrl && typeof entryOrUrl === "object") {
       if (Array.isArray(entryOrUrl.aliases)) {
         entryOrUrl.aliases.forEach(pushAlias);
       }
@@ -2041,18 +3245,25 @@
   }
 
   function emitNavigationCacheEvent(name, detail) {
-    emitRuntimeHook(name, Object.assign({
-      cacheEntries: uniqueNavigationCacheEntries().length,
-    }, detail || {}), document);
+    emitRuntimeHook(
+      name,
+      Object.assign(
+        {
+          cacheEntries: uniqueNavigationCacheEntries().length,
+        },
+        detail || {},
+      ),
+      document,
+    );
   }
 
   function invalidateNavigationCache(url, reason, extra) {
-    if (typeof url !== 'string' || url === '') {
+    if (typeof url !== "string" || url === "") {
       return 0;
     }
 
     const normalizedUrl = normalizeNavigationUrl(url);
-    const details = extra && typeof extra === 'object' ? extra : {};
+    const details = extra && typeof extra === "object" ? extra : {};
     const entry = runtime.navigationCache.get(normalizedUrl);
     const aliases = entry ? navigationCacheAliases(entry) : [normalizedUrl];
     const removed = entry
@@ -2062,12 +3273,18 @@
         : 0;
 
     if (removed > 0 && details.silent !== true) {
-      emitNavigationCacheEvent('volt:cache-invalidate', Object.assign({
-        url: normalizedUrl,
-        aliases: aliases,
-        reason: reason || 'manual',
-        removed: removed,
-      }, details));
+      emitNavigationCacheEvent(
+        "volt:cache-invalidate",
+        Object.assign(
+          {
+            url: normalizedUrl,
+            aliases: aliases,
+            reason: reason || "manual",
+            removed: removed,
+          },
+          details,
+        ),
+      );
     }
 
     return removed;
@@ -2081,26 +3298,36 @@
     }
 
     runtime.navigationCache.clear();
-    emitNavigationCacheEvent('volt:cache-clear', Object.assign({
-      reason: reason || 'manual',
-      removed: removed,
-    }, extra || {}));
+    emitNavigationCacheEvent(
+      "volt:cache-clear",
+      Object.assign(
+        {
+          reason: reason || "manual",
+          removed: removed,
+        },
+        extra || {},
+      ),
+    );
 
     return removed;
   }
 
   function cloneNavigationPayload(entry) {
-    if (!entry || typeof entry !== 'object' || typeof entry.html !== 'string') {
+    if (!entry || typeof entry !== "object" || typeof entry.html !== "string") {
       return null;
     }
 
     const documentPayload = parseNavigationDocument(entry.html);
-    const cacheControl = entry.cacheControl || navigationCacheControlForDocument(documentPayload);
-    const navigationMode = entry.navigationMode || navigationModeForDocument(documentPayload);
-    const pageTransition = entry.pageTransition || pageTransitionForPayload({
-      html: entry.html,
-      document: documentPayload,
-    });
+    const cacheControl =
+      entry.cacheControl || navigationCacheControlForDocument(documentPayload);
+    const navigationMode =
+      entry.navigationMode || navigationModeForDocument(documentPayload);
+    const pageTransition =
+      entry.pageTransition ||
+      pageTransitionForPayload({
+        html: entry.html,
+        document: documentPayload,
+      });
 
     return {
       url: entry.url,
@@ -2110,7 +3337,7 @@
       fetchedAt: entry.fetchedAt,
       lastAccessedAt: entry.lastAccessedAt,
       expiresAt: entry.expiresAt,
-      source: entry.source || 'cache',
+      source: entry.source || "cache",
       cacheKey: entry.cacheKey || null,
       aliases: navigationCacheAliases(entry),
       cacheControl: cacheControl,
@@ -2123,14 +3350,24 @@
     const now = Date.now();
 
     uniqueNavigationCacheEntries().forEach(function (entry) {
-      if (!entry || typeof entry.expiresAt !== 'number' || entry.expiresAt <= now) {
+      if (
+        !entry ||
+        typeof entry.expiresAt !== "number" ||
+        entry.expiresAt <= now
+      ) {
         deleteNavigationCacheEntry(entry);
       }
     });
 
     const entries = uniqueNavigationCacheEntries().sort(function (left, right) {
-      const leftStamp = typeof left.lastAccessedAt === 'number' ? left.lastAccessedAt : left.fetchedAt;
-      const rightStamp = typeof right.lastAccessedAt === 'number' ? right.lastAccessedAt : right.fetchedAt;
+      const leftStamp =
+        typeof left.lastAccessedAt === "number"
+          ? left.lastAccessedAt
+          : left.fetchedAt;
+      const rightStamp =
+        typeof right.lastAccessedAt === "number"
+          ? right.lastAccessedAt
+          : right.fetchedAt;
       return leftStamp - rightStamp;
     });
 
@@ -2153,12 +3390,12 @@
       return null;
     }
 
-    if (typeof entry.expiresAt !== 'number' || entry.expiresAt <= Date.now()) {
+    if (typeof entry.expiresAt !== "number" || entry.expiresAt <= Date.now()) {
       deleteNavigationCacheEntry(entry);
-      emitNavigationCacheEvent('volt:cache-invalidate', {
+      emitNavigationCacheEvent("volt:cache-invalidate", {
         url: normalizedUrl,
         aliases: navigationCacheAliases(entry),
-        reason: 'ttl',
+        reason: "ttl",
       });
       return null;
     }
@@ -2169,7 +3406,7 @@
   }
 
   function setCachedNavigation(url, payload, source, control) {
-    if (!payload || typeof payload.html !== 'string' || payload.html === '') {
+    if (!payload || typeof payload.html !== "string" || payload.html === "") {
       return null;
     }
 
@@ -2177,19 +3414,19 @@
     const finalUrl = normalizeNavigationUrl(payload.finalUrl || normalizedUrl);
     const cacheControl = mergeNavigationCacheControl(
       control,
-      payload.cacheControl && typeof payload.cacheControl === 'object'
+      payload.cacheControl && typeof payload.cacheControl === "object"
         ? payload.cacheControl
         : null,
     );
     const ttl = navigationCacheTtlForControl(cacheControl);
 
     if (!shouldStoreNavigationCache(cacheControl) || ttl <= 0) {
-      invalidateNavigationCache(normalizedUrl, 'no-store', {
+      invalidateNavigationCache(normalizedUrl, "no-store", {
         finalUrl: finalUrl,
       });
 
       if (finalUrl !== normalizedUrl) {
-        invalidateNavigationCache(finalUrl, 'no-store', {
+        invalidateNavigationCache(finalUrl, "no-store", {
           requestedUrl: normalizedUrl,
         });
       }
@@ -2201,7 +3438,7 @@
     const aliases = navigationCacheAliases(normalizedUrl, finalUrl);
 
     aliases.forEach(function (alias) {
-      invalidateNavigationCache(alias, 'replace', {
+      invalidateNavigationCache(alias, "replace", {
         requestedUrl: normalizedUrl,
         finalUrl: finalUrl,
         silent: true,
@@ -2209,7 +3446,7 @@
     });
 
     const entry = {
-      cacheKey: aliases.join('::'),
+      cacheKey: aliases.join("::"),
       aliases: aliases,
       url: normalizedUrl,
       finalUrl: finalUrl,
@@ -2217,24 +3454,26 @@
       fetchedAt: now,
       lastAccessedAt: now,
       expiresAt: now + ttl,
-      source: source || 'prefetch',
+      source: source || "prefetch",
       cacheControl: cacheControl,
-      navigationMode: payload.navigationMode && typeof payload.navigationMode === 'object'
-        ? payload.navigationMode
-        : navigationModeForDocument(parseNavigationDocument(payload.html)),
-      pageTransition: payload.pageTransition && typeof payload.pageTransition === 'object'
-        ? payload.pageTransition
-        : pageTransitionForPayload({
-          html: payload.html,
-          document: parseNavigationDocument(payload.html),
-        }),
+      navigationMode:
+        payload.navigationMode && typeof payload.navigationMode === "object"
+          ? payload.navigationMode
+          : navigationModeForDocument(parseNavigationDocument(payload.html)),
+      pageTransition:
+        payload.pageTransition && typeof payload.pageTransition === "object"
+          ? payload.pageTransition
+          : pageTransitionForPayload({
+              html: payload.html,
+              document: parseNavigationDocument(payload.html),
+            }),
     };
 
     aliases.forEach(function (alias) {
       runtime.navigationCache.set(alias, entry);
     });
     pruneNavigationCache();
-    emitNavigationCacheEvent('volt:cache-store', {
+    emitNavigationCacheEvent("volt:cache-store", {
       url: normalizedUrl,
       finalUrl: finalUrl,
       aliases: aliases,
@@ -2253,49 +3492,49 @@
 
     const tag = node.tagName.toLowerCase();
 
-    if (tag === 'link') {
-      const rel = (node.getAttribute('rel') || '').toLowerCase();
-      const href = normalizeHeadAssetUrl(node.getAttribute('href') || '');
+    if (tag === "link") {
+      const rel = (node.getAttribute("rel") || "").toLowerCase();
+      const href = normalizeHeadAssetUrl(node.getAttribute("href") || "");
 
       if (!href) {
         return null;
       }
 
-      if (rel === 'stylesheet') {
+      if (rel === "stylesheet") {
         return {
-          key: 'style:' + href,
-          rel: 'preload',
+          key: "style:" + href,
+          rel: "preload",
           href: href,
-          as: 'style',
-          crossOrigin: node.getAttribute('crossorigin') || null,
+          as: "style",
+          crossOrigin: node.getAttribute("crossorigin") || null,
         };
       }
 
-      if (rel === 'modulepreload') {
+      if (rel === "modulepreload") {
         return {
-          key: 'module:' + href,
-          rel: 'modulepreload',
+          key: "module:" + href,
+          rel: "modulepreload",
           href: href,
-          crossOrigin: node.getAttribute('crossorigin') || null,
+          crossOrigin: node.getAttribute("crossorigin") || null,
         };
       }
 
       return null;
     }
 
-    if (tag === 'script') {
-      const src = normalizeHeadAssetUrl(node.getAttribute('src') || '');
-      const type = (node.getAttribute('type') || '').toLowerCase();
+    if (tag === "script") {
+      const src = normalizeHeadAssetUrl(node.getAttribute("src") || "");
+      const type = (node.getAttribute("type") || "").toLowerCase();
 
-      if (!src || type !== 'module') {
+      if (!src || type !== "module") {
         return null;
       }
 
       return {
-        key: 'module:' + src,
-        rel: 'modulepreload',
+        key: "module:" + src,
+        rel: "modulepreload",
         href: src,
-        crossOrigin: node.getAttribute('crossorigin') || null,
+        crossOrigin: node.getAttribute("crossorigin") || null,
       };
     }
 
@@ -2309,19 +3548,35 @@
 
     const href = descriptor.href;
 
-    if (descriptor.as === 'style') {
-      return !!document.head.querySelector('link[rel="stylesheet"][href="' + cssEscape(href) + '"]') ||
-        !!document.head.querySelector('link[rel="preload"][as="style"][href="' + cssEscape(href) + '"]');
+    if (descriptor.as === "style") {
+      return (
+        !!document.head.querySelector(
+          'link[rel="stylesheet"][href="' + cssEscape(href) + '"]',
+        ) ||
+        !!document.head.querySelector(
+          'link[rel="preload"][as="style"][href="' + cssEscape(href) + '"]',
+        )
+      );
     }
 
-    if (descriptor.rel === 'modulepreload') {
-      return !!document.head.querySelector('link[rel="modulepreload"][href="' + cssEscape(href) + '"]') ||
-        !!document.head.querySelector('script[type="module"][src="' + cssEscape(href) + '"]');
+    if (descriptor.rel === "modulepreload") {
+      return (
+        !!document.head.querySelector(
+          'link[rel="modulepreload"][href="' + cssEscape(href) + '"]',
+        ) ||
+        !!document.head.querySelector(
+          'script[type="module"][src="' + cssEscape(href) + '"]',
+        )
+      );
     }
 
-    if (descriptor.rel === 'preload') {
+    if (descriptor.rel === "preload") {
       return !!document.head.querySelector(
-        'link[rel="preload"][href="' + cssEscape(href) + '"][as="' + cssEscape(descriptor.as || '') + '"]'
+        'link[rel="preload"][href="' +
+          cssEscape(href) +
+          '"][as="' +
+          cssEscape(descriptor.as || "") +
+          '"]',
       );
     }
 
@@ -2333,21 +3588,24 @@
       return;
     }
 
-    if (runtime.navigationPreloadHints.has(descriptor.key) || documentAlreadyHasHeadAsset(descriptor)) {
+    if (
+      runtime.navigationPreloadHints.has(descriptor.key) ||
+      documentAlreadyHasHeadAsset(descriptor)
+    ) {
       return;
     }
 
-    const link = document.createElement('link');
-    link.setAttribute('href', descriptor.href);
-    link.setAttribute('rel', descriptor.rel);
-    link.setAttribute('data-volt-prefetch-preload', descriptor.key);
+    const link = document.createElement("link");
+    link.setAttribute("href", descriptor.href);
+    link.setAttribute("rel", descriptor.rel);
+    link.setAttribute("data-volt-prefetch-preload", descriptor.key);
 
     if (descriptor.as) {
-      link.setAttribute('as', descriptor.as);
+      link.setAttribute("as", descriptor.as);
     }
 
     if (descriptor.crossOrigin) {
-      link.setAttribute('crossorigin', descriptor.crossOrigin);
+      link.setAttribute("crossorigin", descriptor.crossOrigin);
     }
 
     document.head.appendChild(link);
@@ -2383,7 +3641,12 @@
     const normalizedUrl = normalizeNavigationUrl(url);
     const entry = runtime.navigationInFlight.get(normalizedUrl);
 
-    if (!entry || entry.source !== 'prefetch' || entry.retained || !entry.controller) {
+    if (
+      !entry ||
+      entry.source !== "prefetch" ||
+      entry.retained ||
+      !entry.controller
+    ) {
       return false;
     }
 
@@ -2431,35 +3694,40 @@
 
   function requestNavigationPayload(url, signal, source, options) {
     const normalizedUrl = normalizeNavigationUrl(url);
-    const settings = options && typeof options === 'object' ? options : {};
-    const requestedControl = settings.cacheControl && typeof settings.cacheControl === 'object'
-      ? settings.cacheControl
-      : parseNavigationCacheControl('', 'default');
-    const requestedMode = settings.navigationMode && typeof settings.navigationMode === 'object'
-      ? settings.navigationMode
-      : parseNavigationMode('', 'default');
+    const settings = options && typeof options === "object" ? options : {};
+    const requestedControl =
+      settings.cacheControl && typeof settings.cacheControl === "object"
+        ? settings.cacheControl
+        : parseNavigationCacheControl("", "default");
+    const requestedMode =
+      settings.navigationMode && typeof settings.navigationMode === "object"
+        ? settings.navigationMode
+        : parseNavigationMode("", "default");
 
     if (runtime.navigationInFlight.has(normalizedUrl)) {
       const existing = runtime.navigationInFlight.get(normalizedUrl);
 
       if (
         existing &&
-        existing.source === 'prefetch' &&
+        existing.source === "prefetch" &&
         existing.controller &&
-        (requestedControl.mode === 'reload' || requestedControl.mode === 'invalidate' || requestedControl.mode === 'no-store')
+        (requestedControl.mode === "reload" ||
+          requestedControl.mode === "invalidate" ||
+          requestedControl.mode === "no-store")
       ) {
         existing.controller.abort();
         runtime.navigationInFlight.delete(normalizedUrl);
       } else {
-        if (source !== 'prefetch') {
+        if (source !== "prefetch") {
           existing.retained = true;
-          existing.source = 'navigate';
+          existing.source = "navigate";
         }
 
         return existing.promise.then(function (payload) {
           if (!shouldStoreNavigationCache(requestedControl)) {
-            invalidateNavigationCache(normalizedUrl, 'no-store', {
-              finalUrl: payload && payload.finalUrl ? payload.finalUrl : normalizedUrl,
+            invalidateNavigationCache(normalizedUrl, "no-store", {
+              finalUrl:
+                payload && payload.finalUrl ? payload.finalUrl : normalizedUrl,
             });
           }
 
@@ -2468,36 +3736,58 @@
       }
     }
 
-    const prefetchController = source === 'prefetch' && typeof AbortController === 'function'
-      ? new AbortController()
-      : null;
-    const requestSignal = prefetchController ? prefetchController.signal : signal;
+    const prefetchController =
+      source === "prefetch" && typeof AbortController === "function"
+        ? new AbortController()
+        : null;
+    const requestSignal = prefetchController
+      ? prefetchController.signal
+      : signal;
     const entry = {
       promise: null,
       controller: prefetchController,
-      source: source || 'navigate',
-      retained: source !== 'prefetch',
+      source: source || "navigate",
+      retained: source !== "prefetch",
     };
-    const promise = requestPage(normalizedUrl, requestSignal).then(function (payload) {
-      const responseControl = navigationCacheControlForDocument(payload.document);
-      const responseMode = navigationModeForDocument(payload.document);
-      const responsePageTransition = pageTransitionForDocument(payload.document);
-      const effectiveControl = mergeNavigationCacheControl(requestedControl, responseControl);
-      const enrichedPayload = Object.assign({}, payload, {
-        cacheControl: effectiveControl,
-        navigationMode: responseMode.mode !== 'auto' ? responseMode : requestedMode,
-        pageTransition: responsePageTransition,
+    const promise = requestPage(normalizedUrl, requestSignal)
+      .then(function (payload) {
+        const responseControl = navigationCacheControlForDocument(
+          payload.document,
+        );
+        const responseMode = navigationModeForDocument(payload.document);
+        const responsePageTransition = pageTransitionForDocument(
+          payload.document,
+        );
+        const effectiveControl = mergeNavigationCacheControl(
+          requestedControl,
+          responseControl,
+        );
+        const enrichedPayload = Object.assign({}, payload, {
+          cacheControl: effectiveControl,
+          navigationMode:
+            responseMode.mode !== "auto" ? responseMode : requestedMode,
+          pageTransition: responsePageTransition,
+        });
+
+        if (
+          source === "prefetch" &&
+          enrichedPayload.document &&
+          enrichedPayload.document.head
+        ) {
+          preloadCriticalHeadAssets(enrichedPayload.document.head);
+        }
+
+        const cached = setCachedNavigation(
+          normalizedUrl,
+          enrichedPayload,
+          source || "navigate",
+          effectiveControl,
+        );
+        return cached || enrichedPayload;
+      })
+      .finally(function () {
+        runtime.navigationInFlight.delete(normalizedUrl);
       });
-
-      if (source === 'prefetch' && enrichedPayload.document && enrichedPayload.document.head) {
-        preloadCriticalHeadAssets(enrichedPayload.document.head);
-      }
-
-      const cached = setCachedNavigation(normalizedUrl, enrichedPayload, source || 'navigate', effectiveControl);
-      return cached || enrichedPayload;
-    }).finally(function () {
-      runtime.navigationInFlight.delete(normalizedUrl);
-    });
 
     entry.promise = promise;
     runtime.navigationInFlight.set(normalizedUrl, entry);
@@ -2507,21 +3797,26 @@
 
   function prefetchPage(url, options) {
     const normalizedUrl = normalizeNavigationUrl(url);
-    const settings = options && typeof options === 'object' ? options : {};
-    const cacheControl = settings.cacheControl && typeof settings.cacheControl === 'object'
-      ? settings.cacheControl
-      : parseNavigationCacheControl('', 'default');
-    const navigationMode = settings.navigationMode && typeof settings.navigationMode === 'object'
-      ? settings.navigationMode
-      : parseNavigationMode('', 'default');
+    const settings = options && typeof options === "object" ? options : {};
+    const cacheControl =
+      settings.cacheControl && typeof settings.cacheControl === "object"
+        ? settings.cacheControl
+        : parseNavigationCacheControl("", "default");
+    const navigationMode =
+      settings.navigationMode && typeof settings.navigationMode === "object"
+        ? settings.navigationMode
+        : parseNavigationMode("", "default");
 
-    if (!shouldPrefetchNavigation(cacheControl) || !shouldPrefetchForNavigationMode(navigationMode)) {
+    if (
+      !shouldPrefetchNavigation(cacheControl) ||
+      !shouldPrefetchForNavigationMode(navigationMode)
+    ) {
       return Promise.resolve(null);
     }
 
-    if (cacheControl.mode === 'reload' || cacheControl.mode === 'invalidate') {
+    if (cacheControl.mode === "reload" || cacheControl.mode === "invalidate") {
       invalidateNavigationCache(normalizedUrl, cacheControl.mode, {
-        source: 'prefetch',
+        source: "prefetch",
       });
     }
 
@@ -2529,10 +3824,10 @@
       const cached = getCachedNavigation(normalizedUrl);
 
       if (cached) {
-        emitNavigationCacheEvent('volt:cache-hit', {
+        emitNavigationCacheEvent("volt:cache-hit", {
           url: normalizedUrl,
           finalUrl: cached.finalUrl,
-          source: 'prefetch',
+          source: "prefetch",
           mode: cacheControl.mode,
         });
 
@@ -2540,13 +3835,13 @@
       }
     }
 
-    emitNavigationCacheEvent('volt:cache-miss', {
+    emitNavigationCacheEvent("volt:cache-miss", {
       url: normalizedUrl,
-      source: 'prefetch',
+      source: "prefetch",
       mode: cacheControl.mode,
     });
 
-    return requestNavigationPayload(normalizedUrl, undefined, 'prefetch', {
+    return requestNavigationPayload(normalizedUrl, undefined, "prefetch", {
       cacheControl: cacheControl,
       navigationMode: navigationMode,
     });
@@ -2554,51 +3849,63 @@
 
   function hasNavigationCacheOrFlight(url) {
     const normalizedUrl = normalizeNavigationUrl(url);
-    return !!getCachedNavigation(normalizedUrl) || runtime.navigationInFlight.has(normalizedUrl);
+    return (
+      !!getCachedNavigation(normalizedUrl) ||
+      runtime.navigationInFlight.has(normalizedUrl)
+    );
   }
 
   function navigationVisitCacheControl(options) {
-    const settings = options && typeof options === 'object' ? options : {};
-    const optionControl = settings.cacheControl && typeof settings.cacheControl === 'object'
-      ? settings.cacheControl
-      : null;
-    const triggerControl = navigationCacheControlForElement(settings.trigger || null);
+    const settings = options && typeof options === "object" ? options : {};
+    const optionControl =
+      settings.cacheControl && typeof settings.cacheControl === "object"
+        ? settings.cacheControl
+        : null;
+    const triggerControl = navigationCacheControlForElement(
+      settings.trigger || null,
+    );
 
     return mergeNavigationCacheControl(triggerControl, optionControl);
   }
 
   function ensureNavigationViewportObserver() {
-    if (runtime.navigationViewportObserver || typeof IntersectionObserver !== 'function') {
+    if (
+      runtime.navigationViewportObserver ||
+      typeof IntersectionObserver !== "function"
+    ) {
       return runtime.navigationViewportObserver;
     }
 
-    runtime.navigationViewportObserver = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) {
-          return;
-        }
+    runtime.navigationViewportObserver = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) {
+            return;
+          }
 
-        const element = entry.target;
-        const url = navigationUrlForElement(element);
+          const element = entry.target;
+          const url = navigationUrlForElement(element);
 
-        if (!url) {
+          if (!url) {
+            runtime.navigationViewportObserver.unobserve(element);
+            return;
+          }
+
           runtime.navigationViewportObserver.unobserve(element);
-          return;
-        }
-
-        runtime.navigationViewportObserver.unobserve(element);
-        prefetchPage(url, {
-          cacheControl: navigationCacheControlForElement(element),
-          navigationMode: navigationModeForElement(element),
-        }).catch(function () {
-          return null;
+          prefetchPage(url, {
+            cacheControl: navigationCacheControlForElement(element),
+            navigationMode: navigationModeForElement(element),
+          }).catch(function () {
+            return null;
+          });
         });
-      });
-    }, {
-      root: null,
-      rootMargin: '200px 0px',
-      threshold: 0.01,
-    });
+      },
+      {
+        root: null,
+        rootMargin: "200px 0px",
+        threshold: 0.01,
+      },
+    );
 
     return runtime.navigationViewportObserver;
   }
@@ -2606,39 +3913,44 @@
   function registerViewportPrefetchTargets(root) {
     const observer = ensureNavigationViewportObserver();
 
-    if (!observer || !root || typeof root.querySelectorAll !== 'function') {
+    if (!observer || !root || typeof root.querySelectorAll !== "function") {
       return;
     }
 
-    root.querySelectorAll(NAVIGATION_PREFETCH_SELECTOR).forEach(function (link) {
-      if (
-        !navigationUrlForElement(link) ||
-        !linkAllowsPrefetchSource(link, 'viewport') ||
-        !shouldPrefetchForNavigationMode(navigationModeForElement(link))
-      ) {
-        return;
-      }
+    root
+      .querySelectorAll(NAVIGATION_PREFETCH_SELECTOR)
+      .forEach(function (link) {
+        if (
+          !navigationUrlForElement(link) ||
+          !linkAllowsPrefetchSource(link, "viewport") ||
+          !shouldPrefetchForNavigationMode(navigationModeForElement(link))
+        ) {
+          return;
+        }
 
-      if (runtime.navigationViewportObserved.has(link)) {
-        return;
-      }
+        if (runtime.navigationViewportObserved.has(link)) {
+          return;
+        }
 
-      runtime.navigationViewportObserved.add(link);
-      observer.observe(link);
-    });
+        runtime.navigationViewportObserved.add(link);
+        observer.observe(link);
+      });
   }
 
   function navigationHeuristicScore(link) {
-    if (!link || typeof link.getBoundingClientRect !== 'function') {
+    if (!link || typeof link.getBoundingClientRect !== "function") {
       return null;
     }
 
     const rect = link.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const viewportHeight =
+      window.innerHeight || document.documentElement.clientHeight || 0;
 
-    if ((rect.width <= 0 && rect.height <= 0) ||
-      rect.bottom < (-1 * NAVIGATION_HEURISTIC_VIEWPORT_MARGIN) ||
-      rect.top > viewportHeight + NAVIGATION_HEURISTIC_VIEWPORT_MARGIN) {
+    if (
+      (rect.width <= 0 && rect.height <= 0) ||
+      rect.bottom < -1 * NAVIGATION_HEURISTIC_VIEWPORT_MARGIN ||
+      rect.top > viewportHeight + NAVIGATION_HEURISTIC_VIEWPORT_MARGIN
+    ) {
       return null;
     }
 
@@ -2652,7 +3964,7 @@
   }
 
   function findHeuristicPrefetchCandidate(root) {
-    if (!root || typeof root.querySelectorAll !== 'function') {
+    if (!root || typeof root.querySelectorAll !== "function") {
       return null;
     }
 
@@ -2660,26 +3972,30 @@
     let bestCandidate = null;
     let bestScore = Number.POSITIVE_INFINITY;
 
-    root.querySelectorAll(NAVIGATION_PREFETCH_SELECTOR).forEach(function (link) {
-      const url = navigationUrlForElement(link);
+    root
+      .querySelectorAll(NAVIGATION_PREFETCH_SELECTOR)
+      .forEach(function (link) {
+        const url = navigationUrlForElement(link);
 
-      if (!url ||
-        !linkAllowsPrefetchSource(link, 'idle') ||
-        !shouldPrefetchForNavigationMode(navigationModeForElement(link)) ||
-        normalizeNavigationUrl(url) === currentUrl ||
-        hasNavigationCacheOrFlight(url)) {
-        return;
-      }
+        if (
+          !url ||
+          !linkAllowsPrefetchSource(link, "idle") ||
+          !shouldPrefetchForNavigationMode(navigationModeForElement(link)) ||
+          normalizeNavigationUrl(url) === currentUrl ||
+          hasNavigationCacheOrFlight(url)
+        ) {
+          return;
+        }
 
-      const score = navigationHeuristicScore(link);
+        const score = navigationHeuristicScore(link);
 
-      if (score === null || score >= bestScore) {
-        return;
-      }
+        if (score === null || score >= bestScore) {
+          return;
+        }
 
-      bestCandidate = link;
-      bestScore = score;
-    });
+        bestCandidate = link;
+        bestScore = score;
+      });
 
     return bestCandidate;
   }
@@ -2689,7 +4005,7 @@
       return;
     }
 
-    if (typeof cancelIdleCallback === 'function') {
+    if (typeof cancelIdleCallback === "function") {
       cancelIdleCallback(runtime.navigationHeuristicHandle);
     } else {
       clearTimeout(runtime.navigationHeuristicHandle);
@@ -2701,7 +4017,8 @@
   function scheduleHeuristicPrefetch(root) {
     cancelHeuristicPrefetch();
 
-    const candidateRoot = root && typeof root.querySelectorAll === 'function' ? root : document;
+    const candidateRoot =
+      root && typeof root.querySelectorAll === "function" ? root : document;
     const run = function () {
       runtime.navigationHeuristicHandle = null;
 
@@ -2729,20 +4046,25 @@
       });
     };
 
-    if (typeof requestIdleCallback === 'function') {
+    if (typeof requestIdleCallback === "function") {
       runtime.navigationHeuristicHandle = requestIdleCallback(run, {
         timeout: NAVIGATION_HEURISTIC_DELAY,
       });
       return;
     }
 
-    runtime.navigationHeuristicHandle = window.setTimeout(run, NAVIGATION_HEURISTIC_DELAY);
+    runtime.navigationHeuristicHandle = window.setTimeout(
+      run,
+      NAVIGATION_HEURISTIC_DELAY,
+    );
   }
 
   function directiveSelector(names) {
-    return names.map(function (name) {
-      return '[' + name.replace(/[:.]/g, '\\$&') + ']';
-    }).join(', ');
+    return names
+      .map(function (name) {
+        return "[" + name.replace(/[:.]/g, "\\$&") + "]";
+      })
+      .join(", ");
   }
 
   function collectElementsWithDirectiveAttributes(root, names) {
@@ -2758,15 +4080,15 @@
       });
     }
 
-    if (typeof root.hasAttribute === 'function' && matchesNames(root)) {
+    if (typeof root.hasAttribute === "function" && matchesNames(root)) {
       elements.push(root);
     }
 
-    if (typeof root.querySelectorAll !== 'function') {
+    if (typeof root.querySelectorAll !== "function") {
       return elements;
     }
 
-    root.querySelectorAll('*').forEach(function (element) {
+    root.querySelectorAll("*").forEach(function (element) {
       if (matchesNames(element)) {
         elements.push(element);
       }
@@ -2778,11 +4100,11 @@
   function collectDirectiveElements(root, selector) {
     const elements = [];
 
-    if (!root || typeof root.querySelectorAll !== 'function') {
+    if (!root || typeof root.querySelectorAll !== "function") {
       return elements;
     }
 
-    if (typeof root.matches === 'function' && root.matches(selector)) {
+    if (typeof root.matches === "function" && root.matches(selector)) {
       elements.push(root);
     }
 
@@ -2826,27 +4148,30 @@
       : suffix
         ? [suffix]
         : [];
-    let dashed = 'volt-' + state;
-    let dotted = 'volt:' + state;
+    let dashed = "volt-" + state;
+    let dotted = "volt:" + state;
 
     parts.forEach(function (part) {
-      dashed += '-' + part;
-      dotted += '.' + part;
+      dashed += "-" + part;
+      dotted += "." + part;
     });
 
     return [dashed, dotted];
   }
 
   function parseDirectiveList(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return [];
     }
 
-    return value.split(',').map(function (entry) {
-      return entry.trim();
-    }).filter(function (entry) {
-      return entry !== '';
-    });
+    return value
+      .split(",")
+      .map(function (entry) {
+        return entry.trim();
+      })
+      .filter(function (entry) {
+        return entry !== "";
+      });
   }
 
   function runtimeStateContext(root, state) {
@@ -2858,8 +4183,8 @@
     }
 
     return {
-      action: root.getAttribute('data-volt-' + state + '-action') || null,
-      target: root.getAttribute('data-volt-' + state + '-target') || null,
+      action: root.getAttribute("data-volt-" + state + "-action") || null,
+      target: root.getAttribute("data-volt-" + state + "-target") || null,
     };
   }
 
@@ -2876,8 +4201,14 @@
   }
 
   function stateDirectiveScope(element, state, shorthandValue, context) {
-    const actionAttribute = directiveAttribute(element, stateDirectiveNames(state, 'action'));
-    const targetAttribute = directiveAttribute(element, stateDirectiveNames(state, 'target'));
+    const actionAttribute = directiveAttribute(
+      element,
+      stateDirectiveNames(state, "action"),
+    );
+    const targetAttribute = directiveAttribute(
+      element,
+      stateDirectiveNames(state, "target"),
+    );
     const shorthandEntries = parseDirectiveList(shorthandValue);
     const usesActionShorthand = !!(context && context.action);
 
@@ -2895,26 +4226,34 @@
     };
   }
 
-  function stateDirectiveIsActive(element, state, active, shorthandValue, context) {
+  function stateDirectiveIsActive(
+    element,
+    state,
+    active,
+    shorthandValue,
+    context,
+  ) {
     if (!active) {
       return false;
     }
 
     const scope = stateDirectiveScope(element, state, shorthandValue, context);
 
-    return matchesDirectiveScope(scope.actions, context.action) &&
-      matchesDirectiveScope(scope.targets, context.target);
+    return (
+      matchesDirectiveScope(scope.actions, context.action) &&
+      matchesDirectiveScope(scope.targets, context.target)
+    );
   }
 
   function applyDirectiveVisibility(element, state, active, inverse) {
-    const storeKey = state + ':' + (inverse ? 'hide' : 'show');
+    const storeKey = state + ":" + (inverse ? "hide" : "show");
     const store = runtimeDirectiveStore(element);
 
     if (!store.visibility[storeKey]) {
       store.visibility[storeKey] = {
         hidden: !!element.hidden,
-        ariaHidden: element.getAttribute('aria-hidden'),
-        display: element.style.display || '',
+        ariaHidden: element.getAttribute("aria-hidden"),
+        display: element.style.display || "",
       };
     }
 
@@ -2923,82 +4262,88 @@
 
     if (shouldHide) {
       element.hidden = true;
-      element.setAttribute('aria-hidden', 'true');
-      element.style.setProperty('display', 'none', 'important');
+      element.setAttribute("aria-hidden", "true");
+      element.style.setProperty("display", "none", "important");
       return;
     }
 
     element.hidden = initialState.hidden;
 
-    if (initialState.display === '') {
-      element.style.removeProperty('display');
+    if (initialState.display === "") {
+      element.style.removeProperty("display");
     } else {
       element.style.display = initialState.display;
     }
 
     if (initialState.ariaHidden === null) {
-      element.removeAttribute('aria-hidden');
+      element.removeAttribute("aria-hidden");
       return;
     }
 
-    element.setAttribute('aria-hidden', initialState.ariaHidden);
+    element.setAttribute("aria-hidden", initialState.ariaHidden);
   }
 
   function parseDirectiveAttributes(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return [];
     }
 
-    return value.split(',').map(function (token) {
-      const entry = token.trim();
+    return value
+      .split(",")
+      .map(function (token) {
+        const entry = token.trim();
 
-      if (!entry) {
-        return null;
-      }
+        if (!entry) {
+          return null;
+        }
 
-      const separator = entry.indexOf('=');
+        const separator = entry.indexOf("=");
 
-      if (separator === -1) {
+        if (separator === -1) {
+          return {
+            name: entry,
+            value: "",
+          };
+        }
+
         return {
-          name: entry,
-          value: '',
+          name: entry.slice(0, separator).trim(),
+          value: entry.slice(separator + 1).trim(),
         };
-      }
-
-      return {
-        name: entry.slice(0, separator).trim(),
-        value: entry.slice(separator + 1).trim(),
-      };
-    }).filter(function (entry) {
-      return entry && entry.name;
-    });
+      })
+      .filter(function (entry) {
+        return entry && entry.name;
+      });
   }
 
   function parseDirectiveStyles(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return [];
     }
 
-    return value.split(';').map(function (token) {
-      const entry = token.trim();
+    return value
+      .split(";")
+      .map(function (token) {
+        const entry = token.trim();
 
-      if (!entry) {
-        return null;
-      }
+        if (!entry) {
+          return null;
+        }
 
-      const separator = entry.indexOf(':');
+        const separator = entry.indexOf(":");
 
-      if (separator === -1) {
-        return null;
-      }
+        if (separator === -1) {
+          return null;
+        }
 
-      return {
-        name: entry.slice(0, separator).trim(),
-        value: entry.slice(separator + 1).trim(),
-      };
-    }).filter(function (entry) {
-      return entry && entry.name && entry.value;
-    });
+        return {
+          name: entry.slice(0, separator).trim(),
+          value: entry.slice(separator + 1).trim(),
+        };
+      })
+      .filter(function (entry) {
+        return entry && entry.name && entry.value;
+      });
   }
 
   function applyDirectiveAttributes(element, state, active, attributes) {
@@ -3006,7 +4351,7 @@
       return;
     }
 
-    const storeKey = state + ':attr';
+    const storeKey = state + ":attr";
     const store = runtimeDirectiveStore(element);
 
     if (!store.attributes[storeKey]) {
@@ -3015,7 +4360,9 @@
 
     attributes.forEach(function (entry) {
       if (!store.attributes[storeKey].hasOwnProperty(entry.name)) {
-        store.attributes[storeKey][entry.name] = element.hasAttribute(entry.name)
+        store.attributes[storeKey][entry.name] = element.hasAttribute(
+          entry.name,
+        )
           ? element.getAttribute(entry.name)
           : null;
       }
@@ -3042,14 +4389,19 @@
     }
 
     const store = runtimeDirectiveStore(element);
-    const styleStoreKey = storeKey || 'runtime:style';
+    const styleStoreKey = storeKey || "runtime:style";
 
     if (!store.styles[styleStoreKey]) {
       store.styles[styleStoreKey] = {};
     }
 
     styles.forEach(function (entry) {
-      if (!Object.prototype.hasOwnProperty.call(store.styles[styleStoreKey], entry.name)) {
+      if (
+        !Object.prototype.hasOwnProperty.call(
+          store.styles[styleStoreKey],
+          entry.name,
+        )
+      ) {
         store.styles[styleStoreKey][entry.name] = {
           value: element.style.getPropertyValue(entry.name),
           priority: element.style.getPropertyPriority(entry.name),
@@ -3063,22 +4415,26 @@
 
       const initialState = store.styles[styleStoreKey][entry.name];
 
-      if (!initialState || initialState.value === '') {
+      if (!initialState || initialState.value === "") {
         element.style.removeProperty(entry.name);
         return;
       }
 
-      element.style.setProperty(entry.name, initialState.value, initialState.priority || '');
+      element.style.setProperty(
+        entry.name,
+        initialState.value,
+        initialState.priority || "",
+      );
     });
   }
 
   function applyDirectiveClasses(element, active, value, storeKey) {
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return;
     }
 
     const store = runtimeDirectiveStore(element);
-    const classStoreKey = storeKey || 'runtime:class';
+    const classStoreKey = storeKey || "runtime:class";
 
     if (!store.classes[classStoreKey]) {
       store.classes[classStoreKey] = {};
@@ -3089,8 +4445,14 @@
         return;
       }
 
-      if (!Object.prototype.hasOwnProperty.call(store.classes[classStoreKey], className)) {
-        store.classes[classStoreKey][className] = element.classList.contains(className);
+      if (
+        !Object.prototype.hasOwnProperty.call(
+          store.classes[classStoreKey],
+          className,
+        )
+      ) {
+        store.classes[classStoreKey][className] =
+          element.classList.contains(className);
       }
 
       const initialValue = store.classes[classStoreKey][className];
@@ -3109,40 +4471,40 @@
       return;
     }
 
-    collectElementsWithDirectiveAttributes(root, classDirectiveNames()).forEach(function (element) {
-      const directive = parseStoreClassDirectiveExpression(directiveValue(element, classDirectiveNames()));
+    collectElementsWithDirectiveAttributes(root, classDirectiveNames()).forEach(
+      function (element) {
+        const directives = parseStoreClassDirectiveRules(
+          directiveValue(element, classDirectiveNames()),
+        );
 
-      if (!directive) {
-        return;
-      }
+        if (directives.length === 0) {
+          return;
+        }
 
-      const result = runtimeStateValueByPath(directive.expression.scope, directive.expression.path);
-      const resolvedValue = result.found ? !!result.value : false;
-      const active = directive.expression.negate ? !resolvedValue : resolvedValue;
-
-      applyDirectiveClasses(
-        element,
-        active,
-        directive.classValue,
-        'store:' + directive.expression.raw + '->' + directive.classValue
-      );
-    });
+        directives.forEach(function (directive) {
+          applyDirectiveClasses(
+            element,
+            evaluateStoreConditionNode(directive.expression.ast),
+            directive.classValue,
+            "store:" + directive.expression.raw + "->" + directive.classValue,
+          );
+        });
+      },
+    );
   }
 
   function stateDirectiveShorthandValue(element, state) {
     const attribute = directiveAttribute(element, stateDirectiveNames(state));
 
-    return attribute ? attribute.value : '';
+    return attribute ? attribute.value : "";
   }
 
   function parseDirectiveTimeout(value) {
-    if (typeof value === 'number') {
-      return Number.isFinite(value) && value >= 0
-        ? Math.round(value)
-        : null;
+    if (typeof value === "number") {
+      return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
     }
 
-    if (typeof value !== 'string' || value.trim() === '') {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
@@ -3159,14 +4521,14 @@
       return null;
     }
 
-    const unit = match[2] || 'ms';
-    const multiplier = unit === 's' ? 1000 : 1;
+    const unit = match[2] || "ms";
+    const multiplier = unit === "s" ? 1000 : 1;
 
     return Math.round(amount * multiplier);
   }
 
   function runtimePolicyScopeMatches(policyValue, contextValue) {
-    if (typeof policyValue !== 'string' || policyValue === '') {
+    if (typeof policyValue !== "string" || policyValue === "") {
       return true;
     }
 
@@ -3175,14 +4537,14 @@
 
   function runtimePolicyValueKey(suffix) {
     switch (suffix) {
-      case 'delay':
-        return 'delay';
-      case 'timeout':
-        return 'timeout';
-      case 'debounce':
-        return 'debounce';
-      case 'min-duration':
-        return 'minDuration';
+      case "delay":
+        return "delay";
+      case "timeout":
+        return "timeout";
+      case "debounce":
+        return "debounce";
+      case "min-duration":
+        return "minDuration";
       default:
         return null;
     }
@@ -3193,30 +4555,48 @@
       return [];
     }
 
-    const component = root.getAttribute('data-volt-component') || null;
+    const component = root.getAttribute("data-volt-component") || null;
     const valueKey = runtimePolicyValueKey(suffix);
 
     if (!component || !valueKey) {
       return [];
     }
 
-    return componentStatePolicies(component).filter(function (policy) {
-      return policy && policy.state === state &&
-        runtimePolicyScopeMatches(policy.scopeAction, context && context.action) &&
-        runtimePolicyScopeMatches(policy.scopeTarget, context && context.target);
-    }).map(function (policy) {
-      return parseDirectiveTimeout(policy[valueKey]);
-    }).filter(function (value) {
-      return value !== null;
-    });
+    return componentStatePolicies(component)
+      .filter(function (policy) {
+        return (
+          policy &&
+          policy.state === state &&
+          runtimePolicyScopeMatches(
+            policy.scopeAction,
+            context && context.action,
+          ) &&
+          runtimePolicyScopeMatches(
+            policy.scopeTarget,
+            context && context.target,
+          )
+        );
+      })
+      .map(function (policy) {
+        return parseDirectiveTimeout(policy[valueKey]);
+      })
+      .filter(function (value) {
+        return value !== null;
+      });
   }
 
   function registerRuntimePolicy(root, effect) {
-    if (!root || !effect || effect.type !== 'runtime.policy' || typeof effect.state !== 'string' || effect.state === '') {
+    if (
+      !root ||
+      !effect ||
+      effect.type !== "runtime.policy" ||
+      typeof effect.state !== "string" ||
+      effect.state === ""
+    ) {
       return false;
     }
 
-    const component = root.getAttribute('data-volt-component') || null;
+    const component = root.getAttribute("data-volt-component") || null;
 
     if (!component) {
       return false;
@@ -3224,31 +4604,35 @@
 
     const normalized = {
       state: effect.state,
-      scopeAction: typeof effect.scopeAction === 'string' && effect.scopeAction !== ''
-        ? effect.scopeAction
-        : null,
-      scopeTarget: typeof effect.scopeTarget === 'string' && effect.scopeTarget !== ''
-        ? effect.scopeTarget
-        : null,
+      scopeAction:
+        typeof effect.scopeAction === "string" && effect.scopeAction !== ""
+          ? effect.scopeAction
+          : null,
+      scopeTarget:
+        typeof effect.scopeTarget === "string" && effect.scopeTarget !== ""
+          ? effect.scopeTarget
+          : null,
       delay: parseDirectiveTimeout(effect.delay),
       timeout: parseDirectiveTimeout(effect.timeout),
       debounce: parseDirectiveTimeout(effect.debounce),
       minDuration: parseDirectiveTimeout(effect.minDuration),
     };
-    const hasValues = ['delay', 'timeout', 'debounce', 'minDuration'].some(function (key) {
-      return normalized[key] !== null;
-    });
+    const hasValues = ["delay", "timeout", "debounce", "minDuration"].some(
+      function (key) {
+        return normalized[key] !== null;
+      },
+    );
     const signature = [
       normalized.state,
-      normalized.scopeAction || '',
-      normalized.scopeTarget || '',
-    ].join('|');
+      normalized.scopeAction || "",
+      normalized.scopeTarget || "",
+    ].join("|");
     const store = componentStatePolicies(component).filter(function (policy) {
       const policySignature = [
         policy.state,
-        policy.scopeAction || '',
-        policy.scopeTarget || '',
-      ].join('|');
+        policy.scopeAction || "",
+        policy.scopeTarget || "",
+      ].join("|");
 
       return policySignature !== signature;
     });
@@ -3261,28 +4645,51 @@
     return true;
   }
 
-  function matchingStateDirectiveElements(root, state, suffix, active, contextOverride) {
+  function matchingStateDirectiveElements(
+    root,
+    state,
+    suffix,
+    active,
+    contextOverride,
+  ) {
     const context = contextOverride || runtimeStateContext(root, state);
     const names = stateDirectiveNames(state, suffix);
 
-    return collectElementsWithDirectiveAttributes(root, names).filter(function (element) {
-      return stateDirectiveIsActive(
-        element,
-        state,
-        active,
-        stateDirectiveShorthandValue(element, state),
-        context
-      );
-    });
+    return collectElementsWithDirectiveAttributes(root, names).filter(
+      function (element) {
+        return stateDirectiveIsActive(
+          element,
+          state,
+          active,
+          stateDirectiveShorthandValue(element, state),
+          context,
+        );
+      },
+    );
   }
 
   function resolveStateDirectiveDuration(root, state, suffix, context) {
-    const values = matchingStateDirectiveElements(root, state, suffix, true, context).map(function (element) {
-      return parseDirectiveTimeout(directiveValue(element, stateDirectiveNames(state, suffix)));
-    }).filter(function (value) {
-      return value !== null;
-    });
-    const policyValues = matchingRuntimePolicyDurations(root, state, suffix, context || runtimeStateContext(root, state));
+    const values = matchingStateDirectiveElements(
+      root,
+      state,
+      suffix,
+      true,
+      context,
+    )
+      .map(function (element) {
+        return parseDirectiveTimeout(
+          directiveValue(element, stateDirectiveNames(state, suffix)),
+        );
+      })
+      .filter(function (value) {
+        return value !== null;
+      });
+    const policyValues = matchingRuntimePolicyDurations(
+      root,
+      state,
+      suffix,
+      context || runtimeStateContext(root, state),
+    );
     const allValues = values.concat(policyValues);
 
     if (allValues.length === 0) {
@@ -3293,19 +4700,19 @@
   }
 
   function resolveStateDirectiveTimeout(root, state) {
-    return resolveStateDirectiveDuration(root, state, 'timeout');
+    return resolveStateDirectiveDuration(root, state, "timeout");
   }
 
   function resolveStateDirectiveDelay(root, state, context) {
-    return resolveStateDirectiveDuration(root, state, 'delay', context);
+    return resolveStateDirectiveDuration(root, state, "delay", context);
   }
 
   function resolveStateDirectiveMinDuration(root, state, context) {
-    return resolveStateDirectiveDuration(root, state, 'min-duration', context);
+    return resolveStateDirectiveDuration(root, state, "min-duration", context);
   }
 
   function resolveStateDirectiveDebounce(root, state, context) {
-    return resolveStateDirectiveDuration(root, state, 'debounce', context);
+    return resolveStateDirectiveDuration(root, state, "debounce", context);
   }
 
   function clearLoadingDelay(root) {
@@ -3351,19 +4758,20 @@
 
     clearLoadingDelay(root);
 
-    const detail = meta && typeof meta === 'object' ? meta : {};
+    const detail = meta && typeof meta === "object" ? meta : {};
     const context = {
       action: detail.action || null,
       target: stateTargetValue(detail),
     };
-    const delay = resolveStateDirectiveDelay(root, 'loading', context);
+    const delay = resolveStateDirectiveDelay(root, "loading", context);
 
     if (delay === null || delay <= 0) {
       setLoadingState(root, true, trigger, detail);
       return;
     }
 
-    const component = root.getAttribute('data-volt-component') || detail.component || null;
+    const component =
+      root.getAttribute("data-volt-component") || detail.component || null;
     const requestId = detail.requestId || null;
     const timeoutId = window.setTimeout(function () {
       runtime.loadingDelays.delete(root);
@@ -3375,9 +4783,14 @@
         return;
       }
 
-      setLoadingState(activeRoot, true, trigger, Object.assign({}, detail, {
-        component: component,
-      }));
+      setLoadingState(
+        activeRoot,
+        true,
+        trigger,
+        Object.assign({}, detail, {
+          component: component,
+        }),
+      );
     }, delay);
 
     runtime.loadingDelays.set(root, timeoutId);
@@ -3390,10 +4803,13 @@
 
     clearLoadingMinDuration(root);
 
-    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
     const detail = Object.assign({}, meta || {}, {
       component: component,
-      reason: 'min-duration',
+      reason: "min-duration",
     });
 
     const timeoutId = window.setTimeout(function () {
@@ -3401,7 +4817,10 @@
 
       const activeRoot = resolveRuntimeRoot(root, component);
 
-      if (!activeRoot || activeRoot.getAttribute('data-volt-loading') !== 'true') {
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-loading") !== "true"
+      ) {
         return;
       }
 
@@ -3436,16 +4855,19 @@
 
     clearSuccessTimeout(root);
 
-    const timeout = resolveStateDirectiveTimeout(root, 'success');
+    const timeout = resolveStateDirectiveTimeout(root, "success");
 
     if (timeout === null) {
       return;
     }
 
-    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
     const detail = Object.assign({}, meta || {}, {
       component: component,
-      reason: 'timeout',
+      reason: "timeout",
     });
 
     const timeoutId = window.setTimeout(function () {
@@ -3453,7 +4875,10 @@
 
       const activeRoot = resolveRuntimeRoot(root, component);
 
-      if (!activeRoot || activeRoot.getAttribute('data-volt-success') !== 'true') {
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-success") !== "true"
+      ) {
         return;
       }
 
@@ -3470,10 +4895,13 @@
 
     clearSuccessMinDuration(root);
 
-    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
     const detail = Object.assign({}, meta || {}, {
       component: component,
-      reason: 'min-duration',
+      reason: "min-duration",
     });
 
     const timeoutId = window.setTimeout(function () {
@@ -3481,7 +4909,10 @@
 
       const activeRoot = resolveRuntimeRoot(root, component);
 
-      if (!activeRoot || activeRoot.getAttribute('data-volt-success') !== 'true') {
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-success") !== "true"
+      ) {
         return;
       }
 
@@ -3498,16 +4929,19 @@
 
     clearErrorTimeout(root);
 
-    const timeout = resolveStateDirectiveTimeout(root, 'error');
+    const timeout = resolveStateDirectiveTimeout(root, "error");
 
     if (timeout === null) {
       return;
     }
 
-    const component = root.getAttribute('data-volt-component') || (meta && meta.component) || null;
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
     const detail = Object.assign({}, meta || {}, {
       component: component,
-      reason: 'timeout',
+      reason: "timeout",
     });
 
     const timeoutId = window.setTimeout(function () {
@@ -3515,7 +4949,10 @@
 
       const activeRoot = resolveRuntimeRoot(root, component);
 
-      if (!activeRoot || activeRoot.getAttribute('data-volt-error') !== 'true') {
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-error") !== "true"
+      ) {
         return;
       }
 
@@ -3532,19 +4969,20 @@
 
     clearDirtyDebounce(root);
 
-    const detail = meta && typeof meta === 'object' ? meta : {};
+    const detail = meta && typeof meta === "object" ? meta : {};
     const context = {
       action: detail.action || null,
       target: stateTargetValue(detail),
     };
-    const debounce = resolveStateDirectiveDebounce(root, 'dirty', context);
+    const debounce = resolveStateDirectiveDebounce(root, "dirty", context);
 
     if (debounce === null || debounce <= 0) {
       setDirtyState(root, true, detail);
       return;
     }
 
-    const component = root.getAttribute('data-volt-component') || detail.component || null;
+    const component =
+      root.getAttribute("data-volt-component") || detail.component || null;
     const timeoutId = window.setTimeout(function () {
       runtime.dirtyDebounces.delete(root);
 
@@ -3554,11 +4992,15 @@
         return;
       }
 
-      setDirtyState(activeRoot, true, Object.assign({}, detail, {
-        component: component,
-        reason: 'debounce',
-        debounce: debounce,
-      }));
+      setDirtyState(
+        activeRoot,
+        true,
+        Object.assign({}, detail, {
+          component: component,
+          reason: "debounce",
+          debounce: debounce,
+        }),
+      );
     }, debounce);
 
     runtime.dirtyDebounces.set(root, timeoutId);
@@ -3566,45 +5008,79 @@
 
   function syncRuntimeStateDirective(root, state, active) {
     const showNames = stateDirectiveNames(state);
-    const hideNames = stateDirectiveNames(state, 'hide');
-    const classNames = stateDirectiveNames(state, 'class');
-    const attrNames = stateDirectiveNames(state, 'attr');
+    const hideNames = stateDirectiveNames(state, "hide");
+    const classNames = stateDirectiveNames(state, "class");
+    const attrNames = stateDirectiveNames(state, "attr");
 
-    collectElementsWithDirectiveAttributes(root, showNames).forEach(function (element) {
-      applyDirectiveVisibility(
-        element,
-        state,
-        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
-        false
-      );
-    });
+    collectElementsWithDirectiveAttributes(root, showNames).forEach(
+      function (element) {
+        applyDirectiveVisibility(
+          element,
+          state,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          false,
+        );
+      },
+    );
 
-    collectElementsWithDirectiveAttributes(root, hideNames).forEach(function (element) {
-      applyDirectiveVisibility(
-        element,
-        state,
-        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
-        true
-      );
-    });
+    collectElementsWithDirectiveAttributes(root, hideNames).forEach(
+      function (element) {
+        applyDirectiveVisibility(
+          element,
+          state,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          true,
+        );
+      },
+    );
 
-    collectElementsWithDirectiveAttributes(root, classNames).forEach(function (element) {
-      applyDirectiveClasses(
-        element,
-        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
-        directiveValue(element, stateDirectiveNames(state, 'class')),
-        'state:' + state + ':class'
-      );
-    });
+    collectElementsWithDirectiveAttributes(root, classNames).forEach(
+      function (element) {
+        applyDirectiveClasses(
+          element,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          directiveValue(element, stateDirectiveNames(state, "class")),
+          "state:" + state + ":class",
+        );
+      },
+    );
 
-    collectElementsWithDirectiveAttributes(root, attrNames).forEach(function (element) {
-      applyDirectiveAttributes(
-        element,
-        state,
-        stateDirectiveIsActive(element, state, active, stateDirectiveShorthandValue(element, state), runtimeStateContext(root, state)),
-        parseDirectiveAttributes(directiveValue(element, stateDirectiveNames(state, 'attr')))
-      );
-    });
+    collectElementsWithDirectiveAttributes(root, attrNames).forEach(
+      function (element) {
+        applyDirectiveAttributes(
+          element,
+          state,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          parseDirectiveAttributes(
+            directiveValue(element, stateDirectiveNames(state, "attr")),
+          ),
+        );
+      },
+    );
   }
 
   function syncRuntimeStateDirectives(root) {
@@ -3620,10 +5096,26 @@
       iterations += 1;
     }
 
-    syncRuntimeStateDirective(root, 'loading', root.getAttribute('data-volt-loading') === 'true');
-    syncRuntimeStateDirective(root, 'error', root.getAttribute('data-volt-error') === 'true');
-    syncRuntimeStateDirective(root, 'dirty', root.getAttribute('data-volt-dirty') === 'true');
-    syncRuntimeStateDirective(root, 'success', root.getAttribute('data-volt-success') === 'true');
+    syncRuntimeStateDirective(
+      root,
+      "loading",
+      root.getAttribute("data-volt-loading") === "true",
+    );
+    syncRuntimeStateDirective(
+      root,
+      "error",
+      root.getAttribute("data-volt-error") === "true",
+    );
+    syncRuntimeStateDirective(
+      root,
+      "dirty",
+      root.getAttribute("data-volt-dirty") === "true",
+    );
+    syncRuntimeStateDirective(
+      root,
+      "success",
+      root.getAttribute("data-volt-success") === "true",
+    );
     syncTextDirectives(root);
     syncClassDirectives(root);
     syncAttrDirectives(root);
@@ -3632,9 +5124,11 @@
   }
 
   function syncAllRuntimeStateDirectives() {
-    document.querySelectorAll('[data-volt-root="true"]').forEach(function (root) {
-      syncRuntimeStateDirectives(root);
-    });
+    document
+      .querySelectorAll('[data-volt-root="true"]')
+      .forEach(function (root) {
+        syncRuntimeStateDirectives(root);
+      });
   }
 
   function elementIndex(elements, target) {
@@ -3648,29 +5142,25 @@
   }
 
   function isTextSelectableElement(element) {
-    if (!element || typeof element !== 'object') {
+    if (!element || typeof element !== "object") {
       return false;
     }
 
-    if (element.tagName === 'TEXTAREA') {
+    if (element.tagName === "TEXTAREA") {
       return true;
     }
 
-    if (element.tagName !== 'INPUT') {
+    if (element.tagName !== "INPUT") {
       return false;
     }
 
-    const type = (element.type || 'text').toLowerCase();
+    const type = (element.type || "text").toLowerCase();
 
-    return [
-      'text',
-      'search',
-      'url',
-      'tel',
-      'password',
-      'email',
-      'number',
-    ].indexOf(type) !== -1;
+    return (
+      ["text", "search", "url", "tel", "password", "email", "number"].indexOf(
+        type,
+      ) !== -1
+    );
   }
 
   function buildFocusDescriptor(root, element) {
@@ -3680,44 +5170,46 @@
 
     if (element.id) {
       return {
-        strategy: 'id',
+        strategy: "id",
         value: element.id,
       };
     }
 
-    const targetName = element.getAttribute('data-volt-target');
+    const targetName = element.getAttribute("data-volt-target");
 
     if (targetName) {
       return {
-        strategy: 'target',
+        strategy: "target",
         value: targetName,
       };
     }
 
-    const modelName = directiveValue(element, ['volt-model', 'volt:model']);
+    const modelName = directiveValue(element, ["volt-model", "volt:model"]);
 
     if (modelName) {
-      const matches = root.querySelectorAll('[volt-model], [volt\\:model]');
+      const matches = root.querySelectorAll("[volt-model], [volt\\:model]");
       const index = elementIndex(matches, element);
 
       if (index !== -1) {
         return {
-          strategy: 'model',
+          strategy: "model",
           value: modelName,
           index: index,
         };
       }
     }
 
-    const fieldName = element.getAttribute('name');
+    const fieldName = element.getAttribute("name");
 
     if (fieldName) {
-      const matches = root.querySelectorAll('[name="' + cssEscape(fieldName) + '"]');
+      const matches = root.querySelectorAll(
+        '[name="' + cssEscape(fieldName) + '"]',
+      );
       const index = elementIndex(matches, element);
 
       if (index !== -1) {
         return {
-          strategy: 'name',
+          strategy: "name",
           value: fieldName,
           index: index,
         };
@@ -3734,16 +5226,16 @@
 
     if (element.id) {
       return {
-        strategy: 'id',
+        strategy: "id",
         value: element.id,
       };
     }
 
-    const targetName = element.getAttribute('data-volt-target');
+    const targetName = element.getAttribute("data-volt-target");
 
     if (targetName) {
       return {
-        strategy: 'target',
+        strategy: "target",
         value: targetName,
       };
     }
@@ -3756,24 +5248,32 @@
       return null;
     }
 
-    if (descriptor.strategy === 'id' && descriptor.value) {
+    if (descriptor.strategy === "id" && descriptor.value) {
       return document.getElementById(descriptor.value);
     }
 
-    if (descriptor.strategy === 'target' && descriptor.value) {
-      return root.querySelector('[data-volt-target="' + descriptor.value + '"]');
+    if (descriptor.strategy === "target" && descriptor.value) {
+      return root.querySelector(
+        '[data-volt-target="' + descriptor.value + '"]',
+      );
     }
 
-    if (descriptor.strategy === 'model' && descriptor.value) {
+    if (descriptor.strategy === "model" && descriptor.value) {
       const matches = root.querySelectorAll(
-        '[volt-model="' + descriptor.value + '"], [volt\\:model="' + descriptor.value + '"]'
+        '[volt-model="' +
+          descriptor.value +
+          '"], [volt\\:model="' +
+          descriptor.value +
+          '"]',
       );
 
       return matches[descriptor.index || 0] || null;
     }
 
-    if (descriptor.strategy === 'name' && descriptor.value) {
-      const matches = root.querySelectorAll('[name="' + cssEscape(descriptor.value) + '"]');
+    if (descriptor.strategy === "name" && descriptor.value) {
+      const matches = root.querySelectorAll(
+        '[name="' + cssEscape(descriptor.value) + '"]',
+      );
 
       return matches[descriptor.index || 0] || null;
     }
@@ -3787,11 +5287,20 @@
     }
 
     return {
-      start: typeof element.selectionStart === 'number' ? element.selectionStart : null,
-      end: typeof element.selectionEnd === 'number' ? element.selectionEnd : null,
-      direction: typeof element.selectionDirection === 'string' ? element.selectionDirection : 'none',
-      scrollTop: typeof element.scrollTop === 'number' ? element.scrollTop : null,
-      scrollLeft: typeof element.scrollLeft === 'number' ? element.scrollLeft : null,
+      start:
+        typeof element.selectionStart === "number"
+          ? element.selectionStart
+          : null,
+      end:
+        typeof element.selectionEnd === "number" ? element.selectionEnd : null,
+      direction:
+        typeof element.selectionDirection === "string"
+          ? element.selectionDirection
+          : "none",
+      scrollTop:
+        typeof element.scrollTop === "number" ? element.scrollTop : null,
+      scrollLeft:
+        typeof element.scrollLeft === "number" ? element.scrollLeft : null,
     };
   }
 
@@ -3819,18 +5328,25 @@
       return;
     }
 
-    if (typeof selection.start === 'number' && typeof selection.end === 'number' && typeof element.setSelectionRange === 'function') {
+    if (
+      typeof selection.start === "number" &&
+      typeof selection.end === "number" &&
+      typeof element.setSelectionRange === "function"
+    ) {
       try {
-        element.setSelectionRange(selection.start, selection.end, selection.direction || 'none');
-      } catch (error) {
-      }
+        element.setSelectionRange(
+          selection.start,
+          selection.end,
+          selection.direction || "none",
+        );
+      } catch (error) {}
     }
 
-    if (typeof selection.scrollTop === 'number') {
+    if (typeof selection.scrollTop === "number") {
       element.scrollTop = selection.scrollTop;
     }
 
-    if (typeof selection.scrollLeft === 'number') {
+    if (typeof selection.scrollLeft === "number") {
       element.scrollLeft = selection.scrollLeft;
     }
   }
@@ -3842,7 +5358,7 @@
 
     const nextElement = findByDescriptor(root, focusState.descriptor);
 
-    if (!nextElement || typeof nextElement.focus !== 'function') {
+    if (!nextElement || typeof nextElement.focus !== "function") {
       return;
     }
 
@@ -3853,21 +5369,21 @@
   }
 
   function isElementScrollRestorable(element) {
-    if (!element || typeof element !== 'object') {
+    if (!element || typeof element !== "object") {
       return false;
     }
 
     if (
-      element.hasAttribute('data-volt-preserve-scroll') ||
-      element.hasAttribute('volt-preserve-scroll') ||
-      element.hasAttribute('volt:preserve-scroll')
+      element.hasAttribute("data-volt-preserve-scroll") ||
+      element.hasAttribute("volt-preserve-scroll") ||
+      element.hasAttribute("volt:preserve-scroll")
     ) {
       return true;
     }
 
     return !!(
-      (typeof element.scrollTop === 'number' && element.scrollTop !== 0) ||
-      (typeof element.scrollLeft === 'number' && element.scrollLeft !== 0)
+      (typeof element.scrollTop === "number" && element.scrollTop !== 0) ||
+      (typeof element.scrollLeft === "number" && element.scrollLeft !== 0)
     );
   }
 
@@ -3898,13 +5414,18 @@
 
       candidates.push({
         descriptor: descriptor,
-        scrollTop: typeof element.scrollTop === 'number' ? element.scrollTop : null,
-        scrollLeft: typeof element.scrollLeft === 'number' ? element.scrollLeft : null,
+        scrollTop:
+          typeof element.scrollTop === "number" ? element.scrollTop : null,
+        scrollLeft:
+          typeof element.scrollLeft === "number" ? element.scrollLeft : null,
       });
     }
 
     addCandidate(root);
-    root.querySelectorAll('[id], [data-volt-target], [data-volt-preserve-scroll], [volt-preserve-scroll], [volt\\:preserve-scroll]')
+    root
+      .querySelectorAll(
+        "[id], [data-volt-target], [data-volt-preserve-scroll], [volt-preserve-scroll], [volt\\:preserve-scroll]",
+      )
       .forEach(addCandidate);
 
     return candidates;
@@ -3926,24 +5447,26 @@
         return;
       }
 
-      if (typeof entry.scrollTop === 'number') {
+      if (typeof entry.scrollTop === "number") {
         element.scrollTop = entry.scrollTop;
       }
 
-      if (typeof entry.scrollLeft === 'number') {
+      if (typeof entry.scrollLeft === "number") {
         element.scrollLeft = entry.scrollLeft;
       }
     });
   }
 
   function emitRuntimeHook(name, detail, target) {
-    const hookDetail = detail && typeof detail === 'object' ? detail : {};
+    const hookDetail = detail && typeof detail === "object" ? detail : {};
     const eventTarget = target || document;
 
-    eventTarget.dispatchEvent(new CustomEvent(name, {
-      detail: hookDetail,
-      bubbles: true,
-    }));
+    eventTarget.dispatchEvent(
+      new CustomEvent(name, {
+        detail: hookDetail,
+        bubbles: true,
+      }),
+    );
   }
 
   function wait(duration) {
@@ -3965,54 +5488,78 @@
       return 180;
     }
 
-    const phaseDuration = transitionConfigValue(effect, phase, 'duration');
+    const phaseDuration = transitionConfigValue(effect, phase, "duration");
 
-    if (typeof phaseDuration === 'number' && phaseDuration >= 0) {
+    if (typeof phaseDuration === "number" && phaseDuration >= 0) {
       return phaseDuration;
     }
 
-    if (effect && typeof effect.transitionDuration === 'number' && effect.transitionDuration >= 0) {
+    if (
+      effect &&
+      typeof effect.transitionDuration === "number" &&
+      effect.transitionDuration >= 0
+    ) {
       return effect.transitionDuration;
     }
 
-    const phaseAttribute = element.getAttribute('data-volt-transition-' + phase + '-duration');
+    const phaseAttribute = element.getAttribute(
+      "data-volt-transition-" + phase + "-duration",
+    );
     const phaseParsed = phaseAttribute ? Number(phaseAttribute) : NaN;
 
     if (Number.isFinite(phaseParsed) && phaseParsed >= 0) {
       return phaseParsed;
     }
 
-    const attributeValue = element.getAttribute('data-volt-transition-duration');
+    const attributeValue = element.getAttribute(
+      "data-volt-transition-duration",
+    );
     const parsed = attributeValue ? Number(attributeValue) : NaN;
 
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 180;
   }
 
   function transitionConfigValue(effect, phase, key) {
-    if (!effect || typeof effect !== 'object') {
+    if (!effect || typeof effect !== "object") {
       return null;
     }
 
-    if (effect.transition && typeof effect.transition === 'object' && effect.transition !== null) {
+    if (
+      effect.transition &&
+      typeof effect.transition === "object" &&
+      effect.transition !== null
+    ) {
       const phaseConfig = effect.transition[phase];
 
-      if (phaseConfig && typeof phaseConfig === 'object' && Object.prototype.hasOwnProperty.call(phaseConfig, key)) {
+      if (
+        phaseConfig &&
+        typeof phaseConfig === "object" &&
+        Object.prototype.hasOwnProperty.call(phaseConfig, key)
+      ) {
         return phaseConfig[key];
       }
 
-      if (key === 'name' && typeof phaseConfig === 'string') {
+      if (key === "name" && typeof phaseConfig === "string") {
         return phaseConfig;
       }
     }
 
-    if (effect.transitions && typeof effect.transitions === 'object' && effect.transitions !== null) {
+    if (
+      effect.transitions &&
+      typeof effect.transitions === "object" &&
+      effect.transitions !== null
+    ) {
       const phaseConfig = effect.transitions[phase];
 
-      if (phaseConfig && typeof phaseConfig === 'object' && Object.prototype.hasOwnProperty.call(phaseConfig, key)) {
+      if (
+        phaseConfig &&
+        typeof phaseConfig === "object" &&
+        Object.prototype.hasOwnProperty.call(phaseConfig, key)
+      ) {
         return phaseConfig[key];
       }
 
-      if (key === 'name' && typeof phaseConfig === 'string') {
+      if (key === "name" && typeof phaseConfig === "string") {
         return phaseConfig;
       }
     }
@@ -4025,65 +5572,75 @@
       return null;
     }
 
-    const phaseVariant = transitionConfigValue(effect, phase, 'name');
+    const phaseVariant = transitionConfigValue(effect, phase, "name");
 
-    if (typeof phaseVariant === 'string' && phaseVariant !== '') {
+    if (typeof phaseVariant === "string" && phaseVariant !== "") {
       return phaseVariant;
     }
 
-    if (effect && typeof effect.transition === 'string' && effect.transition !== '') {
+    if (
+      effect &&
+      typeof effect.transition === "string" &&
+      effect.transition !== ""
+    ) {
       return effect.transition;
     }
 
     if (effect && effect.transition === true) {
-      return 'default';
+      return "default";
     }
 
     if (!element) {
       return null;
     }
 
-    const phaseAttribute = element.getAttribute('data-volt-transition-' + phase);
+    const phaseAttribute = element.getAttribute(
+      "data-volt-transition-" + phase,
+    );
 
-    if (phaseAttribute === '') {
-      return 'default';
+    if (phaseAttribute === "") {
+      return "default";
     }
 
     if (phaseAttribute) {
       return phaseAttribute;
     }
 
-    const attributeValue = element.getAttribute('data-volt-transition');
+    const attributeValue = element.getAttribute("data-volt-transition");
 
-    if (attributeValue === '') {
-      return 'default';
+    if (attributeValue === "") {
+      return "default";
     }
 
     return attributeValue || null;
   }
 
   function transitionClassListFor(element, effect, phase, variant) {
-    const classes = ['volt-transition', 'volt-transition-' + phase];
+    const classes = ["volt-transition", "volt-transition-" + phase];
 
     if (variant) {
-      classes.push('volt-transition-' + variant);
+      classes.push("volt-transition-" + variant);
     }
 
     const phaseClasses = [];
-    const classConfig = transitionConfigValue(effect, phase, 'className');
+    const classConfig = transitionConfigValue(effect, phase, "className");
 
-    if (typeof classConfig === 'string' && classConfig !== '') {
+    if (typeof classConfig === "string" && classConfig !== "") {
       phaseClasses.push(classConfig);
     }
 
     if (element) {
-      const phaseAttribute = element.getAttribute('data-volt-transition-' + phase + '-class');
+      const phaseAttribute = element.getAttribute(
+        "data-volt-transition-" + phase + "-class",
+      );
 
       if (phaseAttribute) {
         phaseClasses.push(phaseAttribute);
       }
 
-      const globalAttribute = element.getAttribute('data-volt-transition-class');
+      const globalAttribute = element.getAttribute(
+        "data-volt-transition-class",
+      );
 
       if (globalAttribute) {
         phaseClasses.push(globalAttribute);
@@ -4109,65 +5666,91 @@
     }
 
     const duration = transitionDurationFor(element, effect, phase);
-    const activeClass = 'volt-transition-' + phase + '-active';
+    const activeClass = "volt-transition-" + phase + "-active";
     const classes = transitionClassListFor(element, effect, phase, variant);
     const detail = effectHookDetail(root, effect, element, {
       phase: phase,
       variant: variant,
       duration: duration,
-      transitionSource: effect && effect.pageTransitionSource
-        ? effect.pageTransitionSource
-        : null,
-      transitionMode: effect && effect.pageTransitionMode
-        ? effect.pageTransitionMode
-        : null,
-      transitionName: effect && effect.pageTransitionName
-        ? effect.pageTransitionName
-        : null,
+      transitionSource:
+        effect && effect.pageTransitionSource
+          ? effect.pageTransitionSource
+          : null,
+      transitionMode:
+        effect && effect.pageTransitionMode ? effect.pageTransitionMode : null,
+      transitionName:
+        effect && effect.pageTransitionName ? effect.pageTransitionName : null,
     });
 
-    emitRuntimeHook('volt:before-' + phase, detail, element);
-    element.style.setProperty('--volt-transition-duration', duration + 'ms');
+    emitRuntimeHook("volt:before-" + phase, detail, element);
+    element.style.setProperty("--volt-transition-duration", duration + "ms");
     element.classList.add.apply(element.classList, classes);
     await nextFrame();
     element.classList.add(activeClass);
     await wait(duration);
     element.classList.remove(activeClass);
     element.classList.remove.apply(element.classList, classes);
-    element.style.removeProperty('--volt-transition-duration');
-    emitRuntimeHook('volt:after-' + phase, detail, element);
+    element.style.removeProperty("--volt-transition-duration");
+    emitRuntimeHook("volt:after-" + phase, detail, element);
 
     return true;
   }
 
   function fragmentFromHtml(html) {
-    if (typeof html !== 'string' || html === '') {
+    if (typeof html !== "string" || html === "") {
       return null;
     }
 
-    const template = document.createElement('template');
+    const template = document.createElement("template");
     template.innerHTML = html.trim();
 
     return template.content;
   }
 
   function effectHookDetail(root, effect, target, extra) {
-    return Object.assign({
-      type: effect && effect.type ? effect.type : null,
-      target: effect && typeof effect.target === 'string' ? effect.target : null,
-      selector: effect && typeof effect.selector === 'string' ? effect.selector : null,
-      component: root && typeof root.getAttribute === 'function'
-        ? root.getAttribute('data-volt-component')
-        : null,
-      element: target || null,
-    }, extra || {});
+    return Object.assign(
+      {
+        type: effect && effect.type ? effect.type : null,
+        target:
+          effect && typeof effect.target === "string" ? effect.target : null,
+        selector:
+          effect && typeof effect.selector === "string"
+            ? effect.selector
+            : null,
+        component:
+          root && typeof root.getAttribute === "function"
+            ? root.getAttribute("data-volt-component")
+            : null,
+        element: target || null,
+      },
+      extra || {},
+    );
   }
 
-  function createEffectResult(root, effect, target, handled, preventsHtmlFallback, extra) {
-    emitRuntimeHook('volt:after-effect', effectHookDetail(root, effect, target, Object.assign({
-      handled: handled,
-      preventsHtmlFallback: preventsHtmlFallback,
-    }, extra || {})), target || root || document);
+  function createEffectResult(
+    root,
+    effect,
+    target,
+    handled,
+    preventsHtmlFallback,
+    extra,
+  ) {
+    emitRuntimeHook(
+      "volt:after-effect",
+      effectHookDetail(
+        root,
+        effect,
+        target,
+        Object.assign(
+          {
+            handled: handled,
+            preventsHtmlFallback: preventsHtmlFallback,
+          },
+          extra || {},
+        ),
+      ),
+      target || root || document,
+    );
 
     return {
       handled: handled,
@@ -4176,39 +5759,48 @@
   }
 
   async function withPreservedUiState(root, callback, meta) {
-    const detail = meta && typeof meta === 'object' ? meta : {};
+    const detail = meta && typeof meta === "object" ? meta : {};
     const focusState = captureFocusState(root);
     const scrollState = captureScrollState(root);
-    emitRuntimeHook('volt:before-patch', detail, root);
+    emitRuntimeHook("volt:before-patch", detail, root);
     const result = await callback();
-    const updatedRoot = root && root.isConnected
-      ? root
-      : root && root.getAttribute
-        ? findRootByComponent(root.getAttribute('data-volt-component'))
-        : null;
+    const updatedRoot =
+      root && root.isConnected
+        ? root
+        : root && root.getAttribute
+          ? findRootByComponent(root.getAttribute("data-volt-component"))
+          : null;
 
     if (updatedRoot) {
       restoreScrollState(updatedRoot, scrollState);
       restoreFocusState(updatedRoot, focusState);
     }
 
-    emitRuntimeHook('volt:after-patch', Object.assign({}, detail, {
-      updatedRoot: updatedRoot || null,
-    }), updatedRoot || root || document);
+    emitRuntimeHook(
+      "volt:after-patch",
+      Object.assign({}, detail, {
+        updatedRoot: updatedRoot || null,
+      }),
+      updatedRoot || root || document,
+    );
 
     return result;
   }
 
   function resolveRuntimeRoot(rootOrComponent, fallbackComponent) {
-    if (rootOrComponent && typeof rootOrComponent === 'object' && rootOrComponent.isConnected) {
+    if (
+      rootOrComponent &&
+      typeof rootOrComponent === "object" &&
+      rootOrComponent.isConnected
+    ) {
       return rootOrComponent;
     }
 
-    if (typeof rootOrComponent === 'string' && rootOrComponent !== '') {
+    if (typeof rootOrComponent === "string" && rootOrComponent !== "") {
       return findRootByComponent(rootOrComponent);
     }
 
-    if (typeof fallbackComponent === 'string' && fallbackComponent !== '') {
+    if (typeof fallbackComponent === "string" && fallbackComponent !== "") {
       return findRootByComponent(fallbackComponent);
     }
 
@@ -4218,60 +5810,69 @@
   function isAbortError(error) {
     return !!(
       error &&
-      typeof error === 'object' &&
-      (
-        error.name === 'AbortError' ||
-        error.code === 20
-      )
+      typeof error === "object" &&
+      (error.name === "AbortError" || error.code === 20)
     );
   }
 
   function triggerDescriptor(trigger) {
-    if (!trigger || typeof trigger.getAttribute !== 'function') {
+    if (!trigger || typeof trigger.getAttribute !== "function") {
       return null;
     }
 
     return {
       tag: trigger.tagName ? String(trigger.tagName).toLowerCase() : null,
-      target: trigger.getAttribute('data-volt-target'),
-      action: directiveValue(trigger, ['volt-click', 'volt:click', 'volt-submit', 'volt:submit']),
+      target: trigger.getAttribute("data-volt-target"),
+      action: directiveValue(trigger, [
+        "volt-click",
+        "volt:click",
+        "volt-submit",
+        "volt:submit",
+      ]),
     };
   }
 
   function requestHookDetail(kind, meta, extra) {
-    return Object.assign({
-      type: kind,
-      component: meta && meta.component ? meta.component : null,
-      action: meta && meta.action ? meta.action : null,
-      requestId: meta && meta.requestId ? meta.requestId : null,
-      trigger: meta && meta.trigger ? meta.trigger : null,
-    }, extra || {});
+    return Object.assign(
+      {
+        type: kind,
+        component: meta && meta.component ? meta.component : null,
+        action: meta && meta.action ? meta.action : null,
+        requestId: meta && meta.requestId ? meta.requestId : null,
+        trigger: meta && meta.trigger ? meta.trigger : null,
+      },
+      extra || {},
+    );
   }
 
   function responseErrorDetail(response, payload, meta) {
-    const payloadError = payload && payload.error && typeof payload.error === 'object'
-      ? payload.error
-      : {};
+    const payloadError =
+      payload && payload.error && typeof payload.error === "object"
+        ? payload.error
+        : {};
 
-    return requestHookDetail('action', meta, {
+    return requestHookDetail("action", meta, {
       status: response.status,
       ok: false,
-      message: payloadError.message || ('Request failed with status ' + response.status + '.'),
+      message:
+        payloadError.message ||
+        "Request failed with status " + response.status + ".",
       error: payloadError,
-      outcome: 'error',
+      outcome: "error",
     });
   }
 
   function exceptionErrorDetail(error, meta) {
-    return requestHookDetail('action', meta, {
+    return requestHookDetail("action", meta, {
       ok: false,
-      message: error && error.message ? error.message : 'Unexpected runtime error.',
-      outcome: 'error',
+      message:
+        error && error.message ? error.message : "Unexpected runtime error.",
+      outcome: "error",
     });
   }
 
   function stateTargetValue(detail) {
-    if (!detail || typeof detail !== 'object') {
+    if (!detail || typeof detail !== "object") {
       return null;
     }
 
@@ -4287,15 +5888,17 @@
   }
 
   function fieldStateTarget(element) {
-    if (!element || typeof element.getAttribute !== 'function') {
+    if (!element || typeof element.getAttribute !== "function") {
       return null;
     }
 
-    return directiveValue(element, ['volt-model', 'volt:model']) ||
-      element.getAttribute('data-volt-target') ||
-      element.getAttribute('name') ||
+    return (
+      directiveValue(element, ["volt-model", "volt:model"]) ||
+      element.getAttribute("data-volt-target") ||
+      element.getAttribute("name") ||
       element.id ||
-      null;
+      null
+    );
   }
 
   function syncRequestStatus(root) {
@@ -4303,55 +5906,69 @@
       return;
     }
 
-    if (root.getAttribute('data-volt-loading') === 'true') {
-      root.setAttribute('data-volt-request-status', 'loading');
-      root.setAttribute('aria-busy', 'true');
+    if (root.getAttribute("data-volt-loading") === "true") {
+      root.setAttribute("data-volt-request-status", "loading");
+      root.setAttribute("aria-busy", "true");
       return;
     }
 
-    if (root.getAttribute('data-volt-error') === 'true') {
-      root.setAttribute('data-volt-request-status', 'error');
-      root.setAttribute('aria-busy', 'false');
+    if (root.getAttribute("data-volt-error") === "true") {
+      root.setAttribute("data-volt-request-status", "error");
+      root.setAttribute("aria-busy", "false");
       return;
     }
 
-    if (root.getAttribute('data-volt-success') === 'true') {
-      root.setAttribute('data-volt-request-status', 'success');
-      root.setAttribute('aria-busy', 'false');
+    if (root.getAttribute("data-volt-success") === "true") {
+      root.setAttribute("data-volt-request-status", "success");
+      root.setAttribute("aria-busy", "false");
       return;
     }
 
-    if (root.getAttribute('data-volt-dirty') === 'true') {
-      root.setAttribute('data-volt-request-status', 'dirty');
-      root.setAttribute('aria-busy', 'false');
+    if (root.getAttribute("data-volt-dirty") === "true") {
+      root.setAttribute("data-volt-request-status", "dirty");
+      root.setAttribute("aria-busy", "false");
       return;
     }
 
-    root.setAttribute('data-volt-request-status', 'idle');
-    root.setAttribute('aria-busy', 'false');
+    root.setAttribute("data-volt-request-status", "idle");
+    root.setAttribute("aria-busy", "false");
   }
 
   function setLoadingState(rootOrComponent, active, trigger, meta) {
-    const detail = meta && typeof meta === 'object' ? meta : {};
+    const detail = meta && typeof meta === "object" ? meta : {};
     const root = resolveRuntimeRoot(rootOrComponent, detail.component);
 
     if (root) {
-      const previous = root.getAttribute('data-volt-loading') === 'true';
+      const previous = root.getAttribute("data-volt-loading") === "true";
       const context = active
         ? {
             action: detail.action || null,
             target: stateTargetValue(detail),
           }
-        : runtimeStateContext(root, 'loading');
-      const minDuration = previous ? resolveStateDirectiveMinDuration(root, 'loading', context) : null;
+        : runtimeStateContext(root, "loading");
+      const minDuration = previous
+        ? resolveStateDirectiveMinDuration(root, "loading", context)
+        : null;
       const activatedAt = runtime.loadingActivatedAt.get(root) || null;
       const elapsed = activatedAt === null ? null : Date.now() - activatedAt;
-      const remainingMinDuration = minDuration !== null && elapsed !== null
-        ? Math.max(0, minDuration - elapsed)
-        : null;
+      const remainingMinDuration =
+        minDuration !== null && elapsed !== null
+          ? Math.max(0, minDuration - elapsed)
+          : null;
 
-      if (!active && previous && remainingMinDuration !== null && remainingMinDuration > 0 && detail.reason !== 'min-duration') {
-        scheduleLoadingMinDurationClear(root, trigger, detail, remainingMinDuration);
+      if (
+        !active &&
+        previous &&
+        remainingMinDuration !== null &&
+        remainingMinDuration > 0 &&
+        detail.reason !== "min-duration"
+      ) {
+        scheduleLoadingMinDurationClear(
+          root,
+          trigger,
+          detail,
+          remainingMinDuration,
+        );
         return;
       }
 
@@ -4363,64 +5980,64 @@
         runtime.loadingActivatedAt.delete(root);
       }
 
-      root.setAttribute('data-volt-loading', active ? 'true' : 'false');
+      root.setAttribute("data-volt-loading", active ? "true" : "false");
 
       if (active && detail.action) {
-        root.setAttribute('data-volt-loading-action', detail.action);
+        root.setAttribute("data-volt-loading-action", detail.action);
       } else {
-        root.removeAttribute('data-volt-loading-action');
+        root.removeAttribute("data-volt-loading-action");
       }
 
       if (active && detail.trigger && detail.trigger.target) {
-        root.setAttribute('data-volt-loading-target', detail.trigger.target);
+        root.setAttribute("data-volt-loading-target", detail.trigger.target);
       } else {
-        root.removeAttribute('data-volt-loading-target');
+        root.removeAttribute("data-volt-loading-target");
       }
 
       if (active && detail.requestId) {
-        root.setAttribute('data-volt-request-id', String(detail.requestId));
+        root.setAttribute("data-volt-request-id", String(detail.requestId));
       } else {
-        root.removeAttribute('data-volt-request-id');
+        root.removeAttribute("data-volt-request-id");
       }
 
       syncRequestStatus(root);
       syncRuntimeStateDirectives(root);
     }
 
-    if (trigger && 'disabled' in trigger) {
+    if (trigger && "disabled" in trigger) {
       trigger.disabled = active;
     }
   }
 
   function setErrorState(rootOrComponent, active, meta) {
-    const detail = meta && typeof meta === 'object' ? meta : {};
+    const detail = meta && typeof meta === "object" ? meta : {};
     const root = resolveRuntimeRoot(rootOrComponent, detail.component);
 
     if (!root) {
       return;
     }
 
-    const previous = root.getAttribute('data-volt-error') === 'true';
+    const previous = root.getAttribute("data-volt-error") === "true";
     clearErrorTimeout(root);
-    root.setAttribute('data-volt-error', active ? 'true' : 'false');
+    root.setAttribute("data-volt-error", active ? "true" : "false");
 
     if (active) {
       if (detail.action) {
-        root.setAttribute('data-volt-error-action', detail.action);
+        root.setAttribute("data-volt-error-action", detail.action);
       } else {
-        root.removeAttribute('data-volt-error-action');
+        root.removeAttribute("data-volt-error-action");
       }
 
       if (detail.trigger && detail.trigger.target) {
-        root.setAttribute('data-volt-error-target', detail.trigger.target);
+        root.setAttribute("data-volt-error-target", detail.trigger.target);
       } else {
-        root.removeAttribute('data-volt-error-target');
+        root.removeAttribute("data-volt-error-target");
       }
 
       if (detail.message) {
-        root.setAttribute('data-volt-error-message', String(detail.message));
+        root.setAttribute("data-volt-error-message", String(detail.message));
       } else {
-        root.removeAttribute('data-volt-error-message');
+        root.removeAttribute("data-volt-error-message");
       }
 
       syncRequestStatus(root);
@@ -4429,24 +6046,28 @@
       return;
     }
 
-    root.removeAttribute('data-volt-error-message');
-    root.removeAttribute('data-volt-error-action');
-    root.removeAttribute('data-volt-error-target');
+    root.removeAttribute("data-volt-error-message");
+    root.removeAttribute("data-volt-error-action");
+    root.removeAttribute("data-volt-error-target");
 
     syncRequestStatus(root);
     syncRuntimeStateDirectives(root);
 
     if (previous) {
-      emitRuntimeHook('volt:error-cleared', requestHookDetail('error', detail, {
-        target: stateTargetValue(detail),
-        active: false,
-        reason: detail.reason || null,
-      }), root);
+      emitRuntimeHook(
+        "volt:error-cleared",
+        requestHookDetail("error", detail, {
+          target: stateTargetValue(detail),
+          active: false,
+          reason: detail.reason || null,
+        }),
+        root,
+      );
     }
   }
 
   function setDirtyState(rootOrComponent, active, meta) {
-    const detail = meta && typeof meta === 'object' ? meta : {};
+    const detail = meta && typeof meta === "object" ? meta : {};
     const root = resolveRuntimeRoot(rootOrComponent, detail.component);
 
     if (!root) {
@@ -4457,57 +6078,70 @@
       clearDirtyDebounce(root);
     }
 
-    const previous = root.getAttribute('data-volt-dirty') === 'true';
-    root.setAttribute('data-volt-dirty', active ? 'true' : 'false');
+    const previous = root.getAttribute("data-volt-dirty") === "true";
+    root.setAttribute("data-volt-dirty", active ? "true" : "false");
 
     if (active) {
       const target = stateTargetValue(detail);
 
       if (target) {
-        root.setAttribute('data-volt-dirty-target', target);
+        root.setAttribute("data-volt-dirty-target", target);
       } else {
-        root.removeAttribute('data-volt-dirty-target');
+        root.removeAttribute("data-volt-dirty-target");
       }
     } else {
-      root.removeAttribute('data-volt-dirty-target');
+      root.removeAttribute("data-volt-dirty-target");
     }
 
     syncRequestStatus(root);
     syncRuntimeStateDirectives(root);
 
     if (previous !== active) {
-      emitRuntimeHook(active ? 'volt:dirty' : 'volt:clean', requestHookDetail('dirty', detail, {
-        target: stateTargetValue(detail),
-        active: active,
-        reason: detail.reason || null,
-        debounce: detail.debounce || null,
-      }), root);
+      emitRuntimeHook(
+        active ? "volt:dirty" : "volt:clean",
+        requestHookDetail("dirty", detail, {
+          target: stateTargetValue(detail),
+          active: active,
+          reason: detail.reason || null,
+          debounce: detail.debounce || null,
+        }),
+        root,
+      );
     }
   }
 
   function setSuccessState(rootOrComponent, active, meta) {
-    const detail = meta && typeof meta === 'object' ? meta : {};
+    const detail = meta && typeof meta === "object" ? meta : {};
     const root = resolveRuntimeRoot(rootOrComponent, detail.component);
 
     if (!root) {
       return;
     }
 
-    const previous = root.getAttribute('data-volt-success') === 'true';
+    const previous = root.getAttribute("data-volt-success") === "true";
     const context = active
       ? {
           action: detail.action || null,
           target: stateTargetValue(detail),
         }
-      : runtimeStateContext(root, 'success');
-    const minDuration = previous ? resolveStateDirectiveMinDuration(root, 'success', context) : null;
+      : runtimeStateContext(root, "success");
+    const minDuration = previous
+      ? resolveStateDirectiveMinDuration(root, "success", context)
+      : null;
     const activatedAt = runtime.successActivatedAt.get(root) || null;
     const elapsed = activatedAt === null ? null : Date.now() - activatedAt;
-    const remainingMinDuration = minDuration !== null && elapsed !== null
-      ? Math.max(0, minDuration - elapsed)
-      : null;
+    const remainingMinDuration =
+      minDuration !== null && elapsed !== null
+        ? Math.max(0, minDuration - elapsed)
+        : null;
 
-    if (!active && previous && remainingMinDuration !== null && remainingMinDuration > 0 && detail.reason !== 'min-duration') {
+    if (
+      !active &&
+      previous &&
+      remainingMinDuration !== null &&
+      remainingMinDuration > 0 &&
+      detail.reason !== "min-duration"
+    ) {
       scheduleSuccessMinDurationClear(root, detail, remainingMinDuration);
       return;
     }
@@ -4521,44 +6155,50 @@
       runtime.successActivatedAt.delete(root);
     }
 
-    root.setAttribute('data-volt-success', active ? 'true' : 'false');
+    root.setAttribute("data-volt-success", active ? "true" : "false");
 
     if (active) {
       if (detail.action) {
-        root.setAttribute('data-volt-success-action', detail.action);
+        root.setAttribute("data-volt-success-action", detail.action);
       } else {
-        root.removeAttribute('data-volt-success-action');
+        root.removeAttribute("data-volt-success-action");
       }
 
       const target = stateTargetValue(detail);
 
       if (target) {
-        root.setAttribute('data-volt-success-target', target);
+        root.setAttribute("data-volt-success-target", target);
       } else {
-        root.removeAttribute('data-volt-success-target');
+        root.removeAttribute("data-volt-success-target");
       }
     } else {
-      root.removeAttribute('data-volt-success-action');
-      root.removeAttribute('data-volt-success-target');
+      root.removeAttribute("data-volt-success-action");
+      root.removeAttribute("data-volt-success-target");
     }
 
     syncRequestStatus(root);
     syncRuntimeStateDirectives(root);
 
-    const timeout = active ? resolveStateDirectiveTimeout(root, 'success') : null;
+    const timeout = active
+      ? resolveStateDirectiveTimeout(root, "success")
+      : null;
 
     if (active) {
       scheduleSuccessTimeout(root, detail);
     }
 
     if (previous !== active) {
-      emitRuntimeHook(active ? 'volt:success' : 'volt:success-cleared', requestHookDetail('success', detail, {
-        target: stateTargetValue(detail),
-        active: active,
-        timeout: timeout,
-        minDuration: minDuration,
-        reason: detail.reason || null,
-      }), root);
+      emitRuntimeHook(
+        active ? "volt:success" : "volt:success-cleared",
+        requestHookDetail("success", detail, {
+          target: stateTargetValue(detail),
+          active: active,
+          timeout: timeout,
+          minDuration: minDuration,
+          reason: detail.reason || null,
+        }),
+        root,
+      );
     }
   }
 
@@ -4582,19 +6222,19 @@
       return false;
     }
 
-    if (link.hasAttribute('download')) {
+    if (link.hasAttribute("download")) {
       return false;
     }
 
-    const target = link.getAttribute('target');
+    const target = link.getAttribute("target");
 
-    if (target && target !== '' && target.toLowerCase() !== '_self') {
+    if (target && target !== "" && target.toLowerCase() !== "_self") {
       return false;
     }
 
-    const href = link.getAttribute('href');
+    const href = link.getAttribute("href");
 
-    if (!href || href.startsWith('#')) {
+    if (!href || href.startsWith("#")) {
       return false;
     }
 
@@ -4608,15 +6248,24 @@
   }
 
   function setNavigationState(active, trigger) {
-    document.documentElement.setAttribute('data-volt-navigating', active ? 'true' : 'false');
-    document.documentElement.setAttribute('aria-busy', active ? 'true' : 'false');
+    document.documentElement.setAttribute(
+      "data-volt-navigating",
+      active ? "true" : "false",
+    );
+    document.documentElement.setAttribute(
+      "aria-busy",
+      active ? "true" : "false",
+    );
 
     if (document.body) {
-      document.body.setAttribute('data-volt-navigating', active ? 'true' : 'false');
-      document.body.setAttribute('aria-busy', active ? 'true' : 'false');
+      document.body.setAttribute(
+        "data-volt-navigating",
+        active ? "true" : "false",
+      );
+      document.body.setAttribute("aria-busy", active ? "true" : "false");
     }
 
-    if (trigger && 'disabled' in trigger) {
+    if (trigger && "disabled" in trigger) {
       trigger.disabled = active;
     }
   }
@@ -4630,16 +6279,20 @@
     });
 
     nextBody.getAttributeNames().forEach(function (name) {
-      currentBody.setAttribute(name, nextBody.getAttribute(name) || '');
+      currentBody.setAttribute(name, nextBody.getAttribute(name) || "");
     });
   }
 
   function preservedFragmentAttribute(element) {
-    return directiveAttribute(element, ['data-volt-preserve', 'volt-preserve', 'volt:preserve']);
+    return directiveAttribute(element, [
+      "data-volt-preserve",
+      "volt-preserve",
+      "volt:preserve",
+    ]);
   }
 
   function preservedFragmentKey(element) {
-    if (!element || typeof element.getAttribute !== 'function') {
+    if (!element || typeof element.getAttribute !== "function") {
       return null;
     }
 
@@ -4649,37 +6302,42 @@
       return null;
     }
 
-    const explicitKey = (attribute.value || '').trim();
+    const explicitKey = (attribute.value || "").trim();
 
-    if (explicitKey !== '') {
+    if (explicitKey !== "") {
       return explicitKey;
     }
 
-    const id = (element.getAttribute('id') || '').trim();
+    const id = (element.getAttribute("id") || "").trim();
 
-    if (id !== '') {
+    if (id !== "") {
       return id;
     }
 
-    const target = (element.getAttribute('data-volt-target') || '').trim();
+    const target = (element.getAttribute("data-volt-target") || "").trim();
 
-    return target !== '' ? target : null;
+    return target !== "" ? target : null;
   }
 
   function preservedFragmentCandidates(root) {
-    if (!root || typeof root.querySelectorAll !== 'function') {
+    if (!root || typeof root.querySelectorAll !== "function") {
       return [];
     }
 
     const candidates = [];
 
-    if (typeof root.matches === 'function' && root.matches(NAVIGATION_FRAGMENT_SELECTOR)) {
+    if (
+      typeof root.matches === "function" &&
+      root.matches(NAVIGATION_FRAGMENT_SELECTOR)
+    ) {
       candidates.push(root);
     }
 
-    root.querySelectorAll(NAVIGATION_FRAGMENT_SELECTOR).forEach(function (element) {
-      candidates.push(element);
-    });
+    root
+      .querySelectorAll(NAVIGATION_FRAGMENT_SELECTOR)
+      .forEach(function (element) {
+        candidates.push(element);
+      });
 
     return candidates.filter(function (element) {
       const parent = element.parentElement;
@@ -4689,11 +6347,14 @@
   }
 
   function fragmentNavigationDetail(meta, extra) {
-    return Object.assign({
-      source: meta && meta.source ? meta.source : 'navigate',
-      url: meta && meta.url ? meta.url : window.location.href,
-      finalUrl: meta && meta.finalUrl ? meta.finalUrl : null,
-    }, extra || {});
+    return Object.assign(
+      {
+        source: meta && meta.source ? meta.source : "navigate",
+        url: meta && meta.url ? meta.url : window.location.href,
+        finalUrl: meta && meta.finalUrl ? meta.finalUrl : null,
+      },
+      extra || {},
+    );
   }
 
   function discardPreservedFragments(fragments, meta, reason, extra) {
@@ -4708,11 +6369,21 @@
 
     fragments.forEach(function (fragment) {
       discardedCount += 1;
-      emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, Object.assign({
-        key: fragment.key,
-        tagName: fragment.tagName,
-        reason: reason,
-      }, extra || {})), document);
+      emitRuntimeHook(
+        "volt:fragment-discard",
+        fragmentNavigationDetail(
+          meta,
+          Object.assign(
+            {
+              key: fragment.key,
+              tagName: fragment.tagName,
+              reason: reason,
+            },
+            extra || {},
+          ),
+        ),
+        document,
+      );
     });
 
     return {
@@ -4722,18 +6393,20 @@
   }
 
   function shouldRestorePreservedFragments(control, meta) {
-    const fragmentMode = control && control.mode ? control.mode : 'preserve';
+    const fragmentMode = control && control.mode ? control.mode : "preserve";
 
-    if (fragmentMode === 'reset') {
+    if (fragmentMode === "reset") {
       return false;
     }
 
-    const cacheControl = meta && meta.cacheControl && typeof meta.cacheControl === 'object'
-      ? meta.cacheControl
-      : null;
-    const cacheMode = cacheControl && cacheControl.mode ? cacheControl.mode : 'default';
+    const cacheControl =
+      meta && meta.cacheControl && typeof meta.cacheControl === "object"
+        ? meta.cacheControl
+        : null;
+    const cacheMode =
+      cacheControl && cacheControl.mode ? cacheControl.mode : "default";
 
-    return cacheMode !== 'no-store';
+    return cacheMode !== "no-store";
   }
 
   function capturePreservedFragments(root, meta) {
@@ -4743,19 +6416,27 @@
       const key = preservedFragmentKey(element);
 
       if (!key) {
-        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
-          reason: 'missing-key',
-          tagName: element.tagName ? element.tagName.toLowerCase() : null,
-        }), document);
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            reason: "missing-key",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
         return;
       }
 
       if (fragments.has(key)) {
-        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
-          key: key,
-          reason: 'duplicate-source',
-          tagName: element.tagName ? element.tagName.toLowerCase() : null,
-        }), document);
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: key,
+            reason: "duplicate-source",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
         return;
       }
 
@@ -4776,19 +6457,27 @@
       const key = preservedFragmentKey(element);
 
       if (!key) {
-        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
-          reason: 'missing-target-key',
-          tagName: element.tagName ? element.tagName.toLowerCase() : null,
-        }), document);
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            reason: "missing-target-key",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
         return;
       }
 
       if (targets.has(key)) {
-        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
-          key: key,
-          reason: 'duplicate-target',
-          tagName: element.tagName ? element.tagName.toLowerCase() : null,
-        }), document);
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: key,
+            reason: "duplicate-target",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
         return;
       }
 
@@ -4815,34 +6504,48 @@
 
       if (!target) {
         discardedCount += 1;
-        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
-          key: fragment.key,
-          tagName: fragment.tagName,
-          reason: 'missing-target',
-        }), document);
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: fragment.key,
+            tagName: fragment.tagName,
+            reason: "missing-target",
+          }),
+          document,
+        );
         return;
       }
 
-      const targetTagName = target.tagName ? target.tagName.toLowerCase() : null;
+      const targetTagName = target.tagName
+        ? target.tagName.toLowerCase()
+        : null;
 
       if (targetTagName !== fragment.tagName) {
         discardedCount += 1;
-        emitRuntimeHook('volt:fragment-discard', fragmentNavigationDetail(meta, {
-          key: fragment.key,
-          tagName: fragment.tagName,
-          targetTagName: targetTagName,
-          reason: 'tag-mismatch',
-        }), document);
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: fragment.key,
+            tagName: fragment.tagName,
+            targetTagName: targetTagName,
+            reason: "tag-mismatch",
+          }),
+          document,
+        );
         return;
       }
 
       target.replaceWith(fragment.element);
       preservedCount += 1;
 
-      emitRuntimeHook('volt:fragment-preserve', fragmentNavigationDetail(meta, {
-        key: fragment.key,
-        tagName: fragment.tagName,
-      }), document);
+      emitRuntimeHook(
+        "volt:fragment-preserve",
+        fragmentNavigationDetail(meta, {
+          key: fragment.key,
+          tagName: fragment.tagName,
+        }),
+        document,
+      );
     });
 
     return {
@@ -4853,7 +6556,7 @@
 
   function currentLayoutIdentity() {
     if (document.body) {
-      const bodyLayout = document.body.getAttribute('data-volt-layout');
+      const bodyLayout = document.body.getAttribute("data-volt-layout");
 
       if (bodyLayout) {
         return bodyLayout;
@@ -4861,7 +6564,8 @@
     }
 
     if (document.documentElement) {
-      const documentLayout = document.documentElement.getAttribute('data-volt-layout');
+      const documentLayout =
+        document.documentElement.getAttribute("data-volt-layout");
 
       if (documentLayout) {
         return documentLayout;
@@ -4872,12 +6576,12 @@
   }
 
   function documentLayoutIdentity(doc) {
-    if (!doc || typeof doc !== 'object') {
+    if (!doc || typeof doc !== "object") {
       return null;
     }
 
     if (doc.body) {
-      const bodyLayout = doc.body.getAttribute('data-volt-layout');
+      const bodyLayout = doc.body.getAttribute("data-volt-layout");
 
       if (bodyLayout) {
         return bodyLayout;
@@ -4885,7 +6589,8 @@
     }
 
     if (doc.documentElement) {
-      const documentLayout = doc.documentElement.getAttribute('data-volt-layout');
+      const documentLayout =
+        doc.documentElement.getAttribute("data-volt-layout");
 
       if (documentLayout) {
         return documentLayout;
@@ -4910,7 +6615,7 @@
     const nextAttributes = {};
 
     source.getAttributeNames().forEach(function (name) {
-      nextAttributes[name] = source.getAttribute(name) || '';
+      nextAttributes[name] = source.getAttribute(name) || "";
     });
 
     target.getAttributeNames().forEach(function (name) {
@@ -4929,56 +6634,56 @@
       return null;
     }
 
-    const explicitKey = node.getAttribute('data-volt-head-key');
+    const explicitKey = node.getAttribute("data-volt-head-key");
 
     if (explicitKey) {
-      return 'explicit:' + explicitKey;
+      return "explicit:" + explicitKey;
     }
 
     const tag = node.tagName.toLowerCase();
 
-    if (tag === 'meta') {
-      if (node.hasAttribute('name')) {
-        return 'meta:name:' + (node.getAttribute('name') || '');
+    if (tag === "meta") {
+      if (node.hasAttribute("name")) {
+        return "meta:name:" + (node.getAttribute("name") || "");
       }
 
-      if (node.hasAttribute('property')) {
-        return 'meta:property:' + (node.getAttribute('property') || '');
+      if (node.hasAttribute("property")) {
+        return "meta:property:" + (node.getAttribute("property") || "");
       }
 
-      if (node.hasAttribute('http-equiv')) {
-        return 'meta:http-equiv:' + (node.getAttribute('http-equiv') || '');
+      if (node.hasAttribute("http-equiv")) {
+        return "meta:http-equiv:" + (node.getAttribute("http-equiv") || "");
       }
 
       return null;
     }
 
-    if (tag === 'link') {
-      const rel = (node.getAttribute('rel') || '').toLowerCase();
-      const href = node.getAttribute('href') || '';
+    if (tag === "link") {
+      const rel = (node.getAttribute("rel") || "").toLowerCase();
+      const href = node.getAttribute("href") || "";
 
       if (!rel || !href) {
         return null;
       }
 
-      return 'link:' + rel + ':' + href + ':' + (node.getAttribute('as') || '');
+      return "link:" + rel + ":" + href + ":" + (node.getAttribute("as") || "");
     }
 
-    if (tag === 'script') {
-      const src = node.getAttribute('src') || '';
+    if (tag === "script") {
+      const src = node.getAttribute("src") || "";
 
       if (!src) {
         return null;
       }
 
-      return 'script:' + (node.getAttribute('type') || '') + ':' + src;
+      return "script:" + (node.getAttribute("type") || "") + ":" + src;
     }
 
-    if (tag === 'style') {
-      const styleId = node.getAttribute('id') || '';
+    if (tag === "style") {
+      const styleId = node.getAttribute("id") || "";
 
       if (styleId) {
-        return 'style:id:' + styleId;
+        return "style:id:" + styleId;
       }
     }
 
@@ -5015,8 +6720,8 @@
 
     const tag = currentNode.tagName.toLowerCase();
 
-    if (tag === 'script' || tag === 'style') {
-      const nextContent = nextNode.textContent || '';
+    if (tag === "script" || tag === "style") {
+      const nextContent = nextNode.textContent || "";
 
       if (currentNode.textContent !== nextContent) {
         currentNode.textContent = nextContent;
@@ -5025,13 +6730,13 @@
   }
 
   function waitForManagedHeadNode(node) {
-    if (!node || node.tagName.toLowerCase() !== 'link') {
+    if (!node || node.tagName.toLowerCase() !== "link") {
       return Promise.resolve();
     }
 
-    const rel = (node.getAttribute('rel') || '').toLowerCase();
+    const rel = (node.getAttribute("rel") || "").toLowerCase();
 
-    if (rel !== 'stylesheet') {
+    if (rel !== "stylesheet") {
       return Promise.resolve();
     }
 
@@ -5052,8 +6757,8 @@
         return;
       }
 
-      node.addEventListener('load', finish, { once: true });
-      node.addEventListener('error', finish, { once: true });
+      node.addEventListener("load", finish, { once: true });
+      node.addEventListener("error", finish, { once: true });
       window.setTimeout(finish, 1500);
     });
   }
@@ -5105,9 +6810,10 @@
   }
 
   async function applyDocumentPayload(doc, meta) {
-    const payloadMeta = meta && typeof meta === 'object' ? meta : {};
+    const payloadMeta = meta && typeof meta === "object" ? meta : {};
     const fragmentControl = fragmentControlForDocument(doc);
-    const pageTransition = payloadMeta.pageTransition || parsePageTransition('', 'default');
+    const pageTransition =
+      payloadMeta.pageTransition || parsePageTransition("", "default");
     const fragmentSummary = {
       preservedCount: 0,
       discardedCount: 0,
@@ -5125,55 +6831,68 @@
       const fragmentMeta = Object.assign({}, payloadMeta, {
         fragmentControl: fragmentControl,
       });
-      const preservedFragments = capturePreservedFragments(document.body, fragmentMeta);
+      const preservedFragments = capturePreservedFragments(
+        document.body,
+        fragmentMeta,
+      );
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
-      const restoredFragments = shouldRestorePreservedFragments(fragmentControl, payloadMeta)
-        ? restorePreservedFragments(document.body, preservedFragments, fragmentMeta)
+      const restoredFragments = shouldRestorePreservedFragments(
+        fragmentControl,
+        payloadMeta,
+      )
+        ? restorePreservedFragments(
+            document.body,
+            preservedFragments,
+            fragmentMeta,
+          )
         : discardPreservedFragments(
-          preservedFragments,
-          fragmentMeta,
-          fragmentControl.mode === 'reset' ? 'document-policy' : 'navigation-policy',
-          {
-            policyMode: fragmentControl.mode,
-            policySource: fragmentControl.source,
-            cacheMode: payloadMeta.cacheControl && payloadMeta.cacheControl.mode
-              ? payloadMeta.cacheControl.mode
-              : 'default',
-          },
-        );
+            preservedFragments,
+            fragmentMeta,
+            fragmentControl.mode === "reset"
+              ? "document-policy"
+              : "navigation-policy",
+            {
+              policyMode: fragmentControl.mode,
+              policySource: fragmentControl.source,
+              cacheMode:
+                payloadMeta.cacheControl && payloadMeta.cacheControl.mode
+                  ? payloadMeta.cacheControl.mode
+                  : "default",
+            },
+          );
 
       fragmentSummary.preservedCount = restoredFragments.preservedCount;
       fragmentSummary.discardedCount = restoredFragments.discardedCount;
       syncAllRuntimeStateDirectives();
       registerViewportPrefetchTargets(document);
       scheduleHeuristicPrefetch(document);
-      await runPageTransitionPhase(document.body, 'enter', pageTransition);
+      await runPageTransitionPhase(document.body, "enter", pageTransition);
     }
 
     return fragmentSummary;
   }
 
   function resolveEffectTarget(root, effect) {
-    if (!effect || typeof effect !== 'object') {
+    if (!effect || typeof effect !== "object") {
       return null;
     }
 
-    if (effect.target === 'root' || effect.target === 'self') {
+    if (effect.target === "root" || effect.target === "self") {
       return root;
     }
 
-    if (typeof effect.selector === 'string' && effect.selector !== '') {
+    if (typeof effect.selector === "string" && effect.selector !== "") {
       return document.querySelector(effect.selector);
     }
 
-    if (typeof effect.target !== 'string' || effect.target === '') {
+    if (typeof effect.target !== "string" || effect.target === "") {
       return null;
     }
 
     const escapedTarget = cssEscape(effect.target);
     const scopedTarget = root
-      ? root.querySelector('#' + escapedTarget) ||
+      ? root.querySelector("#" + escapedTarget) ||
         root.querySelector('[data-volt-target="' + effect.target + '"]')
       : null;
 
@@ -5181,8 +6900,10 @@
       return scopedTarget;
     }
 
-    return document.getElementById(effect.target) ||
-      document.querySelector('[data-volt-target="' + effect.target + '"]');
+    return (
+      document.getElementById(effect.target) ||
+      document.querySelector('[data-volt-target="' + effect.target + '"]')
+    );
   }
 
   function dispatchRuntimeEvent(effect, target) {
@@ -5193,10 +6914,12 @@
     }
 
     const eventTarget = target || document;
-    eventTarget.dispatchEvent(new CustomEvent(name, {
-      detail: effect.payload || effect.detail || {},
-      bubbles: true,
-    }));
+    eventTarget.dispatchEvent(
+      new CustomEvent(name, {
+        detail: effect.payload || effect.detail || {},
+        bubbles: true,
+      }),
+    );
   }
 
   function applyHtmlReplace(root, target, effect) {
@@ -5204,28 +6927,35 @@
       return null;
     }
 
-    const html = typeof effect.html === 'string' ? effect.html : effect.value;
+    const html = typeof effect.html === "string" ? effect.html : effect.value;
 
-    if (typeof html !== 'string') {
+    if (typeof html !== "string") {
       return null;
     }
 
     const descriptor = buildStableElementDescriptor(target);
 
-    if (effect.outer === true || effect.mode === 'outer' || target === document.body || target.hasAttribute('data-volt-root')) {
+    if (
+      effect.outer === true ||
+      effect.mode === "outer" ||
+      target === document.body ||
+      target.hasAttribute("data-volt-root")
+    ) {
       target.outerHTML = html;
 
       if (target === document.body) {
         return document.body;
       }
 
-      if (target.hasAttribute('data-volt-root')) {
-        const componentName = target.getAttribute('data-volt-component');
+      if (target.hasAttribute("data-volt-root")) {
+        const componentName = target.getAttribute("data-volt-component");
 
         return componentName ? findRootByComponent(componentName) : null;
       }
 
-      return descriptor ? findByDescriptor(root || document.body, descriptor) : null;
+      return descriptor
+        ? findByDescriptor(root || document.body, descriptor)
+        : null;
     }
 
     target.innerHTML = html;
@@ -5239,11 +6969,11 @@
 
     const className = effect.class || effect.className || effect.value;
 
-    if (typeof className !== 'string' || className === '') {
+    if (typeof className !== "string" || className === "") {
       return;
     }
 
-    if (typeof effect.force === 'boolean') {
+    if (typeof effect.force === "boolean") {
       target.classList.toggle(className, effect.force);
       return;
     }
@@ -5256,7 +6986,7 @@
       return;
     }
 
-    if (effect.styles && typeof effect.styles === 'object') {
+    if (effect.styles && typeof effect.styles === "object") {
       Object.keys(effect.styles).forEach(function (property) {
         if (effect.styles[property] === null) {
           target.style.removeProperty(property);
@@ -5269,24 +6999,24 @@
       return;
     }
 
-    if (typeof effect.property === 'string') {
+    if (typeof effect.property === "string") {
       if (effect.value === null) {
         target.style.removeProperty(effect.property);
         return;
       }
 
-      if (typeof effect.value !== 'undefined') {
+      if (typeof effect.value !== "undefined") {
         target.style.setProperty(effect.property, String(effect.value));
       }
     }
   }
 
   function resolveContainerTarget(root, effect) {
-    if (!effect || typeof effect !== 'object') {
+    if (!effect || typeof effect !== "object") {
       return null;
     }
 
-    if (typeof effect.parentTarget === 'string' && effect.parentTarget !== '') {
+    if (typeof effect.parentTarget === "string" && effect.parentTarget !== "") {
       return resolveEffectTarget(root, { target: effect.parentTarget });
     }
 
@@ -5297,7 +7027,7 @@
     const container = resolveContainerTarget(root, effect);
     const fragment = fragmentFromHtml(effect.html);
 
-    if (!container || typeof effect.html !== 'string' || !fragment) {
+    if (!container || typeof effect.html !== "string" || !fragment) {
       return [];
     }
 
@@ -5306,7 +7036,10 @@
       return node.nodeType === 1;
     });
 
-    if (typeof effect.beforeSelector === 'string' && effect.beforeSelector !== '') {
+    if (
+      typeof effect.beforeSelector === "string" &&
+      effect.beforeSelector !== ""
+    ) {
       const anchor = document.querySelector(effect.beforeSelector);
 
       if (anchor) {
@@ -5315,7 +7048,10 @@
       }
     }
 
-    if ((effect.position || 'beforeend') === 'afterbegin' && container.firstChild) {
+    if (
+      (effect.position || "beforeend") === "afterbegin" &&
+      container.firstChild
+    ) {
       container.insertBefore(fragment, container.firstChild);
       return insertedElements;
     }
@@ -5331,7 +7067,10 @@
       return false;
     }
 
-    if (typeof effect.beforeSelector === 'string' && effect.beforeSelector !== '') {
+    if (
+      typeof effect.beforeSelector === "string" &&
+      effect.beforeSelector !== ""
+    ) {
       const anchor = document.querySelector(effect.beforeSelector);
 
       if (anchor && anchor.parentNode === container) {
@@ -5345,51 +7084,51 @@
   }
 
   function syncAttributeProperty(target, name, value) {
-    if (!target || typeof name !== 'string') {
+    if (!target || typeof name !== "string") {
       return;
     }
 
-    if (name === 'value' && 'value' in target) {
+    if (name === "value" && "value" in target) {
       target.value = value;
       return;
     }
 
-    if (name === 'checked' && 'checked' in target) {
+    if (name === "checked" && "checked" in target) {
       target.checked = value !== null;
       return;
     }
 
-    if (name === 'selected' && 'selected' in target) {
+    if (name === "selected" && "selected" in target) {
       target.selected = value !== null;
       return;
     }
 
-    if (name === 'disabled' && 'disabled' in target) {
+    if (name === "disabled" && "disabled" in target) {
       target.disabled = value !== null;
     }
   }
 
   function applyScroll(target, effect) {
-    const behavior = effect.behavior === 'smooth' ? 'smooth' : 'auto';
+    const behavior = effect.behavior === "smooth" ? "smooth" : "auto";
 
-    if (target && typeof target.scrollIntoView === 'function') {
+    if (target && typeof target.scrollIntoView === "function") {
       target.scrollIntoView({
         behavior: behavior,
-        block: effect.block || 'start',
-        inline: effect.inline || 'nearest',
+        block: effect.block || "start",
+        inline: effect.inline || "nearest",
       });
       return;
     }
 
     window.scrollTo({
-      top: typeof effect.top === 'number' ? effect.top : 0,
-      left: typeof effect.left === 'number' ? effect.left : 0,
+      top: typeof effect.top === "number" ? effect.top : 0,
+      left: typeof effect.left === "number" ? effect.left : 0,
       behavior: behavior,
     });
   }
 
   async function applyEffect(root, effect) {
-    if (!effect || typeof effect.type !== 'string') {
+    if (!effect || typeof effect.type !== "string") {
       return {
         handled: false,
         preventsHtmlFallback: false,
@@ -5397,37 +7136,61 @@
     }
 
     const target = resolveEffectTarget(root, effect);
-    emitRuntimeHook('volt:before-effect', effectHookDetail(root, effect, target), target || root || document);
+    emitRuntimeHook(
+      "volt:before-effect",
+      effectHookDetail(root, effect, target),
+      target || root || document,
+    );
 
     switch (effect.type) {
-      case 'text.update':
-        if (target && typeof effect.value !== 'undefined') {
+      case "text.update":
+        if (target && typeof effect.value !== "undefined") {
           target.textContent = String(effect.value);
-          await runElementTransition(root, target, 'update', effect);
+          await runElementTransition(root, target, "update", effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
 
-      case 'html.replace':
-        {
-          const replacedTarget = applyHtmlReplace(root, target, effect);
+      case "html.replace": {
+        const replacedTarget = applyHtmlReplace(root, target, effect);
 
-          if (replacedTarget) {
-            await runElementTransition(root, replacedTarget, effect.outer === true || effect.mode === 'outer' ? 'enter' : 'update', effect);
-          }
-
-          return createEffectResult(root, effect, replacedTarget || target, !!target, !!target);
+        if (replacedTarget) {
+          await runElementTransition(
+            root,
+            replacedTarget,
+            effect.outer === true || effect.mode === "outer"
+              ? "enter"
+              : "update",
+            effect,
+          );
         }
 
-      case 'dom.append':
-        if (target && typeof effect.html === 'string') {
-          const insertedElements = applyDomInsert(root, Object.assign({}, effect, {
-            beforeSelector: null,
-            position: effect.position || 'beforeend',
-          }));
+        return createEffectResult(
+          root,
+          effect,
+          replacedTarget || target,
+          !!target,
+          !!target,
+        );
+      }
+
+      case "dom.append":
+        if (target && typeof effect.html === "string") {
+          const insertedElements = applyDomInsert(
+            root,
+            Object.assign({}, effect, {
+              beforeSelector: null,
+              position: effect.position || "beforeend",
+            }),
+          );
 
           for (let index = 0; index < insertedElements.length; index += 1) {
-            await runElementTransition(root, insertedElements[index], 'enter', effect);
+            await runElementTransition(
+              root,
+              insertedElements[index],
+              "enter",
+              effect,
+            );
           }
 
           return createEffectResult(root, effect, target, true, true, {
@@ -5436,13 +7199,18 @@
         }
         break;
 
-      case 'dom.insert':
+      case "dom.insert":
         {
           const insertedElements = applyDomInsert(root, effect);
 
           if (insertedElements.length > 0) {
             for (let index = 0; index < insertedElements.length; index += 1) {
-              await runElementTransition(root, insertedElements[index], 'enter', effect);
+              await runElementTransition(
+                root,
+                insertedElements[index],
+                "enter",
+                effect,
+              );
             }
 
             return createEffectResult(root, effect, target, true, true, {
@@ -5452,104 +7220,105 @@
         }
         break;
 
-      case 'dom.remove':
+      case "dom.remove":
         if (target) {
-          await runElementTransition(root, target, 'leave', effect);
+          await runElementTransition(root, target, "leave", effect);
           target.remove();
           return createEffectResult(root, effect, target, true, true);
         }
         break;
 
-      case 'dom.move':
+      case "dom.move":
         if (applyDomMove(root, target, effect)) {
-          await runElementTransition(root, target, 'move', effect);
+          await runElementTransition(root, target, "move", effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
 
-      case 'attribute.set':
-        if (target && typeof effect.name === 'string') {
-          const attributeValue = typeof effect.value === 'undefined' ? '' : String(effect.value);
+      case "attribute.set":
+        if (target && typeof effect.name === "string") {
+          const attributeValue =
+            typeof effect.value === "undefined" ? "" : String(effect.value);
           target.setAttribute(effect.name, attributeValue);
           syncAttributeProperty(target, effect.name, attributeValue);
-          await runElementTransition(root, target, 'update', effect);
+          await runElementTransition(root, target, "update", effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
 
-      case 'attribute.remove':
-        if (target && typeof effect.name === 'string') {
+      case "attribute.remove":
+        if (target && typeof effect.name === "string") {
           target.removeAttribute(effect.name);
           syncAttributeProperty(target, effect.name, null);
-          await runElementTransition(root, target, 'update', effect);
+          await runElementTransition(root, target, "update", effect);
           return createEffectResult(root, effect, target, true, true);
         }
         break;
 
-      case 'class.toggle':
+      case "class.toggle":
         applyClassToggle(target, effect);
         if (target) {
-          await runElementTransition(root, target, 'update', effect);
+          await runElementTransition(root, target, "update", effect);
         }
         return createEffectResult(root, effect, target, !!target, !!target);
 
-      case 'style.set':
+      case "style.set":
         applyStyleSet(target, effect);
         if (target) {
-          await runElementTransition(root, target, 'update', effect);
+          await runElementTransition(root, target, "update", effect);
         }
         return createEffectResult(root, effect, target, !!target, !!target);
 
-      case 'focus':
-        if (target && typeof target.focus === 'function') {
+      case "focus":
+        if (target && typeof target.focus === "function") {
           target.focus();
           return createEffectResult(root, effect, target, true, false);
         }
         break;
 
-      case 'blur':
-        if (target && typeof target.blur === 'function') {
+      case "blur":
+        if (target && typeof target.blur === "function") {
           target.blur();
           return createEffectResult(root, effect, target, true, false);
         }
         break;
 
-      case 'scroll':
+      case "scroll":
         applyScroll(target, effect);
         return createEffectResult(root, effect, target, true, false);
 
-      case 'dispatch.event':
+      case "dispatch.event":
         dispatchRuntimeEvent(effect, target);
         return createEffectResult(root, effect, target, true, false);
 
-      case 'runtime.policy':
-        {
-          const component = root && root.getAttribute
-            ? root.getAttribute('data-volt-component')
+      case "runtime.policy": {
+        const component =
+          root && root.getAttribute
+            ? root.getAttribute("data-volt-component")
             : null;
-          const activeRoot = resolveRuntimeRoot(root, component) || root;
+        const activeRoot = resolveRuntimeRoot(root, component) || root;
 
-          return createEffectResult(
-            activeRoot,
-            effect,
-            activeRoot,
-            registerRuntimePolicy(activeRoot, effect),
-            false
-          );
-        }
+        return createEffectResult(
+          activeRoot,
+          effect,
+          activeRoot,
+          registerRuntimePolicy(activeRoot, effect),
+          false,
+        );
+      }
 
-      case 'state.set':
-        if (typeof effect.key === 'string' && effect.key !== '') {
+      case "state.set":
+        if (typeof effect.key === "string" && effect.key !== "") {
           setRuntimeStateValue(effect.key, effect.value, {
             scope: effect.scope,
-            action: 'effect',
+            action: "effect",
           });
           return createEffectResult(root, effect, target, true, false);
         }
         break;
 
-      case 'state.merge':
-        if (typeof effect.key === 'string' && effect.key !== '') {
+      case "state.merge":
+        if (typeof effect.key === "string" && effect.key !== "") {
           mergeRuntimeStateValue(effect.key, effect.value, {
             scope: effect.scope,
           });
@@ -5557,8 +7326,8 @@
         }
         break;
 
-      case 'state.delete':
-        if (typeof effect.key === 'string' && effect.key !== '') {
+      case "state.delete":
+        if (typeof effect.key === "string" && effect.key !== "") {
           deleteRuntimeStateValue(effect.key, {
             scope: effect.scope,
           });
@@ -5566,14 +7335,14 @@
         }
         break;
 
-      case 'state.clear':
-        clearRuntimeState(effect.scope, effect.reason || 'effect');
+      case "state.clear":
+        clearRuntimeState(effect.scope, effect.reason || "effect");
         return createEffectResult(root, effect, target, true, false);
 
-      case 'navigate':
-        if (typeof effect.url === 'string' && effect.url !== '') {
+      case "navigate":
+        if (typeof effect.url === "string" && effect.url !== "") {
           await visit(effect.url, {
-            historyMode: effect.replace ? 'replace' : 'push',
+            historyMode: effect.replace ? "replace" : "push",
             preserveScroll: !!effect.preserveScroll,
           });
           return createEffectResult(root, effect, target, true, true);
@@ -5601,7 +7370,8 @@
     for (let index = 0; index < effects.length; index += 1) {
       const result = await applyEffect(root, effects[index]);
       handled = result.handled || handled;
-      preventsHtmlFallback = result.preventsHtmlFallback || preventsHtmlFallback;
+      preventsHtmlFallback =
+        result.preventsHtmlFallback || preventsHtmlFallback;
     }
 
     return {
@@ -5612,17 +7382,19 @@
 
   async function requestPage(url, signal) {
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'X-Requested-With': 'VoltStack',
-        'X-Volt-Navigate': 'true',
+        "X-Requested-With": "VoltStack",
+        "X-Volt-Navigate": "true",
       },
-      credentials: 'same-origin',
+      credentials: "same-origin",
       signal: signal,
     });
 
     if (!response.ok) {
-      throw new Error('Navigation request failed with status ' + response.status + '.');
+      throw new Error(
+        "Navigation request failed with status " + response.status + ".",
+      );
     }
 
     const html = await response.text();
@@ -5638,13 +7410,15 @@
     const settings = options || {};
     const normalizedUrl = normalizeNavigationUrl(url);
     const cacheControl = navigationVisitCacheControl(settings);
-    const requestedNavigationMode = settings.navigationMode && typeof settings.navigationMode === 'object'
-      ? settings.navigationMode
-      : parseNavigationMode('', 'default');
+    const requestedNavigationMode =
+      settings.navigationMode && typeof settings.navigationMode === "object"
+        ? settings.navigationMode
+        : parseNavigationMode("", "default");
     const requestId = runtime.navigationRequestId + 1;
     runtime.navigationRequestId = requestId;
     const previousController = runtime.navigationController;
-    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const controller =
+      typeof AbortController === "function" ? new AbortController() : null;
     const requestMeta = {
       requestId: requestId,
       trigger: triggerDescriptor(settings.trigger || null),
@@ -5656,19 +7430,26 @@
     }
 
     setNavigationState(true, settings.trigger || null);
-    emitRuntimeHook('volt:request-start', requestHookDetail('navigation', requestMeta, {
-      url: normalizedUrl,
-      historyMode: settings.historyMode || 'push',
-      cacheMode: cacheControl.mode,
-      navigationMode: requestedNavigationMode.mode,
-    }), document);
+    emitRuntimeHook(
+      "volt:request-start",
+      requestHookDetail("navigation", requestMeta, {
+        url: normalizedUrl,
+        historyMode: settings.historyMode || "push",
+        cacheMode: cacheControl.mode,
+        navigationMode: requestedNavigationMode.mode,
+      }),
+      document,
+    );
 
-    let outcome = 'success';
+    let outcome = "success";
 
     try {
-      if (cacheControl.mode === 'reload' || cacheControl.mode === 'invalidate') {
+      if (
+        cacheControl.mode === "reload" ||
+        cacheControl.mode === "invalidate"
+      ) {
         invalidateNavigationCache(normalizedUrl, cacheControl.mode, {
-          source: 'navigate',
+          source: "navigate",
         });
       }
 
@@ -5677,58 +7458,66 @@
         : null;
 
       if (cachedPayload) {
-        emitNavigationCacheEvent('volt:cache-hit', {
+        emitNavigationCacheEvent("volt:cache-hit", {
           url: normalizedUrl,
           finalUrl: cachedPayload.finalUrl,
-          source: 'navigate',
+          source: "navigate",
           mode: cacheControl.mode,
         });
       } else {
-        emitNavigationCacheEvent('volt:cache-miss', {
+        emitNavigationCacheEvent("volt:cache-miss", {
           url: normalizedUrl,
-          source: 'navigate',
+          source: "navigate",
           mode: cacheControl.mode,
         });
       }
 
-      const payload = cachedPayload || await requestNavigationPayload(
-        normalizedUrl,
-        controller ? controller.signal : undefined,
-        'navigate',
-        {
-          cacheControl: cacheControl,
-          navigationMode: requestedNavigationMode,
-        },
-      );
+      const payload =
+        cachedPayload ||
+        (await requestNavigationPayload(
+          normalizedUrl,
+          controller ? controller.signal : undefined,
+          "navigate",
+          {
+            cacheControl: cacheControl,
+            navigationMode: requestedNavigationMode,
+          },
+        ));
 
       if (runtime.navigationRequestId !== requestId) {
-        outcome = 'stale';
-        emitRuntimeHook('volt:request-stale', requestHookDetail('navigation', requestMeta, {
-          url: normalizedUrl,
-          finalUrl: payload.finalUrl,
-          outcome: outcome,
-        }), document);
+        outcome = "stale";
+        emitRuntimeHook(
+          "volt:request-stale",
+          requestHookDetail("navigation", requestMeta, {
+            url: normalizedUrl,
+            finalUrl: payload.finalUrl,
+            outcome: outcome,
+          }),
+          document,
+        );
         return;
       }
 
       const resolvedPayloadNavigationMode = payload.document
         ? navigationModeForDocument(payload.document)
-        : (payload.navigationMode && typeof payload.navigationMode === 'object'
+        : payload.navigationMode && typeof payload.navigationMode === "object"
           ? payload.navigationMode
-          : requestedNavigationMode);
-      const payloadNavigationMode = resolvedPayloadNavigationMode.mode !== 'auto'
-        ? resolvedPayloadNavigationMode
-        : (payload.navigationMode && typeof payload.navigationMode === 'object'
-          ? payload.navigationMode
-          : requestedNavigationMode);
-      const payloadPageTransition = payload.document || (payload && typeof payload.html === 'string')
-        ? pageTransitionForPayload(payload)
-        : (payload.pageTransition && typeof payload.pageTransition === 'object'
-          ? payload.pageTransition
-          : parsePageTransition('', 'default'));
+          : requestedNavigationMode;
+      const payloadNavigationMode =
+        resolvedPayloadNavigationMode.mode !== "auto"
+          ? resolvedPayloadNavigationMode
+          : payload.navigationMode && typeof payload.navigationMode === "object"
+            ? payload.navigationMode
+            : requestedNavigationMode;
+      const payloadPageTransition =
+        payload.document || (payload && typeof payload.html === "string")
+          ? pageTransitionForPayload(payload)
+          : payload.pageTransition && typeof payload.pageTransition === "object"
+            ? payload.pageTransition
+            : parsePageTransition("", "default");
 
       if (shouldFallbackForLayoutChange(payload.document)) {
-        outcome = 'layout-fallback';
+        outcome = "layout-fallback";
 
         if (settings.fallback !== false) {
           window.location.assign(payload.finalUrl);
@@ -5736,8 +7525,8 @@
         }
       }
 
-      if (payloadNavigationMode && payloadNavigationMode.mode === 'reload') {
-        outcome = 'policy-reload';
+      if (payloadNavigationMode && payloadNavigationMode.mode === "reload") {
+        outcome = "policy-reload";
 
         if (settings.fallback !== false) {
           window.location.assign(payload.finalUrl);
@@ -5750,88 +7539,117 @@
         payloadPageTransition,
       );
 
-      emitRuntimeHook('volt:before-navigate', {
-        url: normalizedUrl,
-        finalUrl: payload.finalUrl,
-        navigationMode: payloadNavigationMode && payloadNavigationMode.mode
-          ? payloadNavigationMode.mode
-          : requestedNavigationMode.mode,
-        pageTransition: pageTransition.name,
-        pageTransitionSource: pageTransition.source || 'default',
-        pageTransitionMode: pageTransition.mode || 'out-in',
-        pageTransitionDuration: typeof pageTransition.duration === 'number'
-          ? pageTransition.duration
-          : null,
-        pageTransitionProfile: pageTransition.profile || null,
-      }, document);
-
-      if (pageTransition.mode === 'out-in') {
-        await runPageTransitionPhase(document.body, 'leave', pageTransition);
-      }
-
-      const navigationMutation = await withPreservedUiState(document.body, async function () {
-        return applyDocumentPayload(payload.document, {
-          source: 'navigate',
+      emitRuntimeHook(
+        "volt:before-navigate",
+        {
           url: normalizedUrl,
           finalUrl: payload.finalUrl,
-          cacheControl: payload.cacheControl,
-          pageTransition: pageTransition,
-        });
-      }, {
-        type: 'navigation',
-        url: normalizedUrl,
-        finalUrl: payload.finalUrl,
-      });
+          navigationMode:
+            payloadNavigationMode && payloadNavigationMode.mode
+              ? payloadNavigationMode.mode
+              : requestedNavigationMode.mode,
+          pageTransition: pageTransition.name,
+          pageTransitionSource: pageTransition.source || "default",
+          pageTransitionMode: pageTransition.mode || "out-in",
+          pageTransitionDuration:
+            typeof pageTransition.duration === "number"
+              ? pageTransition.duration
+              : null,
+          pageTransitionProfile: pageTransition.profile || null,
+        },
+        document,
+      );
 
-      if (settings.historyMode === 'replace') {
-        window.history.replaceState({}, '', payload.finalUrl);
+      if (pageTransition.mode === "out-in") {
+        await runPageTransitionPhase(document.body, "leave", pageTransition);
+      }
+
+      const navigationMutation = await withPreservedUiState(
+        document.body,
+        async function () {
+          return applyDocumentPayload(payload.document, {
+            source: "navigate",
+            url: normalizedUrl,
+            finalUrl: payload.finalUrl,
+            cacheControl: payload.cacheControl,
+            pageTransition: pageTransition,
+          });
+        },
+        {
+          type: "navigation",
+          url: normalizedUrl,
+          finalUrl: payload.finalUrl,
+        },
+      );
+
+      if (settings.historyMode === "replace") {
+        window.history.replaceState({}, "", payload.finalUrl);
       } else if (settings.updateHistory !== false) {
-        window.history.pushState({}, '', payload.finalUrl);
+        window.history.pushState({}, "", payload.finalUrl);
       }
 
       if (settings.preserveScroll !== true) {
         window.scrollTo(0, 0);
       }
 
-      transitionClientStateScope(payload.finalUrl, 'navigation');
+      transitionClientStateScope(payload.finalUrl, "navigation");
 
-      emitRuntimeHook('volt:navigated', {
-        url: normalizedUrl,
-        finalUrl: payload.finalUrl,
-        historyMode: settings.historyMode || 'push',
-        navigationMode: payloadNavigationMode && payloadNavigationMode.mode
-          ? payloadNavigationMode.mode
-          : requestedNavigationMode.mode,
-        pageTransition: pageTransition.name,
-        pageTransitionSource: pageTransition.source || 'default',
-        pageTransitionMode: pageTransition.mode || 'out-in',
-        pageTransitionDuration: typeof pageTransition.duration === 'number'
-          ? pageTransition.duration
-          : null,
-        pageTransitionProfile: pageTransition.profile || null,
-        preservedFragments: navigationMutation && typeof navigationMutation.preservedCount === 'number'
-          ? navigationMutation.preservedCount
-          : 0,
-        discardedFragments: navigationMutation && typeof navigationMutation.discardedCount === 'number'
-          ? navigationMutation.discardedCount
-          : 0,
-      }, document);
+      emitRuntimeHook(
+        "volt:navigated",
+        {
+          url: normalizedUrl,
+          finalUrl: payload.finalUrl,
+          historyMode: settings.historyMode || "push",
+          navigationMode:
+            payloadNavigationMode && payloadNavigationMode.mode
+              ? payloadNavigationMode.mode
+              : requestedNavigationMode.mode,
+          pageTransition: pageTransition.name,
+          pageTransitionSource: pageTransition.source || "default",
+          pageTransitionMode: pageTransition.mode || "out-in",
+          pageTransitionDuration:
+            typeof pageTransition.duration === "number"
+              ? pageTransition.duration
+              : null,
+          pageTransitionProfile: pageTransition.profile || null,
+          preservedFragments:
+            navigationMutation &&
+            typeof navigationMutation.preservedCount === "number"
+              ? navigationMutation.preservedCount
+              : 0,
+          discardedFragments:
+            navigationMutation &&
+            typeof navigationMutation.discardedCount === "number"
+              ? navigationMutation.discardedCount
+              : 0,
+        },
+        document,
+      );
     } catch (error) {
       if (isAbortError(error)) {
-        outcome = 'aborted';
-        emitRuntimeHook('volt:request-abort', requestHookDetail('navigation', requestMeta, {
-          url: normalizedUrl,
-          outcome: outcome,
-        }), document);
+        outcome = "aborted";
+        emitRuntimeHook(
+          "volt:request-abort",
+          requestHookDetail("navigation", requestMeta, {
+            url: normalizedUrl,
+            outcome: outcome,
+          }),
+          document,
+        );
         return;
       }
 
-      outcome = 'error';
-      emitRuntimeHook('volt:request-error', requestHookDetail('navigation', requestMeta, {
-        url: normalizedUrl,
-        message: error && error.message ? error.message : 'Navigation failed.',
-        outcome: outcome,
-      }), document);
+      outcome = "error";
+      emitRuntimeHook(
+        "volt:request-error",
+        requestHookDetail("navigation", requestMeta, {
+          url: normalizedUrl,
+          message:
+            error && error.message ? error.message : "Navigation failed.",
+          outcome: outcome,
+        }),
+        document,
+      );
 
       if (settings.fallback !== false) {
         window.location.assign(normalizedUrl);
@@ -5848,34 +7666,46 @@
         setNavigationState(false, settings.trigger || null);
       }
 
-      emitRuntimeHook('volt:request-finish', requestHookDetail('navigation', requestMeta, {
-        url: normalizedUrl,
-        outcome: outcome,
-      }), document);
+      emitRuntimeHook(
+        "volt:request-finish",
+        requestHookDetail("navigation", requestMeta, {
+          url: normalizedUrl,
+          outcome: outcome,
+        }),
+        document,
+      );
     }
   }
 
   async function dispatchAction(root, action, params, updates, trigger) {
-    const snapshot = root.getAttribute('data-volt-snapshot');
-    const component = root.getAttribute('data-volt-component');
-    const endpoint = root.getAttribute('data-volt-endpoint') || '/_volt/action';
-    const csrf = root.getAttribute('data-volt-csrf');
+    const snapshot = root.getAttribute("data-volt-snapshot");
+    const component = root.getAttribute("data-volt-component");
+    const endpoint = root.getAttribute("data-volt-endpoint") || "/_volt/action";
+    const csrf = root.getAttribute("data-volt-csrf");
 
     if (!snapshot || !component || !action) {
       return;
     }
 
     const state = componentRequestState(component);
-    const previousController = state && state.controller ? state.controller : null;
+    const previousController =
+      state && state.controller ? state.controller : null;
     const requestId = state ? state.requestId + 1 : 1;
-    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const controller =
+      typeof AbortController === "function" ? new AbortController() : null;
     const requestMeta = {
       component: component,
       action: action,
       requestId: requestId,
       trigger: triggerDescriptor(trigger),
     };
-    const syncedPayload = applySelectiveStateSync(root, trigger, params, updates, requestMeta);
+    const syncedPayload = applySelectiveStateSync(
+      root,
+      trigger,
+      params,
+      updates,
+      requestMeta,
+    );
 
     if (state) {
       state.requestId = requestId;
@@ -5888,28 +7718,36 @@
 
     clearDirtyDebounce(root);
     setErrorState(component, false, requestMeta);
-    setSuccessState(component, false, Object.assign({}, requestMeta, {
-      reason: 'request',
-    }));
+    setSuccessState(
+      component,
+      false,
+      Object.assign({}, requestMeta, {
+        reason: "request",
+      }),
+    );
 
-    if (trigger && 'disabled' in trigger) {
+    if (trigger && "disabled" in trigger) {
       trigger.disabled = true;
     }
 
     scheduleLoadingDelay(root, trigger, requestMeta);
-    emitRuntimeHook('volt:request-start', requestHookDetail('action', requestMeta), resolveRuntimeRoot(root, component) || document);
+    emitRuntimeHook(
+      "volt:request-start",
+      requestHookDetail("action", requestMeta),
+      resolveRuntimeRoot(root, component) || document,
+    );
 
-    let outcome = 'success';
+    let outcome = "success";
 
     try {
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'VoltStack',
-          'X-CSRF-TOKEN': csrf || '',
+          "Content-Type": "application/json",
+          "X-Requested-With": "VoltStack",
+          "X-CSRF-TOKEN": csrf || "",
         },
-        credentials: 'same-origin',
+        credentials: "same-origin",
         signal: controller ? controller.signal : undefined,
         body: JSON.stringify({
           component: component,
@@ -5929,69 +7767,100 @@
       }
 
       if (state && state.requestId !== requestId) {
-        outcome = 'stale';
-        emitRuntimeHook('volt:request-stale', requestHookDetail('action', requestMeta, {
-          status: response.status,
-          outcome: outcome,
-        }), resolveRuntimeRoot(root, component) || document);
+        outcome = "stale";
+        emitRuntimeHook(
+          "volt:request-stale",
+          requestHookDetail("action", requestMeta, {
+            status: response.status,
+            outcome: outcome,
+          }),
+          resolveRuntimeRoot(root, component) || document,
+        );
         return;
       }
 
       if (!response.ok) {
-        outcome = 'error';
+        outcome = "error";
         const errorDetail = responseErrorDetail(response, payload, requestMeta);
         setErrorState(component, true, errorDetail);
-        emitRuntimeHook('volt:request-error', errorDetail, resolveRuntimeRoot(root, component) || document);
+        emitRuntimeHook(
+          "volt:request-error",
+          errorDetail,
+          resolveRuntimeRoot(root, component) || document,
+        );
         return;
       }
 
       const patchMeta = {
-        type: 'action',
+        type: "action",
         component: component,
         action: action,
-        effects: Array.isArray(payload.effects) ? payload.effects.map(function (effect) {
-          return effect && effect.type ? effect.type : null;
-        }).filter(function (value) {
-          return value !== null;
-        }) : [],
+        effects: Array.isArray(payload.effects)
+          ? payload.effects
+              .map(function (effect) {
+                return effect && effect.type ? effect.type : null;
+              })
+              .filter(function (value) {
+                return value !== null;
+              })
+          : [],
         usedHtmlFallback: false,
       };
 
       const patchRoot = resolveRuntimeRoot(root, component) || root;
 
-      await withPreservedUiState(patchRoot, async function () {
-        const activeRoot = resolveRuntimeRoot(root, component) || root;
-        const result = await applyEffects(activeRoot, payload.effects);
+      await withPreservedUiState(
+        patchRoot,
+        async function () {
+          const activeRoot = resolveRuntimeRoot(root, component) || root;
+          const result = await applyEffects(activeRoot, payload.effects);
 
-        if (!result.preventsHtmlFallback && payload.html && activeRoot.isConnected) {
-          patchMeta.usedHtmlFallback = true;
-          activeRoot.outerHTML = payload.html;
-        }
+          if (
+            !result.preventsHtmlFallback &&
+            payload.html &&
+            activeRoot.isConnected
+          ) {
+            patchMeta.usedHtmlFallback = true;
+            activeRoot.outerHTML = payload.html;
+          }
 
-        const updatedRoot = resolveRuntimeRoot(activeRoot, component);
+          const updatedRoot = resolveRuntimeRoot(activeRoot, component);
 
-        if (payload.snapshot && updatedRoot) {
-          updatedRoot.setAttribute('data-volt-snapshot', JSON.stringify(payload.snapshot));
-        }
+          if (payload.snapshot && updatedRoot) {
+            updatedRoot.setAttribute(
+              "data-volt-snapshot",
+              JSON.stringify(payload.snapshot),
+            );
+          }
 
-        return result;
-      }, patchMeta);
+          return result;
+        },
+        patchMeta,
+      );
 
       setDirtyState(component, false, requestMeta);
       setSuccessState(component, true, requestMeta);
     } catch (error) {
       if (isAbortError(error)) {
-        outcome = 'aborted';
-        emitRuntimeHook('volt:request-abort', requestHookDetail('action', requestMeta, {
-          outcome: outcome,
-        }), resolveRuntimeRoot(root, component) || document);
+        outcome = "aborted";
+        emitRuntimeHook(
+          "volt:request-abort",
+          requestHookDetail("action", requestMeta, {
+            outcome: outcome,
+          }),
+          resolveRuntimeRoot(root, component) || document,
+        );
         return;
       }
 
-      outcome = 'error';
+      outcome = "error";
       const errorDetail = exceptionErrorDetail(error, requestMeta);
       setErrorState(component, true, errorDetail);
-      emitRuntimeHook('volt:request-error', errorDetail, resolveRuntimeRoot(root, component) || document);
+      emitRuntimeHook(
+        "volt:request-error",
+        errorDetail,
+        resolveRuntimeRoot(root, component) || document,
+      );
       throw error;
     } finally {
       if (state && state.requestId === requestId) {
@@ -6000,14 +7869,18 @@
         setLoadingState(component, false, trigger, requestMeta);
       }
 
-      emitRuntimeHook('volt:request-finish', requestHookDetail('action', requestMeta, {
-        outcome: outcome,
-      }), resolveRuntimeRoot(root, component) || document);
+      emitRuntimeHook(
+        "volt:request-finish",
+        requestHookDetail("action", requestMeta, {
+          outcome: outcome,
+        }),
+        resolveRuntimeRoot(root, component) || document,
+      );
     }
   }
 
-  document.addEventListener('input', function (event) {
-    const element = closestFromEventTarget(event, 'input, textarea, select');
+  document.addEventListener("input", function (event) {
+    const element = closestFromEventTarget(event, "input, textarea, select");
 
     if (!element) {
       return;
@@ -6019,13 +7892,14 @@
       return;
     }
 
-    const component = root.getAttribute('data-volt-component');
+    const component = root.getAttribute("data-volt-component");
     const snapshot = readSnapshot(root);
-    const key = directiveValue(element, ['volt-model', 'volt:model']);
+    const key = directiveValue(element, ["volt-model", "volt:model"]);
 
     if (snapshot && snapshot.state && key) {
-      snapshot.state[key] = element.type === 'checkbox' ? !!element.checked : element.value;
-      root.setAttribute('data-volt-snapshot', JSON.stringify(snapshot));
+      snapshot.state[key] =
+        element.type === "checkbox" ? !!element.checked : element.value;
+      root.setAttribute("data-volt-snapshot", JSON.stringify(snapshot));
     }
 
     scheduleDirtyDebounce(root, {
@@ -6038,8 +7912,11 @@
     });
   });
 
-  document.addEventListener('click', function (event) {
-    const actionTrigger = closestFromEventTarget(event, '[volt-click], [volt\\:click]');
+  document.addEventListener("click", function (event) {
+    const actionTrigger = closestFromEventTarget(
+      event,
+      "[volt-click], [volt\\:click]",
+    );
 
     if (actionTrigger) {
       const root = findRoot(actionTrigger);
@@ -6050,21 +7927,27 @@
 
       event.preventDefault();
 
-      const params = directiveValue(actionTrigger, ['volt-params', 'volt:params']);
+      const params = directiveValue(actionTrigger, [
+        "volt-params",
+        "volt:params",
+      ]);
       dispatchAction(
         root,
-        directiveValue(actionTrigger, ['volt-click', 'volt:click']),
+        directiveValue(actionTrigger, ["volt-click", "volt:click"]),
         params ? JSON.parse(params) : {},
         collectModelUpdates(root),
-        actionTrigger
+        actionTrigger,
       ).catch(function (error) {
-        console.error('VoltStack runtime error:', error);
+        console.error("VoltStack runtime error:", error);
       });
 
       return;
     }
 
-    const navigationTrigger = closestFromEventTarget(event, 'a[volt-navigate], a[volt\\:navigate]');
+    const navigationTrigger = closestFromEventTarget(
+      event,
+      "a[volt-navigate], a[volt\\:navigate]",
+    );
 
     if (!shouldHandleNavigation(event, navigationTrigger)) {
       return;
@@ -6073,101 +7956,137 @@
     const url = new URL(navigationTrigger.href, window.location.href);
     const navigationMode = navigationModeForElement(navigationTrigger);
 
-    if (navigationMode.mode === 'reload') {
+    if (navigationMode.mode === "reload") {
       return;
     }
 
     event.preventDefault();
 
-    const preserveScroll = navigationTrigger.hasAttribute('volt-preserve-scroll') ||
-      navigationTrigger.hasAttribute('volt:preserve-scroll');
-    const replace = navigationTrigger.hasAttribute('volt-replace') ||
-      navigationTrigger.hasAttribute('volt:replace');
+    const preserveScroll =
+      navigationTrigger.hasAttribute("volt-preserve-scroll") ||
+      navigationTrigger.hasAttribute("volt:preserve-scroll");
+    const replace =
+      navigationTrigger.hasAttribute("volt-replace") ||
+      navigationTrigger.hasAttribute("volt:replace");
 
     visit(url.toString(), {
       trigger: navigationTrigger,
       preserveScroll: preserveScroll,
-      historyMode: replace ? 'replace' : 'push',
+      historyMode: replace ? "replace" : "push",
       navigationMode: navigationMode,
       pageTransition: pageTransitionForElement(navigationTrigger),
     }).catch(function (error) {
-      console.error('VoltStack navigation error:', error);
+      console.error("VoltStack navigation error:", error);
     });
   });
 
-  document.addEventListener('pointerenter', function (event) {
-    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
+  document.addEventListener(
+    "pointerenter",
+    function (event) {
+      const navigationTrigger = closestFromEventTarget(
+        event,
+        NAVIGATION_PREFETCH_SELECTOR,
+      );
 
-    if (
-      !navigationTrigger ||
-      !navigationTrigger.href ||
-      !linkAllowsPrefetchSource(navigationTrigger, 'intent') ||
-      !shouldPrefetchForNavigationMode(navigationModeForElement(navigationTrigger))
-    ) {
-      return;
-    }
+      if (
+        !navigationTrigger ||
+        !navigationTrigger.href ||
+        !linkAllowsPrefetchSource(navigationTrigger, "intent") ||
+        !shouldPrefetchForNavigationMode(
+          navigationModeForElement(navigationTrigger),
+        )
+      ) {
+        return;
+      }
 
-    const url = trackPrefetchInterest(navigationTrigger, navigationTrigger.href);
+      const url = trackPrefetchInterest(
+        navigationTrigger,
+        navigationTrigger.href,
+      );
 
-    prefetchPage(url, {
-      cacheControl: navigationCacheControlForElement(navigationTrigger),
-      navigationMode: navigationModeForElement(navigationTrigger),
-    }).catch(function () {
-      return null;
-    });
-  }, true);
-
-  document.addEventListener('pointerleave', function (event) {
-    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
-
-    if (!navigationTrigger) {
-      return;
-    }
-
-    releasePrefetchInterest(navigationTrigger);
-  }, true);
-
-  document.addEventListener('focusin', function (event) {
-    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
-
-    if (
-      !navigationTrigger ||
-      !navigationTrigger.href ||
-      !linkAllowsPrefetchSource(navigationTrigger, 'intent') ||
-      !shouldPrefetchForNavigationMode(navigationModeForElement(navigationTrigger))
-    ) {
-      return;
-    }
-
-    const url = trackPrefetchInterest(navigationTrigger, navigationTrigger.href);
-
-    prefetchPage(url, {
-      cacheControl: navigationCacheControlForElement(navigationTrigger),
-      navigationMode: navigationModeForElement(navigationTrigger),
-    }).catch(function () {
-      return null;
-    });
-  });
-
-  document.addEventListener('volt:navigation-cache-invalidate', function (event) {
-    const detail = event && event.detail && typeof event.detail === 'object'
-      ? event.detail
-      : {};
-
-    if (typeof detail.url === 'string' && detail.url !== '') {
-      invalidateNavigationCache(detail.url, detail.reason || 'event', {
-        source: detail.source || 'event',
+      prefetchPage(url, {
+        cacheControl: navigationCacheControlForElement(navigationTrigger),
+        navigationMode: navigationModeForElement(navigationTrigger),
+      }).catch(function () {
+        return null;
       });
+    },
+    true,
+  );
+
+  document.addEventListener(
+    "pointerleave",
+    function (event) {
+      const navigationTrigger = closestFromEventTarget(
+        event,
+        NAVIGATION_PREFETCH_SELECTOR,
+      );
+
+      if (!navigationTrigger) {
+        return;
+      }
+
+      releasePrefetchInterest(navigationTrigger);
+    },
+    true,
+  );
+
+  document.addEventListener("focusin", function (event) {
+    const navigationTrigger = closestFromEventTarget(
+      event,
+      NAVIGATION_PREFETCH_SELECTOR,
+    );
+
+    if (
+      !navigationTrigger ||
+      !navigationTrigger.href ||
+      !linkAllowsPrefetchSource(navigationTrigger, "intent") ||
+      !shouldPrefetchForNavigationMode(
+        navigationModeForElement(navigationTrigger),
+      )
+    ) {
       return;
     }
 
-    clearNavigationCache(detail.reason || 'event', {
-      source: detail.source || 'event',
+    const url = trackPrefetchInterest(
+      navigationTrigger,
+      navigationTrigger.href,
+    );
+
+    prefetchPage(url, {
+      cacheControl: navigationCacheControlForElement(navigationTrigger),
+      navigationMode: navigationModeForElement(navigationTrigger),
+    }).catch(function () {
+      return null;
     });
   });
 
-  document.addEventListener('focusout', function (event) {
-    const navigationTrigger = closestFromEventTarget(event, NAVIGATION_PREFETCH_SELECTOR);
+  document.addEventListener(
+    "volt:navigation-cache-invalidate",
+    function (event) {
+      const detail =
+        event && event.detail && typeof event.detail === "object"
+          ? event.detail
+          : {};
+
+      if (typeof detail.url === "string" && detail.url !== "") {
+        invalidateNavigationCache(detail.url, detail.reason || "event", {
+          source: detail.source || "event",
+        });
+        return;
+      }
+
+      clearNavigationCache(detail.reason || "event", {
+        source: detail.source || "event",
+      });
+    },
+  );
+
+  document.addEventListener("focusout", function (event) {
+    const navigationTrigger = closestFromEventTarget(
+      event,
+      NAVIGATION_PREFETCH_SELECTOR,
+    );
 
     if (!navigationTrigger) {
       return;
@@ -6176,8 +8095,11 @@
     releasePrefetchInterest(navigationTrigger);
   });
 
-  document.addEventListener('submit', function (event) {
-    const form = closestFromEventTarget(event, 'form[volt-submit], form[volt\\:submit]');
+  document.addEventListener("submit", function (event) {
+    const form = closestFromEventTarget(
+      event,
+      "form[volt-submit], form[volt\\:submit]",
+    );
 
     if (!form) {
       return;
@@ -6193,31 +8115,30 @@
 
     dispatchAction(
       root,
-      directiveValue(form, ['volt-submit', 'volt:submit']),
+      directiveValue(form, ["volt-submit", "volt:submit"]),
       collectFormData(form),
       collectModelUpdates(root),
-      form
+      form,
     ).catch(function (error) {
-      console.error('VoltStack runtime error:', error);
+      console.error("VoltStack runtime error:", error);
     });
   });
 
-  window.addEventListener('popstate', function () {
+  window.addEventListener("popstate", function () {
     visit(window.location.href, {
       updateHistory: false,
-      historyMode: 'replace',
+      historyMode: "replace",
       preserveScroll: false,
       fallback: false,
     }).catch(function (error) {
-      console.error('VoltStack navigation error:', error);
+      console.error("VoltStack navigation error:", error);
       window.location.reload();
     });
   });
 
   runtime.clientStateScope = normalizeNavigationUrl(window.location.href);
-  window.Volt = window.Volt && typeof window.Volt === 'object'
-    ? window.Volt
-    : {};
+  window.Volt =
+    window.Volt && typeof window.Volt === "object" ? window.Volt : {};
   window.Volt.visit = function (url, options) {
     return visit(url, options || {});
   };
@@ -6232,8 +8153,8 @@
     scheduleHeuristicPrefetch(document);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootRuntimeDocumentFeatures, {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootRuntimeDocumentFeatures, {
       once: true,
     });
   }

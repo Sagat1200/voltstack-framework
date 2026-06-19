@@ -31,7 +31,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` prefetch y preload SPA
 - `[x]` client state real
 - `[x]` shared state global real
-- `[~]` directivas SPA avanzadas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`, `volt:for`)
+- `[x]` directivas SPA avanzadas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`, `volt:for`)
 - `[ ]` effects de alto nivel (`toast`, `modal`)
 - `[ ]` retry system
 - `[ ]` offline mode
@@ -151,7 +151,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` `volt:show`
 - `[x]` `volt:if`
 - `[x]` `volt:for`
-- `[~]` directivas runtime personalizadas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`)
+- `[-]` directivas runtime mas expresivas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`)
 - `[ ]` parser extensible de directivas frontend
 
 ### 8. Transition Engine
@@ -319,6 +319,10 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` MVP de `volt:class` para alternar clases CSS desde `client/shared state`
 - `[x]` MVP de `volt:attr` para alternar atributos HTML desde `client/shared state`
 - `[x]` MVP de `volt:style` para alternar estilos inline desde `client/shared state`
+- `[x]` expresiones booleanas compuestas para `volt:show`, `volt:if`, `volt:class`, `volt:attr` y `volt:style`
+- `[x]` multiples reglas declarativas en un mismo atributo para `volt:class`, `volt:attr` y `volt:style`
+- `[x]` fallback declarativo con `??` para `volt:text`
+- `[x]` comparaciones runtime flexibles y estrictas (`==`, `!=`, `===`, `!==`, `>`, `<`, `>=`, `<=`)
 
 ## Proximo Bloque Recomendado
 
@@ -841,8 +845,11 @@ Declaracion actual:
 
 Reglas actuales:
 
-- acepta expresiones simples con `client:path` o `shared:path`
-- soporta negacion con `!`, por ejemplo `volt:show="!shared:ui.showSharedPanel"`
+- acepta expresiones simples o compuestas con `client:path` y `shared:path`
+- soporta `!`, `&&`, `||`, parentesis y comparaciones relacionales flexibles o estrictas
+- ejemplo: `volt:show="client:counter >= 2 && shared:counter < 3"`
+- tambien permite comparar una ref contra otra, por ejemplo `volt:show="client:counter >= shared:counter"`
+- en comparacion flexible, una ref con `null` y otra ausente (`undefined`) coinciden con `==`; con `===` ya no
 - el `path` soporta acceso con punto como `draft.note` o `ui.showSharedPanel`
 - un valor truthy muestra el elemento en `volt:show`
 - un valor truthy oculta el elemento en `volt:show.hide`
@@ -850,8 +857,7 @@ Reglas actuales:
 
 Limitaciones actuales:
 
-- no evalua expresiones arbitrarias
-- no soporta todavia comparaciones, operadores logicos ni lectura directa de snapshot backend
+- no soporta todavia lectura directa de snapshot backend
 - `volt:show` ya cubre visibilidad basada en state; los siguientes pasos quedan en directivas mas expresivas
 
 Rutas demo:
@@ -874,8 +880,13 @@ Declaracion actual:
 
 Reglas actuales:
 
-- acepta expresiones simples con `client:path` o `shared:path`
-- soporta negacion con `!`, por ejemplo `volt:if="!shared:ui.mountSharedPanel"`
+- acepta expresiones simples o compuestas con `client:path` y `shared:path`
+- soporta `!`, `&&`, `||`, parentesis y comparaciones relacionales flexibles o estrictas
+- ejemplo: `volt:if="shared:draft.note == 'activar' || client:counter > 3"`
+- tambien permite comparar una ref contra otra, por ejemplo `volt:if="client:counter >= shared:counter"`
+- el laboratorio `/runtimeAdvancedDirectives` incluye el caso borde `client:edge.nullValue == shared:edge.undefinedValue`
+- el mismo laboratorio incluye el caso inverso `client:edge.undefinedValue == shared:edge.nullValue`
+- tambien incluye una tabla rapida para contrastar `null`, `undefined`, `''`, `0` y `false` con `==` frente a `===`
 - el `path` soporta acceso con punto como `ui.mountSharedPanel`
 - cuando la expresion es falsy, el nodo se desmonta del DOM
 - cuando la expresion vuelve a ser truthy, el runtime vuelve a montar una clonacion fresca del nodo original
@@ -944,11 +955,13 @@ Declaracion actual:
 <span volt:text="client:draft.note"></span>
 <span volt:text="shared:draft.note"></span>
 <span volt:text="shared:serverSync.syncedAt"></span>
+<span volt:text="client:draft.note ?? shared:draft.note ?? 'Sin nota'"></span>
 ```
 
 Reglas actuales:
 
 - acepta expresiones simples con `client:path` o `shared:path`
+- soporta fallback declarativo con `??`, por ejemplo `client:draft.note ?? shared:draft.note ?? 'Sin nota'`
 - el `path` soporta acceso con punto como `draft.note` o `serverSync.syncedAt`
 - escribe el resultado en `textContent` del nodo destino
 - si el valor es `null`, `undefined` o no existe, el texto queda vacio
@@ -957,7 +970,6 @@ Reglas actuales:
 
 Limitaciones actuales:
 
-- no soporta todavia fallback textual declarativo
 - no evalua expresiones arbitrarias ni concatenaciones
 - no distingue todavia entre `textContent` y `innerText`; siempre usa `textContent`
 
@@ -978,13 +990,16 @@ Declaracion actual:
 <article volt:class="client:ui.highlightClientCard -> ring-4 ring-cyan-400"></article>
 <article volt:class="shared:ui.highlightSharedCard -> ring-4 ring-fuchsia-400"></article>
 <article volt:class="!shared:ui.highlightSharedCard -> opacity-60"></article>
+<article volt:class="client:ui.ready && !shared:ui.blocked -> ring-2 ring-emerald-400 | shared:ui.highlightSharedCard -> shadow-xl"></article>
+<article volt:class="client:counter >= 2 && shared:counter < 3 -> ring-4 ring-sky-400"></article>
+<article volt:class="client:counter >= shared:counter -> ring-2 ring-violet-400"></article>
 ```
 
 Reglas actuales:
 
-- acepta expresiones con formato `scope:path -> clases`
-- `scope` puede ser `client` o `shared`
-- soporta negacion con `!`, por ejemplo `!shared:ui.highlightSharedCard -> opacity-60`
+- acepta expresiones con formato `condicion -> clases`
+- la condicion puede usar `client:path`, `shared:path`, `!`, `&&`, `||`, parentesis y comparaciones relacionales flexibles o estrictas
+- soporta multiples reglas en un mismo atributo separadas por `|`
 - la lista de clases se separa por espacios y se aplica con `classList`
 - si la condicion pasa a falsy, el runtime quita solo las clases controladas por esa directiva
 - si el elemento ya tenia una clase originalmente, el runtime la restaura al desactivar la directiva
@@ -993,7 +1008,6 @@ Reglas actuales:
 Limitaciones actuales:
 
 - no evalua expresiones arbitrarias ni objetos estilo `{ active: condition }`
-- no soporta todavia combinaciones declarativas con multiples reglas en un mismo atributo
 - no hace diff semantico de utilidades CSS; solo alterna la lista literal declarada
 
 Rutas demo:
@@ -1013,13 +1027,16 @@ Declaracion actual:
 <button volt:attr="client:ui.lockClientAction -> disabled=disabled, aria-disabled=true"></button>
 <button volt:attr="shared:ui.lockSharedAction -> disabled=disabled, data-lock=shared"></button>
 <div volt:attr="!shared:ui.lockSharedAction -> data-state=ready"></div>
+<div volt:attr="client:ui.ready && !shared:ui.busy -> data-state=ready, aria-busy=false | shared:ui.busy -> data-state=busy, aria-busy=true"></div>
+<div volt:attr="client:counter >= 2 -> data-threshold=ready, aria-live=polite"></div>
+<div volt:attr="client:counter >= shared:counter -> data-balance=client-dominant"></div>
 ```
 
 Reglas actuales:
 
-- acepta expresiones con formato `scope:path -> atributo=valor, otro=valor`
-- `scope` puede ser `client` o `shared`
-- soporta negacion con `!`, por ejemplo `!shared:ui.lockSharedAction -> data-state=ready`
+- acepta expresiones con formato `condicion -> atributo=valor, otro=valor`
+- la condicion puede usar `client:path`, `shared:path`, `!`, `&&`, `||`, parentesis y comparaciones relacionales flexibles o estrictas
+- soporta multiples reglas en un mismo atributo separadas por `|`
 - la lista de atributos se separa por comas
 - si la condicion es truthy, el runtime aplica cada atributo con `setAttribute`
 - si la condicion vuelve a falsy, el runtime restaura el valor original de cada atributo o lo elimina si no existia
@@ -1029,7 +1046,6 @@ Limitaciones actuales:
 
 - no soporta todavia sintaxis booleana especial distinta de la presencia normal del atributo
 - no evalua expresiones arbitrarias ni objetos tipo `{ disabled: condition }`
-- no soporta multiples reglas independientes dentro del mismo atributo `volt:attr`
 
 Rutas demo:
 
@@ -1048,13 +1064,16 @@ Declaracion actual:
 <article volt:style="client:ui.softenClientCard -> opacity:0.55; transform:scale(0.98)"></article>
 <article volt:style="shared:ui.softenSharedCard -> opacity:0.7; box-shadow:0 18px 40px rgba(217,70,239,0.22)"></article>
 <div volt:style="!shared:ui.softenSharedCard -> opacity:1"></div>
+<div volt:style="client:ui.ready && !shared:ui.busy -> opacity:1; transform:scale(1) | shared:ui.busy -> opacity:0.55; pointer-events:none"></div>
+<div volt:style="shared:counter >= 3 -> opacity:0.45; filter:saturate(0.7)"></div>
+<div volt:style="client:counter >= shared:counter -> outline:1px solid rgba(139,92,246,0.45)"></div>
 ```
 
 Reglas actuales:
 
-- acepta expresiones con formato `scope:path -> propiedad:valor; otra-propiedad:valor`
-- `scope` puede ser `client` o `shared`
-- soporta negacion con `!`, por ejemplo `!shared:ui.softenSharedCard -> opacity:1`
+- acepta expresiones con formato `condicion -> propiedad:valor; otra-propiedad:valor`
+- la condicion puede usar `client:path`, `shared:path`, `!`, `&&`, `||`, parentesis y comparaciones relacionales flexibles o estrictas
+- soporta multiples reglas en un mismo atributo separadas por `|`
 - la lista de declaraciones se separa por `;`
 - si la condicion es truthy, el runtime aplica cada declaracion con `style.setProperty`
 - si la condicion vuelve a falsy, el runtime restaura el valor inline original de cada propiedad o la elimina si no existia
@@ -1064,7 +1083,6 @@ Limitaciones actuales:
 
 - no soporta todavia objetos estilo `{ opacity: condition }`
 - no evalua expresiones arbitrarias ni calculos dinamicos dentro del valor
-- no soporta multiples reglas independientes dentro del mismo atributo `volt:style`
 
 Rutas demo:
 
