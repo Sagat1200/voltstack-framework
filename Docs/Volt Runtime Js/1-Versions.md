@@ -136,15 +136,16 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 ### 7. Directives System
 
-- `[ ]` `volt:html`
+- `[x]` `volt:html`
 - `[ ]` `volt:bind`
 - `[ ]` `volt:model.local`
 - `[ ]` `volt:model.sync`
-- `[ ]` `volt:on`
-- `[ ]` `volt:dispatch`
-- `[ ]` `volt:focus`
-- `[ ]` `volt:portal`
-- `[ ]` `volt:persist`
+- `[x]` `volt:on`
+- `[x]` `volt:dispatch`
+- `[x]` `volt:focus`
+- `[x]` `volt:portal`
+- `[-]` `volt:preserve` (fragment preserve SPA opt-in actual)
+- `[-]` `volt:persist`
 - `[x]` `volt:click`
 - `[x]` `volt:model`
 - `[x]` `volt:submit`
@@ -332,6 +333,17 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` multiples reglas declarativas en un mismo atributo para `volt:class`, `volt:attr` y `volt:style`
 - `[x]` fallback declarativo con `??` para `volt:text`
 - `[x]` comparaciones runtime flexibles y estrictas (`==`, `!=`, `===`, `!==`, `>`, `<`, `>=`, `<=`)
+- `[x]` MVP de `volt:on` con `state:set`, `state:toggle`, `state:delete`, `dispatch:*` y modificadores `prevent`, `stop`, `once`, `self`
+- `[x]` MVP de `volt:dispatch` con eventos simples, multiples y convivencia con `volt:on` en `/runtimeEvents`
+- `[x]` MVP de `volt:html` con reemplazo completo de `innerHTML` y reescaneo del subarbol inyectado
+- `[x]` MVP de `volt:focus` y `volt:autofocus.when` con enfoque reactivo por transicion `false -> true`
+- `[x]` MVP de `volt:portal` con movimiento real del nodo hacia targets globales del layout
+- `[-]` `volt:preserve` disponible como preserve opt-in de fragmentos top-level; `volt:persist` ya arranco como capa independiente sobre esa base
+- `[-]` MVP inicial de `volt:persist` montado sobre la base de `fragment cache SPA`, con registro runtime propio entre navegaciones
+- `[x]` demos `/runtimeHtml` y `/runtimeHtmlAlt` para validar contenido `client/shared`, reemplazo de subarbol y reactivacion de directivas internas
+- `[x]` demos `/runtimeFocus` y `/runtimeFocusAlt` para validar foco reactivo y autofocus en navegacion SPA
+- `[x]` demos `/runtimePortal` y `/runtimePortalAlt` para validar banner, modal y drawer portalizados
+- `[x]` demos `/runtimePersist`, `/runtimePersistBridge` y `/runtimePersistAlt` para validar origen, pantalla intermedia sin target y reinyeccion final
 
 ## Proximo Bloque Recomendado
 
@@ -952,14 +964,15 @@ Rutas demo:
 - `/runtimeState`: origen para agregar y quitar items en `client:list.items` y `shared:list.items`
 - `/runtimeStateAlt`: destino para validar que la lista `client` se reinicia por URL y la `shared` persiste
 
-## Contrato Propuesto: Volt Html
+## Contrato Actual: Volt Html
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` MVP inicial implementado en runtime
+- `[x]` demo dedicada creada en el skeleton
+- `[-]` pendiente validacion manual fina de comportamiento en navegador
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <div volt:html="shared:preview.html"></div>
@@ -967,34 +980,34 @@ Declaracion propuesta:
 <article volt:html="shared:cms.fragment"></article>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `volt:html="origen"`
-- `origen` acepta una ref simple `client:path` o `shared:path`
+- `origen` acepta refs runtime del store; el MVP actual reutiliza el mismo resolvedor base de `volt:text`
 - el `path` usa notacion con punto como `preview.html`, `editor.renderedHtml` o `cms.fragment`
 - cada nodo puede declarar un solo `volt:html`
 - `volt:html` reemplaza el contenido interno del nodo destino, no el nodo contenedor
 
-Reglas propuestas:
+Reglas actuales:
 
 - `volt:html` es una directiva de lectura DOM <- state; no escribe al store
 - al montar o resincronizar el DOM, el runtime resuelve la ref y la escribe en `innerHTML`
 - cuando cambia `window.Volt.state`, se reevalua cada `volt:html` registrado
 - al aplicar effects o navegar por SPA, el runtime vuelve a resincronizar los nodos con `volt:html` dentro del arbol afectado
 - si el valor resuelto es `null`, `undefined` o la ref no existe, el runtime vacia el contenido interno del nodo
-- si el nodo ya tenia contenido SSR inicial, el runtime puede usarlo como baseline solo mientras la ref no exista en el primer montaje
 - cuando el valor cambia, el runtime reemplaza el subarbol interno completo del nodo destino
 - despues de escribir `innerHTML`, el runtime debe volver a escanear el subarbol insertado para activar directivas runtime soportadas en el contenido nuevo
-- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora y emite warning en modo debug
+- para evitar trabajo innecesario, el runtime conserva el ultimo HTML aplicado y no reescribe si el string no cambio
+- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora
 
-Semantica propuesta de tipos:
+Semantica actual de tipos:
 
 - si el valor es string, se inserta tal cual en `innerHTML`
 - si el valor es numero o booleano, se convierte con `String(valor)` antes de insertarlo
 - si el valor es un arreglo u objeto, el MVP lo serializa con `JSON.stringify` antes de insertarlo
 - si el valor es `null` o `undefined`, el contenido queda vacio
 
-Seguridad propuesta del MVP:
+Seguridad actual del MVP:
 
 - `volt:html` se considera una directiva de contenido confiable
 - el MVP no incluye sanitizacion automatica
@@ -1002,22 +1015,22 @@ Seguridad propuesta del MVP:
 - la documentacion debe advertir explicitamente que no se debe usar con input arbitrario de usuario sin sanitizacion previa
 - un paso futuro puede agregar `volt:html:safe` o una politica configurable de sanitizacion, pero no forma parte del primer contrato
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - `volt:html` no reemplaza a `volt:text`; cuando solo se necesita texto, `volt:text` sigue siendo la opcion recomendada
 - `volt:html` puede convivir con directivas en el nodo contenedor como `volt:show`, `volt:if`, `volt:class`, `volt:attr` o `volt:style`
 - el contenido inyectado puede incluir directivas runtime, siempre que el runtime reescanee el subarbol despues del reemplazo
 - si el contenido inyectado contiene formularios, listeners o nodos interactivos, esos recursos se consideran efimeros y pueden perder estado al siguiente reemplazo completo
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales del MVP:
 
 - no soporta todavia politicas de sanitizacion integradas
 - no hace diff granular del HTML interno; siempre reemplaza el subarbol completo
 - no preserva foco, seleccion ni estado efimero dentro del contenido reemplazado
 - no soporta todavia modos especiales como `morph`, `fragment` o `append`
-- no evalua expresiones compuestas ni `??`; solo refs simples
+- aunque el contrato preferido es una ref simple, el MVP actual hereda el resolvedor base de contenido del runtime
 
-Rutas demo sugeridas:
+Rutas demo actuales:
 
 - `/runtimeHtml`: origen para probar preview HTML desde `client/shared state`, incluyendo contenido enriquecido y bloques con directivas internas
 - `/runtimeHtmlAlt`: destino para validar reinicio de contenido `client`, persistencia de `shared` y reactivacion del subarbol tras navegacion SPA
@@ -1090,7 +1103,7 @@ Limitaciones propuestas del MVP:
 
 - no soporta todavia expresiones compuestas, `??` ni comparaciones; solo refs simples
 - no soporta modificadores tipo `.number`, `.trim` o `.lazy`
-- no escribe al store; para eso siguen existiendo `volt:model` o un futuro `volt:on`
+- no escribe al store; para eso siguen existiendo `volt:model` o `volt:on`
 - no hace diff profundo de objetos ni bindings a subpropiedades complejas del DOM
 - no resuelve todavia `style`, `class` o `dataset` como namespaces especiales dentro de `volt:bind`
 
@@ -1099,24 +1112,25 @@ Rutas demo sugeridas:
 - `/runtimeBind`: origen para probar `value`, `checked`, `disabled`, `href` y `src` desde `client/shared state`
 - `/runtimeBindAlt`: destino para validar restauracion de baseline y reinicio de `client scope` en navegacion SPA
 
-## Contrato Propuesto: Volt On
+## Contrato Actual: Volt On
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` disponible en MVP actual
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <button volt:on="click -> dispatch:menu:toggle"></button>
 <form volt:on="submit.prevent -> dispatch:form:submitted"></form>
 <input volt:on="input -> state:set client:draft.note = $event.target.value"></input>
 <button volt:on="click.once -> state:toggle client:ui.open"></button>
-<div volt:on="keydown.escape.stop -> dispatch:modal:close"></div>
+<div volt:on="click.self -> state:toggle client:ui.open"></div>
+<button volt:on="click.stop -> state:set client:events.lastNested = 'inner-button'"></button>
+<input volt:on="keydown.enter.prevent -> dispatch:demo.events.enter"></input>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `evento[.modificador[.modificador...]] -> accion`
 - un mismo atributo puede declarar multiples reglas separadas por `|`
@@ -1132,32 +1146,34 @@ Gramatica propuesta:
 - `scope` acepta `client` o `shared`
 - `path` usa la misma notacion con punto ya soportada por el runtime, por ejemplo `ui.open` o `draft.note`
 - `valor` acepta `true`, `false`, `null`, numeros, strings con comillas simples y `$event.target.value`
+- `valor` tambien acepta `$event.target.checked` para controles booleanos
 
-Reglas propuestas:
+Reglas actuales:
 
-- el runtime registra listeners solo en elementos que declaren `volt:on`
-- al montar o resincronizar el DOM, una misma regla no debe duplicar listeners sobre el mismo nodo
-- al desmontar un nodo por `volt:if`, navegacion SPA o reemplazo DOM, el runtime debe limpiar todos sus listeners asociados
+- el runtime usa delegacion global de eventos sobre `document` y resuelve el nodo objetivo mas cercano con `volt:on`
+- al no montar listeners por nodo, evita duplicaciones al resincronizar el DOM o al navegar por SPA
 - si una regla usa `prevent`, el runtime ejecuta `event.preventDefault()` antes de resolver la accion
 - si una regla usa `stop`, el runtime ejecuta `event.stopPropagation()` antes de resolver la accion
 - si una regla usa `self`, la accion solo corre cuando `event.target === element`
-- si una regla usa `once`, el listener se elimina despues de la primera ejecucion exitosa
+- si una regla usa `once`, la regla queda consumida por nodo despues de la primera ejecucion exitosa y se rearma al remount de la pagina o del elemento
 - si una regla usa `keydown.<tecla>` o `keyup.<tecla>`, la accion solo corre cuando `event.key` coincide con la tecla declarada normalizada en minusculas
 - `dispatch:nombre` emite un `CustomEvent` con `bubbles: true` y `detail` minimo formado por `originalEvent`, `scopeId`, `element` y `directive`
 - `state:set scope:path = valor` escribe el valor resuelto en `window.Volt.state`
 - `state:toggle scope:path` invierte el valor truthy actual del path objetivo
 - `state:delete scope:path` elimina la clave objetivo del store si existe
 - despues de una accion `state:*`, el runtime debe disparar el mismo ciclo de resincronizacion que ya usa para cambios manuales de `window.Volt.state`
-- una regla invalida no rompe el resto del atributo; el runtime la ignora y emite un warning en consola en modo debug
+- una regla invalida no rompe el resto del atributo; el runtime la ignora
 - si varias reglas escuchan el mismo evento en el mismo atributo, se ejecutan en el orden declarado
 
-Semantica propuesta de acciones:
+Semantica actual de acciones:
 
 - `dispatch:nombre` no modifica estado por si sola; sirve para componer interaccion entre componentes frontend
 - `state:set` permite escribir en `client` o `shared` sin roundtrip al backend
 - `state:toggle` esta limitado a valores pensados como booleanos; si el path no existe, el primer toggle lo crea como `true`
 - `state:delete` fuerza el caso `undefined` para pruebas y escenarios de limpieza local
-- `$event.target.value` solo se resuelve si el evento trae `target`; en otro caso produce `undefined`
+- `$event.target.value` y `$event.target.checked` solo se resuelven si el evento trae `target`; en otro caso la accion no se considera valida
+- `dispatch:*` desde `volt:on` reutiliza el mismo contrato base de `volt:dispatch`, pero con el nombre del evento definido en la accion
+- el laboratorio actual tambien confirma que `volt:on` puede convivir con `volt:dispatch` en el mismo nodo
 
 Eventos iniciales soportados por el contrato:
 
@@ -1177,7 +1193,7 @@ Teclas iniciales soportadas por el contrato:
 - `tab`
 - `space`
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales:
 
 - no evalua expresiones arbitrarias del tipo `state:set client:count = client:count + 1`
 - no expone todavia payloads declarativos complejos para `dispatch`
@@ -1185,10 +1201,10 @@ Limitaciones propuestas del MVP:
 - no reemplaza a `volt:click`, `volt:model` ni `volt:submit` en la primera iteracion; convive con ellas
 - no ejecuta codigo JavaScript libre ni `eval`
 
-Rutas demo sugeridas:
+Rutas demo:
 
 - `/runtimeEvents`: origen para probar `click`, `input`, `change` y `dispatch:*` contra `window.Volt.state`
-- `/runtimeEventsAlt`: destino para validar limpieza de listeners y comportamiento en navegacion SPA
+- la misma demo cubre `click.once`, `click.self`, `click.stop`, `keydown.enter.prevent` y `submit.prevent`
 
 ## Comparativa: Volt On Vs Volt Dispatch
 
@@ -1216,14 +1232,13 @@ Rutas demo sugeridas:
 | Complejidad | alta | baja | media | media |
 | Recomendacion | usar cuando necesitas control fino del evento | usar cuando solo quieres emitir un evento | usar para acciones backend simples | usar para formularios y submits reactivos |
 
-## Contrato Propuesto: Volt Dispatch
+## Contrato Actual: Volt Dispatch
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` disponible en MVP actual
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <button volt:dispatch="menu:toggle"></button>
@@ -1232,7 +1247,7 @@ Declaracion propuesta:
 <button volt:dispatch="filters:changed"></button>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `volt:dispatch="evento"`
 - un mismo atributo puede declarar multiples eventos separados por `|`
@@ -1240,33 +1255,33 @@ Gramatica propuesta:
 - `evento` es un nombre logico de `CustomEvent`, como `menu:toggle`, `toast:show`, `dialog:close` o `filters:changed`
 - el nombre del evento no incluye JavaScript libre ni payloads arbitrarios en la primera version
 
-Reglas propuestas:
+Reglas actuales:
 
-- `volt:dispatch` registra un listener DOM minimo sobre el nodo para emitir eventos custom desde interaccion directa del usuario
+- `volt:dispatch` se resuelve desde un listener global delegado y en el MVP se activa por `click`
 - en el MVP, el disparador implicito es `click`
 - al activar el nodo, el runtime emite un `CustomEvent` por cada nombre declarado en el atributo
 - los eventos se emiten con `bubbles: true` y `cancelable: true`
-- el `detail` minimo del evento incluye `sourceElement`, `directive`, `scopeId`, `clientScope`, `sharedScope` y `originalEvent`
+- el `detail` emitido incluye `sourceElement`, `directive`, `scopeId`, `clientScope`, `sharedScope`, `component` y `originalEvent`
 - si el nodo esta deshabilitado o no puede recibir activacion, el runtime no debe disparar eventos
-- al montar o resincronizar el DOM, una misma directiva no debe duplicar listeners sobre el mismo nodo
-- al desmontar el nodo por `volt:if`, navegacion SPA o reemplazo DOM, el runtime debe limpiar sus listeners asociados
-- si una declaracion es invalida, el runtime la ignora y emite warning en modo debug sin romper otras directivas del nodo
+- al usar delegacion global, no necesita montar ni limpiar listeners por cada nodo individual
+- si una declaracion es invalida, el runtime la ignora sin romper otras directivas del nodo
 
-Semantica propuesta:
+Semantica actual:
 
 - `volt:dispatch` no modifica `window.Volt.state` por si sola
 - su objetivo es emitir eventos frontend declarativos para que otras partes del runtime o la aplicacion reaccionen
 - si hay multiples eventos en el atributo, todos se emiten en el orden declarado dentro de la misma activacion
 - el runtime no debe asumir listeners existentes; despachar un evento sin consumidores sigue siendo valido
+- la demo actual muestra su convivencia con `volt:on`, donde primero corre `volt:on` y despues `volt:dispatch` en el listener global actual
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - con `volt:on`, `volt:dispatch` sirve como version abreviada y declarativa para el caso comun `click -> dispatch:nombre`
 - con `volt:show` y `volt:if`, solo puede disparar eventos si el nodo esta visible o montado realmente
 - con `volt:loading`, `volt:dirty`, `volt:success` y `volt:error`, puede servir para notificar estados UI a listeners frontend sin roundtrip
 - con un futuro `runtime.on(...)`, estos eventos deberian poder observarse desde una API publica coherente
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales:
 
 - no soporta todavia payload declarativo, por ejemplo objetos o expresiones
 - no soporta todavia cambiar el evento disparador; el MVP se limita a `click`
@@ -1274,19 +1289,20 @@ Limitaciones propuestas del MVP:
 - no sustituye a `volt:click` ni a acciones backend; es solo un canal frontend de eventos
 - no ejecuta codigo JavaScript libre ni `eval`
 
-Rutas demo sugeridas:
+Rutas demo:
 
-- `/runtimeDispatch`: origen para probar `volt:dispatch` con listeners documentales y panel de eventos recibidos
-- `/runtimeDispatchAlt`: destino para validar limpieza de listeners y comportamiento tras navegacion SPA
+- `/runtimeEvents`: origen para probar `volt:dispatch` simple, multiple y combinado con `volt:on`
+- la demo actual incluye puente minimo hacia `window.Volt.state` para reflejar los `CustomEvent` emitidos
 
-## Contrato Propuesto: Volt Focus
+## Contrato Actual: Volt Focus
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` MVP inicial implementado en runtime
+- `[x]` demo dedicada creada en el skeleton
+- `[-]` pendiente validacion manual fina de comportamiento en navegador
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <input volt:focus="client:ui.focusTitle">
@@ -1294,7 +1310,7 @@ Declaracion propuesta:
 <button volt:focus="client:ui.returnFocusToAction"></button>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base para foco reactivo: `volt:focus="condicion"`
 - formato base para foco al montar o al pasar a truthy: `volt:autofocus.when="condicion"`
@@ -1302,53 +1318,54 @@ Gramatica propuesta:
 - el `path` usa notacion con punto como `ui.focusTitle`, `form.showErrors` o `ui.returnFocusToAction`
 - un mismo nodo puede declarar `volt:focus`, `volt:autofocus.when` o ambos, pero cada directiva se evalua por separado
 
-Reglas propuestas:
+Reglas actuales:
 
 - `volt:focus` y `volt:autofocus.when` son directivas de lectura DOM <- state; no escriben al store
 - al montar o resincronizar el DOM, el runtime evalua la condicion declarada
-- si la condicion de `volt:focus` es truthy y el elemento es focuseable, el runtime ejecuta `element.focus()`
+- si la condicion de `volt:focus` pasa de falsy a truthy o entra ya truthy en el primer montaje, el runtime ejecuta `element.focus()`
 - si la condicion de `volt:autofocus.when` pasa de falsy a truthy o el nodo entra ya truthy en el primer montaje, el runtime ejecuta `element.focus()`
 - si la condicion sigue en truthy pero el elemento ya es `document.activeElement`, el runtime no debe reenfocar innecesariamente
 - si el elemento esta deshabilitado, oculto, desconectado del DOM o no es focuseable, el runtime no debe lanzar error; solo omite el intento
 - al aplicar effects o navegar por SPA, el runtime vuelve a evaluar estas directivas dentro del arbol afectado
 - si varias directivas de foco quedan truthy en la misma pasada, gana la ultima resuelta en orden de escaneo del DOM
-- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora y emite warning en modo debug
+- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora
 
-Semantica propuesta:
+Semantica actual:
 
 - `volt:focus` esta pensada para reenfocar o mover el foco reactivamente cuando el state cambia
 - `volt:autofocus.when` esta pensada para el primer foco util al montar un bloque, mostrar errores o abrir un panel
 - ninguna de las dos directivas selecciona texto ni mueve el cursor; el MVP solo garantiza `focus()`
 - el runtime no debe disparar eventos sinteticos adicionales mas alla de los normales que el navegador emite al enfocar
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - puede convivir con `volt:show` y `volt:if`, pero solo intenta enfocar cuando el nodo existe realmente en el DOM
 - con `volt:html`, cualquier foco interno dentro del contenido reemplazado se considera efimero y puede perderse al siguiente reemplazo
 - con `volt:on`, un listener frontend puede alternar la condicion que luego active `volt:focus`
 - con `volt:model`, el foco no debe interferir con la escritura normal del input; solo evita reenfoques redundantes
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales del MVP:
 
 - no soporta todavia modificadores como `.select`, `.prevent-scroll` o `.delay`
-- no preserva seleccion de texto ni posicion del cursor
+- no preserva seleccion de texto ni posicion del cursor como hace la capa de restore de patch
 - no soporta prioridad explicita entre multiples nodos candidatos al foco
 - no usa comparaciones ni expresiones compuestas en la primera version; solo refs simples
 - no intenta enfocar nodos dentro de shadow DOM ni portales futuros
 
-Rutas demo sugeridas:
+Rutas demo actuales:
 
 - `/runtimeFocus`: origen para probar foco condicional en inputs, textareas, botones de retorno y paneles con error
-- `/runtimeFocusAlt`: destino para validar reenfoque, no duplicacion de foco y comportamiento tras navegacion SPA
+- `/runtimeFocusAlt`: destino para validar reenfoque, `shared state` y comportamiento tras navegacion SPA
 
-## Contrato Propuesto: Volt Portal
+## Contrato Actual: Volt Portal
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` MVP inicial implementado en runtime
+- `[x]` demo dedicada creada en el skeleton
+- `[-]` pendiente validacion manual fina de comportamiento en navegador
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <div volt:portal="#modals-root">
@@ -1360,40 +1377,40 @@ Declaracion propuesta:
 </aside>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `volt:portal="selector"`
 - `selector` es un selector CSS simple resuelto con `document.querySelector`
 - cada nodo puede declarar un solo `volt:portal`
 - `volt:portal` mueve o proyecta el subarbol del nodo hacia un target externo, manteniendo el nodo origen como ancla logica del runtime
 
-Reglas propuestas:
+Reglas actuales:
 
 - al montar o resincronizar el DOM, el runtime resuelve el target del portal
 - si el target existe, el contenido portalizado se inserta dentro de ese contenedor destino
-- si el target no existe, el runtime conserva temporalmente el contenido en su posicion original y emite warning en modo debug
+- si el target no existe, el runtime conserva el contenido en su posicion original
 - el runtime debe asociar el portal con una ancla estable para poder limpiarlo, reubicarlo o desmontarlo correctamente
 - al desmontar el nodo origen por `volt:if`, navegacion SPA o reemplazo DOM, el runtime debe desmontar tambien el contenido portalizado
 - al aplicar effects o navegar por SPA, el runtime debe evitar duplicar la misma instancia portalizada
 - si el nodo portalizado contiene directivas runtime, estas deben seguir activas y resincronizarse con normalidad
 - si varias instancias portalizan al mismo target, el orden visual sigue el orden de montaje
-- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora y emite warning en modo debug
+- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora
 
-Semantica propuesta:
+Semantica actual:
 
 - `volt:portal` no cambia el estado ni el snapshot del componente; solo cambia la ubicacion fisica del DOM renderizado
 - el contenido portalizado sigue perteneciendo logicamente al componente o al arbol donde fue declarado
 - los eventos del DOM portalizado siguen pudiendo burbujear hacia `document`, pero no deben depender de la jerarquia visual original para funcionar
-- el MVP puede implementar portal como movimiento real del nodo, no como clonacion, para evitar divergencias de estado local del DOM
+- el MVP actual implementa portal como movimiento real del nodo, no como clonacion, para evitar divergencias de estado local del DOM
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - con `volt:show` y `volt:if`, el portal solo existe mientras el nodo origen este visible o montado segun corresponda
 - con `volt:focus`, el foco debe dirigirse al contenido ya portalizado si ese es el nodo realmente activo
 - con `volt:html`, el contenido interno portalizado puede reemplazarse, pero el contenedor portalizado debe mantenerse estable
 - con `volt:on` y `volt:dispatch`, los listeners deben seguir funcionando sobre el contenido ya proyectado
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales del MVP:
 
 - no soporta todavia targets multiples ni expresiones dinamicas para el selector
 - no soporta todavia portales anidados con reglas especiales de prioridad
@@ -1401,19 +1418,28 @@ Limitaciones propuestas del MVP:
 - no preserva todavia el orden relativo si el mismo portal se remonta varias veces en ciclos complejos
 - no soporta todavia shadow DOM ni targets fuera del `document` principal
 
-Rutas demo sugeridas:
+Rutas demo actuales:
 
 - `/runtimePortal`: origen para probar modales, drawers y banners portalizados desde `client/shared state`
 - `/runtimePortalAlt`: destino para validar limpieza, remount y comportamiento del portal tras navegacion SPA
 
-## Contrato Propuesto: Volt Persist
+## Contrato Actual: Volt Persist
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[-]` MVP inicial implementado en runtime
+- `[-]` demo dedicada creada en el skeleton; pendiente validacion manual fina
+- `[x]` reutiliza la base existente de `data-volt-preserve="clave"` y `volt:preserve="clave"` dentro de `fragment cache SPA`
 
-Declaracion propuesta:
+Nota de alcance actual:
+
+- `volt:persist` ya existe como directiva independiente en `volt.js`
+- el runtime acepta `data-volt-persist`, `volt-persist` y `volt:persist`
+- la base de captura/restauracion se apoya en el mismo enfoque usado por `fragment cache SPA`
+- a diferencia de `volt:preserve`, el registro de `volt:persist` puede sobrevivir a una pantalla intermedia que no exponga el target y reinyectarse cuando aparezca una clave compatible otra vez
+- la politica documental `reset` sigue pudiendo descartar el registro persistido actual
+
+Declaracion actual:
 
 ```html
 <aside volt:persist="app-sidebar"></aside>
@@ -1421,50 +1447,54 @@ Declaracion propuesta:
 <div volt:persist="search-panel"></div>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `volt:persist="clave"`
 - `clave` es un identificador estable y unico dentro de la pagina, por ejemplo `app-sidebar`, `global-player` o `search-panel`
 - cada nodo puede declarar un solo `volt:persist`
 - el nodo persistido se identifica por su clave logica, no por su posicion exacta en el DOM
 
-Reglas propuestas:
+Reglas actuales:
 
 - al navegar por SPA, si la nueva vista contiene un nodo con la misma clave de `volt:persist`, el runtime reutiliza la instancia DOM ya existente en lugar de crear una nueva
 - si la nueva vista no contiene esa clave, el runtime puede conservar temporalmente la instancia persistida fuera del arbol principal hasta una siguiente navegacion compatible o descartarla segun politica documental
 - al reutilizar una instancia persistida, el runtime debe volver a asociarla a su nuevo ancla logica sin duplicarla
 - el runtime debe evitar que una misma clave genere dos instancias activas al mismo tiempo
-- si una clave aparece mas de una vez en la misma vista, el runtime considera el caso invalido y emite warning en modo debug
+- si una clave aparece mas de una vez en la misma captura o en el target actual, el MVP conserva la primera coincidencia valida y descarta el resto
 - una instancia persistida conserva estado efimero del DOM como scroll interno, foco potencial, valor local no controlado y listeners ya montados, salvo que otra directiva o patch lo reemplace explicitamente
 - si la navegacion fuerza recarga completa o cambia a un layout incompatible, el runtime puede descartar las instancias persistidas
-- al desmontar explicitamente una clave persistida por politica del runtime, debe limpiar tambien sus listeners y referencias internas
+- la politica documental `reset` descarta el registro persistido para evitar reinyectar nodos en destinos que exigen arranque limpio
+- en el MVP actual, la restauracion exige coincidencia de clave y de `tagName`
 
-Semantica propuesta:
+Semantica actual:
 
 - `volt:persist` no preserva estado del store; preserva una instancia fisica del DOM entre navegaciones SPA compatibles
 - la clave representa identidad visual/estructural estable, no contenido reactivo serializado
 - esta directiva esta pensada para sidebar, reproductores, shells flotantes, buscadores globales y paneles que no deberian reinicializarse en cada cambio de pagina
 - el contenido persistido puede seguir recibiendo resincronizacion runtime si contiene otras directivas activas
+- el MVP actual opera sobre fragmentos top-level, alineado con la base existente de `fragment cache SPA`
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - con `volt:portal`, un nodo puede ser persistido y ademas portalizado, pero el runtime debe resolver primero identidad persistida y luego su ubicacion visual
 - con `volt:focus`, el foco de un nodo persistido puede sobrevivir a la navegacion si el navegador mantiene el elemento activo
 - con `volt:html`, si una directiva reemplaza el contenido interno del nodo persistido, solo persiste la instancia contenedora, no el subarbol reemplazado previo
 - con `volt:on` y `volt:dispatch`, los listeners ya asociados a la instancia persistida deben seguir funcionando al reutilizarla
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales del MVP:
 
 - no soporta todavia estrategias configurables como `keep-alive`, `discard-on-leave` o TTL
 - no soporta todavia persistencia entre recargas completas de pagina ni entre pestañas
 - no resuelve conflictos complejos entre persistencia y reconciliacion profunda del DOM
 - no soporta todavia persistencia parcial declarativa dentro de una misma clave
 - no expone todavia hooks publicos tipo `persist:attached` o `persist:discarded`
+- aun no tiene hooks publicos especificos para persistencia; la observabilidad actual se apoya en `volt:navigated`
 
-Rutas demo sugeridas:
+Rutas demo actuales:
 
-- `/runtimePersist`: origen para probar sidebar, buscador global o reproductor persistido entre paginas SPA
-- `/runtimePersistAlt`: destino para validar reutilizacion real de instancia, conservacion de estado efimero y descarte por incompatibilidad
+- `/runtimePersist`: origen para editar nodos con `volt:persist`
+- `/runtimePersistBridge`: pantalla intermedia sin targets persistidos para comprobar que el registro sobrevive fuera del DOM visible
+- `/runtimePersistAlt`: destino final para validar reinyeccion real de la instancia viva tras una pantalla intermedia
 
 ## Contrato Propuesto: Volt Model Local
 

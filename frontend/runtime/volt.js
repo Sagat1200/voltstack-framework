@@ -4,6 +4,7 @@
     navigationController: null,
     navigationCache: new Map(),
     navigationInFlight: new Map(),
+    persistentFragments: new Map(),
     navigationPreloadHints: new Set(),
     navigationPrefetchInterest: new Map(),
     navigationPrefetchElements: new WeakMap(),
@@ -67,6 +68,10 @@
   ];
   const NAVIGATION_FRAGMENT_SELECTOR =
     "[data-volt-preserve], [volt-preserve], [volt\\:preserve]";
+  const NAVIGATION_PERSIST_SELECTOR =
+    "[data-volt-persist], [volt-persist], [volt\\:persist]";
+  const NAVIGATION_RETAINED_SELECTOR =
+    NAVIGATION_FRAGMENT_SELECTOR + ", " + NAVIGATION_PERSIST_SELECTOR;
   const PAGE_TRANSITION_PROFILES = Object.freeze({
     soft: Object.freeze({
       name: "fade",
@@ -1217,6 +1222,26 @@
     return storeDirectiveNames("text", suffix);
   }
 
+  function htmlDirectiveNames(suffix) {
+    return storeDirectiveNames("html", suffix);
+  }
+
+  function portalDirectiveNames() {
+    return storeDirectiveNames("portal");
+  }
+
+  function focusDirectiveNames(suffix) {
+    return storeDirectiveNames("focus", suffix);
+  }
+
+  function autofocusDirectiveNames(suffix) {
+    return storeDirectiveNames("autofocus", suffix);
+  }
+
+  function autofocusWhenDirectiveNames() {
+    return autofocusDirectiveNames("when");
+  }
+
   function parseStoreDirectiveExpression(value) {
     if (typeof value !== "string" || value.trim() === "") {
       return null;
@@ -2090,6 +2115,278 @@
     }
 
     return String(value);
+  }
+
+  function formatStoreDirectiveHtmlValue(value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
+    }
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  function isDirectiveFocusableElement(element) {
+    if (
+      !element ||
+      typeof element.focus !== "function" ||
+      !element.isConnected ||
+      element.hidden === true
+    ) {
+      return false;
+    }
+
+    if (
+      (typeof element.disabled === "boolean" && element.disabled) ||
+      element.getAttribute("aria-disabled") === "true"
+    ) {
+      return false;
+    }
+
+    if (typeof window.getComputedStyle === "function") {
+      const styles = window.getComputedStyle(element);
+
+      if (
+        !styles ||
+        styles.display === "none" ||
+        styles.visibility === "hidden"
+      ) {
+        return false;
+      }
+    }
+
+    if (
+      typeof element.getClientRects === "function" &&
+      element.getClientRects().length === 0 &&
+      document.activeElement !== element
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function portalDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.portal) {
+      store.portal = {
+        placeholder: null,
+        selector: null,
+      };
+    }
+
+    return store.portal;
+  }
+
+  function htmlDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.html) {
+      store.html = {
+        lastApplied: null,
+      };
+    }
+
+    return store.html;
+  }
+
+  function ensurePortalPlaceholder(element, state) {
+    if (
+      state &&
+      state.placeholder &&
+      state.placeholder.parentNode &&
+      state.placeholder.isConnected
+    ) {
+      return state.placeholder;
+    }
+
+    if (!element || !element.parentNode) {
+      return null;
+    }
+
+    const placeholder = document.createElement("span");
+
+    placeholder.setAttribute("data-volt-portal-placeholder", "true");
+    placeholder.hidden = true;
+    placeholder.style.display = "none";
+    element.parentNode.insertBefore(placeholder, element);
+
+    if (state) {
+      state.placeholder = placeholder;
+    }
+
+    return placeholder;
+  }
+
+  function restorePortalElement(element, state) {
+    const placeholder =
+      state && state.placeholder && state.placeholder.parentNode
+        ? state.placeholder
+        : null;
+
+    if (!element || !placeholder || !placeholder.parentNode) {
+      return false;
+    }
+
+    if (
+      element.parentNode === placeholder.parentNode &&
+      element.previousSibling === placeholder
+    ) {
+      return false;
+    }
+
+    placeholder.parentNode.insertBefore(element, placeholder.nextSibling);
+    return true;
+  }
+
+  function syncPortalDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, portalDirectiveNames()).forEach(
+      function (element) {
+        const selector = directiveValue(element, portalDirectiveNames());
+        const state = portalDirectiveState(element);
+
+        if (typeof selector !== "string" || selector.trim() === "") {
+          restorePortalElement(element, state);
+          return;
+        }
+
+        state.selector = selector.trim();
+
+        const target = document.querySelector(state.selector);
+
+        if (!target) {
+          restorePortalElement(element, state);
+          return;
+        }
+
+        ensurePortalPlaceholder(element, state);
+
+        if (element.parentNode !== target) {
+          target.appendChild(element);
+        }
+      },
+    );
+  }
+
+  function syncHtmlDirectives(root) {
+    if (!root) {
+      return false;
+    }
+
+    let changed = false;
+
+    collectElementsWithDirectiveAttributes(root, htmlDirectiveNames()).forEach(
+      function (element) {
+        const directive = directiveValue(element, htmlDirectiveNames());
+        const result = resolveStoreDirectiveValue(directive);
+        const nextHtml = result.found
+          ? formatStoreDirectiveHtmlValue(result.value)
+          : "";
+        const state = htmlDirectiveState(element);
+
+        if (state.lastApplied === nextHtml) {
+          return;
+        }
+
+        element.innerHTML = nextHtml;
+        state.lastApplied = nextHtml;
+        changed = true;
+      },
+    );
+
+    return changed;
+  }
+
+  function focusDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.focus) {
+      store.focus = {};
+    }
+
+    return store.focus;
+  }
+
+  function focusElementForDirective(element) {
+    if (
+      !isDirectiveFocusableElement(element) ||
+      document.activeElement === element
+    ) {
+      return false;
+    }
+
+    try {
+      element.focus({
+        preventScroll: true,
+      });
+    } catch (error) {
+      try {
+        element.focus();
+      } catch (innerError) {
+        return false;
+      }
+    }
+
+    return document.activeElement === element;
+  }
+
+  function syncFocusDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    let candidate = null;
+
+    collectElementsWithDirectiveAttributes(root, focusDirectiveNames()).forEach(
+      function (element) {
+        const directive = directiveValue(element, focusDirectiveNames());
+        const active = resolveStoreDirectiveActive(directive);
+        const state = focusDirectiveState(element);
+        const previous = state.reactive === true;
+
+        state.reactive = active;
+
+        if (active && !previous && isDirectiveFocusableElement(element)) {
+          candidate = element;
+        }
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(
+      root,
+      autofocusWhenDirectiveNames(),
+    ).forEach(function (element) {
+      const directive = directiveValue(element, autofocusWhenDirectiveNames());
+      const active = resolveStoreDirectiveActive(directive);
+      const state = focusDirectiveState(element);
+      const previous = state.autofocusWhen === true;
+
+      state.autofocusWhen = active;
+
+      if (active && !previous && isDirectiveFocusableElement(element)) {
+        candidate = element;
+      }
+    });
+
+    if (candidate) {
+      focusElementForDirective(candidate);
+    }
   }
 
   function parseForDirectiveExpression(value) {
@@ -4618,6 +4915,9 @@
         attributes: {},
         classes: {},
         styles: {},
+        html: {},
+        portal: {},
+        focus: {},
       };
     }
 
@@ -5612,11 +5912,28 @@
       "success",
       root.getAttribute("data-volt-success") === "true",
     );
+    syncPortalDirectives(root);
+    let htmlIterations = 0;
+
+    while (syncHtmlDirectives(root) && htmlIterations < 5) {
+      htmlIterations += 1;
+      syncForDirectives(root);
+
+      let htmlIfIterations = 0;
+
+      while (syncIfDirectives(root) && htmlIfIterations < 5) {
+        htmlIfIterations += 1;
+      }
+
+      syncPortalDirectives(root);
+    }
+
     syncTextDirectives(root);
     syncClassDirectives(root);
     syncAttrDirectives(root);
     syncStyleDirectives(root);
     syncShowDirectives(root);
+    syncFocusDirectives(root);
   }
 
   function syncAllRuntimeStateDirectives() {
@@ -6787,6 +7104,14 @@
     ]);
   }
 
+  function persistedFragmentAttribute(element) {
+    return directiveAttribute(element, [
+      "data-volt-persist",
+      "volt-persist",
+      "volt:persist",
+    ]);
+  }
+
   function preservedFragmentKey(element) {
     if (!element || typeof element.getAttribute !== "function") {
       return null;
@@ -6815,31 +7140,66 @@
     return target !== "" ? target : null;
   }
 
-  function preservedFragmentCandidates(root) {
+  function persistedFragmentKey(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = persistedFragmentAttribute(element);
+
+    if (!attribute) {
+      return null;
+    }
+
+    const explicitKey = (attribute.value || "").trim();
+
+    if (explicitKey !== "") {
+      return explicitKey;
+    }
+
+    const id = (element.getAttribute("id") || "").trim();
+
+    if (id !== "") {
+      return id;
+    }
+
+    const target = (element.getAttribute("data-volt-target") || "").trim();
+
+    return target !== "" ? target : null;
+  }
+
+  function retainedFragmentCandidates(root, selector) {
     if (!root || typeof root.querySelectorAll !== "function") {
       return [];
     }
 
     const candidates = [];
 
-    if (
-      typeof root.matches === "function" &&
-      root.matches(NAVIGATION_FRAGMENT_SELECTOR)
-    ) {
+    if (typeof root.matches === "function" && root.matches(selector)) {
       candidates.push(root);
     }
 
-    root
-      .querySelectorAll(NAVIGATION_FRAGMENT_SELECTOR)
-      .forEach(function (element) {
-        candidates.push(element);
-      });
+    root.querySelectorAll(selector).forEach(function (element) {
+      candidates.push(element);
+    });
 
     return candidates.filter(function (element) {
       const parent = element.parentElement;
 
-      return !parent || !parent.closest(NAVIGATION_FRAGMENT_SELECTOR);
+      return !parent || !parent.closest(NAVIGATION_RETAINED_SELECTOR);
     });
+  }
+
+  function preservedFragmentCandidates(root) {
+    return retainedFragmentCandidates(root, NAVIGATION_FRAGMENT_SELECTOR).filter(
+      function (element) {
+        return !persistedFragmentAttribute(element);
+      },
+    );
+  }
+
+  function persistedFragmentCandidates(root) {
+    return retainedFragmentCandidates(root, NAVIGATION_PERSIST_SELECTOR);
   }
 
   function fragmentNavigationDetail(meta, extra) {
@@ -7047,6 +7407,125 @@
     return {
       preservedCount: preservedCount,
       discardedCount: discardedCount,
+    };
+  }
+
+  function capturePersistentFragments(root) {
+    const captured = new Map();
+    let discardedCount = 0;
+
+    persistedFragmentCandidates(root).forEach(function (element) {
+      const key = persistedFragmentKey(element);
+
+      if (!key) {
+        discardedCount += 1;
+        return;
+      }
+
+      if (captured.has(key)) {
+        discardedCount += 1;
+        return;
+      }
+
+      captured.set(key, {
+        key: key,
+        tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        element: element,
+      });
+    });
+
+    captured.forEach(function (fragment, key) {
+      runtime.persistentFragments.set(key, fragment);
+    });
+
+    return {
+      capturedCount: captured.size,
+      discardedCount: discardedCount,
+      registrySize: runtime.persistentFragments.size,
+    };
+  }
+
+  function persistentFragmentTargets(root) {
+    const targets = new Map();
+
+    persistedFragmentCandidates(root).forEach(function (element) {
+      const key = persistedFragmentKey(element);
+
+      if (!key || targets.has(key)) {
+        return;
+      }
+
+      targets.set(key, element);
+    });
+
+    return targets;
+  }
+
+  function discardPersistentFragments() {
+    const discardedCount = runtime.persistentFragments.size;
+
+    runtime.persistentFragments.clear();
+
+    return {
+      persistedCount: 0,
+      discardedCount: discardedCount,
+      registrySize: 0,
+    };
+  }
+
+  function restorePersistentFragments(root) {
+    if (
+      !root ||
+      !(runtime.persistentFragments instanceof Map) ||
+      runtime.persistentFragments.size === 0
+    ) {
+      return {
+        persistedCount: 0,
+        discardedCount: 0,
+        registrySize:
+          runtime.persistentFragments instanceof Map
+            ? runtime.persistentFragments.size
+            : 0,
+      };
+    }
+
+    const targets = persistentFragmentTargets(root);
+    let persistedCount = 0;
+    let discardedCount = 0;
+
+    targets.forEach(function (target, key) {
+      const fragment = runtime.persistentFragments.get(key);
+
+      if (!fragment) {
+        return;
+      }
+
+      const targetTagName = target.tagName
+        ? target.tagName.toLowerCase()
+        : null;
+
+      if (targetTagName !== fragment.tagName) {
+        runtime.persistentFragments.delete(key);
+        discardedCount += 1;
+        return;
+      }
+
+      if (fragment.element !== target) {
+        target.replaceWith(fragment.element);
+      }
+
+      runtime.persistentFragments.set(key, {
+        key: key,
+        tagName: fragment.tagName,
+        element: fragment.element,
+      });
+      persistedCount += 1;
+    });
+
+    return {
+      persistedCount: persistedCount,
+      discardedCount: discardedCount,
+      registrySize: runtime.persistentFragments.size,
     };
   }
 
@@ -7313,6 +7792,10 @@
     const fragmentSummary = {
       preservedCount: 0,
       discardedCount: 0,
+      persistedCount: 0,
+      discardedPersistentCount: 0,
+      capturedPersistentCount: 0,
+      persistentRegistrySize: runtime.persistentFragments.size,
     };
 
     if (doc.title) {
@@ -7327,12 +7810,24 @@
       const fragmentMeta = Object.assign({}, payloadMeta, {
         fragmentControl: fragmentControl,
       });
+      const capturedPersistent = shouldRestorePreservedFragments(
+        fragmentControl,
+        payloadMeta,
+      )
+        ? capturePersistentFragments(document.body)
+        : discardPersistentFragments();
       const preservedFragments = capturePreservedFragments(
         document.body,
         fragmentMeta,
       );
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
+      const restoredPersistent = shouldRestorePreservedFragments(
+        fragmentControl,
+        payloadMeta,
+      )
+        ? restorePersistentFragments(document.body)
+        : discardPersistentFragments();
       const restoredFragments = shouldRestorePreservedFragments(
         fragmentControl,
         payloadMeta,
@@ -7360,6 +7855,13 @@
 
       fragmentSummary.preservedCount = restoredFragments.preservedCount;
       fragmentSummary.discardedCount = restoredFragments.discardedCount;
+      fragmentSummary.persistedCount = restoredPersistent.persistedCount;
+      fragmentSummary.discardedPersistentCount =
+        capturedPersistent.discardedCount + restoredPersistent.discardedCount;
+      fragmentSummary.capturedPersistentCount =
+        capturedPersistent.capturedCount || 0;
+      fragmentSummary.persistentRegistrySize =
+        restoredPersistent.registrySize || 0;
       syncAllRuntimeStateDirectives();
       registerViewportPrefetchTargets(document);
       scheduleHeuristicPrefetch(document);
@@ -8117,6 +8619,16 @@
             navigationMutation &&
             typeof navigationMutation.discardedCount === "number"
               ? navigationMutation.discardedCount
+              : 0,
+          persistedFragments:
+            navigationMutation &&
+            typeof navigationMutation.persistedCount === "number"
+              ? navigationMutation.persistedCount
+              : 0,
+          persistentFragmentRegistrySize:
+            navigationMutation &&
+            typeof navigationMutation.persistentRegistrySize === "number"
+              ? navigationMutation.persistentRegistrySize
               : 0,
         },
         document,
