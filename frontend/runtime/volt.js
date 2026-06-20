@@ -28,6 +28,7 @@
     clientStateGlobalSubscribers: new Set(),
     sharedStateGlobalSubscribers: new Set(),
     directiveSequence: 0,
+    onDirectiveOnce: new WeakMap(),
   };
 
   const NAVIGATION_CACHE_TTL = 5000;
@@ -201,6 +202,497 @@
     return null;
   }
 
+  function dispatchDirectiveNames() {
+    return ["volt-dispatch", "volt:dispatch"];
+  }
+
+  function onDirectiveNames() {
+    return ["volt-on", "volt:on"];
+  }
+
+  function parseDispatchDirectiveEvents(value) {
+    if (typeof value !== "string") {
+      return [];
+    }
+
+    return value
+      .split("|")
+      .map(function (entry) {
+        return entry.trim();
+      })
+      .filter(function (entry) {
+        return /^[A-Za-z][A-Za-z0-9:._-]*$/.test(entry);
+      });
+  }
+
+  function onDirectiveSelector() {
+    return "[volt-on], [volt\\:on]";
+  }
+
+  function normalizeOnDirectiveKeyFilter(key) {
+    const normalized = String(key || "").trim().toLowerCase();
+
+    if (normalized === "esc") {
+      return "escape";
+    }
+
+    if (normalized === "spacebar" || normalized === " ") {
+      return "space";
+    }
+
+    return normalized;
+  }
+
+  function onDirectiveOnceStore(element) {
+    if (!runtime.onDirectiveOnce.has(element)) {
+      runtime.onDirectiveOnce.set(element, new Set());
+    }
+
+    return runtime.onDirectiveOnce.get(element);
+  }
+
+  function onDirectiveActionValue(rawValue, event) {
+    const trimmed = typeof rawValue === "string" ? rawValue.trim() : "";
+
+    if (trimmed === "") {
+      return {
+        valid: false,
+        value: null,
+      };
+    }
+
+    if (trimmed === "$event.target.value") {
+      return {
+        valid: true,
+        value:
+          event && event.target && "value" in event.target
+            ? event.target.value
+            : undefined,
+      };
+    }
+
+    if (trimmed === "$event.target.checked") {
+      return {
+        valid: true,
+        value:
+          event && event.target && "checked" in event.target
+            ? !!event.target.checked
+            : undefined,
+      };
+    }
+
+    const stringLiteral = parseDirectiveStringLiteral(trimmed);
+
+    if (stringLiteral !== null) {
+      return {
+        valid: true,
+        value: stringLiteral,
+      };
+    }
+
+    if (/^(true|false)$/i.test(trimmed)) {
+      return {
+        valid: true,
+        value: trimmed.toLowerCase() === "true",
+      };
+    }
+
+    if (/^null$/i.test(trimmed)) {
+      return {
+        valid: true,
+        value: null,
+      };
+    }
+
+    if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+      return {
+        valid: true,
+        value: Number(trimmed),
+      };
+    }
+
+    return {
+      valid: false,
+      value: null,
+    };
+  }
+
+  function parseOnDirectiveEventSpec(rawValue) {
+    if (typeof rawValue !== "string" || rawValue.trim() === "") {
+      return null;
+    }
+
+    const segments = rawValue
+      .trim()
+      .split(".")
+      .map(function (segment) {
+        return segment.trim().toLowerCase();
+      })
+      .filter(function (segment) {
+        return segment !== "";
+      });
+
+    if (segments.length === 0) {
+      return null;
+    }
+
+    const eventName = segments[0];
+    const supportedEvents = [
+      "click",
+      "input",
+      "change",
+      "submit",
+      "focus",
+      "blur",
+      "keydown",
+      "keyup",
+    ];
+
+    if (supportedEvents.indexOf(eventName) === -1) {
+      return null;
+    }
+
+    const modifiers = {
+      prevent: false,
+      stop: false,
+      once: false,
+      self: false,
+    };
+    let keyFilter = null;
+
+    for (let index = 1; index < segments.length; index += 1) {
+      const segment = segments[index];
+
+      if (Object.prototype.hasOwnProperty.call(modifiers, segment)) {
+        modifiers[segment] = true;
+        continue;
+      }
+
+      if ((eventName === "keydown" || eventName === "keyup") && !keyFilter) {
+        keyFilter = normalizeOnDirectiveKeyFilter(segment);
+        continue;
+      }
+
+      return null;
+    }
+
+    return {
+      name: eventName,
+      modifiers: modifiers,
+      keyFilter: keyFilter,
+      raw: rawValue.trim(),
+    };
+  }
+
+  function parseOnDirectiveAction(rawValue) {
+    if (typeof rawValue !== "string" || rawValue.trim() === "") {
+      return null;
+    }
+
+    const trimmed = rawValue.trim();
+    const dispatchMatches = trimmed.match(/^dispatch:([A-Za-z][A-Za-z0-9:._-]*)$/);
+
+    if (dispatchMatches) {
+      return {
+        type: "dispatch",
+        name: dispatchMatches[1],
+        raw: trimmed,
+      };
+    }
+
+    const toggleMatches = trimmed.match(
+      /^state:toggle\s+(client|shared):([A-Za-z0-9_.-]+)$/i,
+    );
+
+    if (toggleMatches) {
+      return {
+        type: "toggle",
+        scope: normalizeRuntimeStateScope(toggleMatches[1]),
+        path: toggleMatches[2],
+        raw: trimmed,
+      };
+    }
+
+    const deleteMatches = trimmed.match(
+      /^state:delete\s+(client|shared):([A-Za-z0-9_.-]+)$/i,
+    );
+
+    if (deleteMatches) {
+      return {
+        type: "delete",
+        scope: normalizeRuntimeStateScope(deleteMatches[1]),
+        path: deleteMatches[2],
+        raw: trimmed,
+      };
+    }
+
+    const setMatches = trimmed.match(
+      /^state:set\s+(client|shared):([A-Za-z0-9_.-]+)\s*=\s*(.+)$/i,
+    );
+
+    if (setMatches) {
+      return {
+        type: "set",
+        scope: normalizeRuntimeStateScope(setMatches[1]),
+        path: setMatches[2],
+        valueExpression: setMatches[3].trim(),
+        raw: trimmed,
+      };
+    }
+
+    return null;
+  }
+
+  function parseOnDirectiveRule(value, index) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const separator = findTopLevelArrow(value);
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const eventSpec = parseOnDirectiveEventSpec(value.slice(0, separator).trim());
+    const action = parseOnDirectiveAction(value.slice(separator + 2).trim());
+
+    if (!eventSpec || !action) {
+      return null;
+    }
+
+    return {
+      key: String(index) + ":" + value.trim(),
+      event: eventSpec,
+      action: action,
+      raw: value.trim(),
+    };
+  }
+
+  function parseOnDirectiveRules(value) {
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry, index) {
+        return parseOnDirectiveRule(entry, index);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function dispatchDirectiveDisabled(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return true;
+    }
+
+    if ("disabled" in element && !!element.disabled) {
+      return true;
+    }
+
+    return (
+      (element.getAttribute("aria-disabled") || "").toLowerCase() === "true"
+    );
+  }
+
+  function dispatchDirectiveScopeId(root) {
+    if (!root || typeof root.getAttribute !== "function") {
+      return currentClientStateScope();
+    }
+
+    return (
+      root.getAttribute("data-volt-component") ||
+      root.getAttribute("data-volt-scope-id") ||
+      currentClientStateScope()
+    );
+  }
+
+  function dispatchDirectiveDetail(root, trigger, directive, originalEvent) {
+    return {
+      sourceElement: trigger,
+      directive: directive,
+      scopeId: dispatchDirectiveScopeId(root),
+      clientScope: currentClientStateScope(),
+      sharedScope: "shared",
+      component:
+        root && typeof root.getAttribute === "function"
+          ? root.getAttribute("data-volt-component") || null
+          : null,
+      originalEvent: originalEvent,
+    };
+  }
+
+  function emitNamedDispatchDirectiveEvent(
+    trigger,
+    root,
+    name,
+    directive,
+    originalEvent,
+  ) {
+    if (!trigger || !name || dispatchDirectiveDisabled(trigger)) {
+      return false;
+    }
+
+    trigger.dispatchEvent(
+      new CustomEvent(name, {
+        detail: dispatchDirectiveDetail(
+          root,
+          trigger,
+          directive || "dispatch:" + name,
+          originalEvent,
+        ),
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    return true;
+  }
+
+  function emitDispatchDirective(trigger, root, directiveAttributeValue, event) {
+    const events = parseDispatchDirectiveEvents(directiveAttributeValue);
+
+    if (!trigger || events.length === 0 || dispatchDirectiveDisabled(trigger)) {
+      return false;
+    }
+
+    const detail = dispatchDirectiveDetail(
+      root,
+      trigger,
+      directiveAttributeValue,
+      event,
+    );
+
+    events.forEach(function (name) {
+      trigger.dispatchEvent(
+        new CustomEvent(name, {
+          detail: detail,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    return true;
+  }
+
+  function matchesOnDirectiveEvent(rule, eventName, event) {
+    if (!rule || !rule.event || rule.event.name !== eventName) {
+      return false;
+    }
+
+    if (
+      (eventName === "keydown" || eventName === "keyup") &&
+      rule.event.keyFilter
+    ) {
+      return (
+        normalizeOnDirectiveKeyFilter(event && event.key) ===
+        rule.event.keyFilter
+      );
+    }
+
+    return true;
+  }
+
+  function runOnDirectiveAction(rule, trigger, root, event) {
+    if (!rule || !rule.action) {
+      return false;
+    }
+
+    if (rule.action.type === "dispatch") {
+      return emitNamedDispatchDirectiveEvent(
+        trigger,
+        root,
+        rule.action.name,
+        "volt:on=" + rule.raw,
+        event,
+      );
+    }
+
+    if (rule.action.type === "set") {
+      const resolved = onDirectiveActionValue(rule.action.valueExpression, event);
+
+      if (!resolved.valid) {
+        return false;
+      }
+
+      setRuntimeStateValue(rule.action.path, resolved.value, {
+        scope: rule.action.scope,
+        action: "directive:on:set",
+      });
+      return true;
+    }
+
+    if (rule.action.type === "toggle") {
+      const current = getRuntimeStateValue(rule.action.path, {
+        scope: rule.action.scope,
+        fallback: false,
+      });
+      setRuntimeStateValue(rule.action.path, !current, {
+        scope: rule.action.scope,
+        action: "directive:on:toggle",
+      });
+      return true;
+    }
+
+    if (rule.action.type === "delete") {
+      return deleteRuntimeStateValue(rule.action.path, {
+        scope: rule.action.scope,
+      });
+    }
+
+    return false;
+  }
+
+  function handleOnDirectiveEvent(eventName, event) {
+    const trigger = closestFromEventTarget(event, onDirectiveSelector());
+
+    if (!trigger) {
+      return false;
+    }
+
+    const rules = parseOnDirectiveRules(directiveValue(trigger, onDirectiveNames()));
+
+    if (rules.length === 0) {
+      return false;
+    }
+
+    const root = findRoot(trigger);
+    let handled = false;
+
+    rules.forEach(function (rule) {
+      if (!matchesOnDirectiveEvent(rule, eventName, event)) {
+        return;
+      }
+
+      if (rule.event.modifiers.self && event.target !== trigger) {
+        return;
+      }
+
+      const onceStore = onDirectiveOnceStore(trigger);
+
+      if (rule.event.modifiers.once && onceStore.has(rule.key)) {
+        return;
+      }
+
+      if (rule.event.modifiers.prevent && event.cancelable) {
+        event.preventDefault();
+      }
+
+      if (rule.event.modifiers.stop) {
+        event.stopPropagation();
+      }
+
+      if (runOnDirectiveAction(rule, trigger, root, event)) {
+        handled = true;
+
+        if (rule.event.modifiers.once) {
+          onceStore.add(rule.key);
+        }
+      }
+    });
+
+    return handled;
+  }
+
   function normalizeNavigationUrl(url) {
     try {
       return new URL(url, window.location.href).toString();
@@ -355,27 +847,31 @@
       };
     }
 
-    const stateKey = segments.shift();
+    for (let length = segments.length; length >= 1; length -= 1) {
+      const stateKey = segments.slice(0, length).join(".");
 
-    if (
-      !hasRuntimeStateValue(stateKey, {
+      if (
+        !hasRuntimeStateValue(stateKey, {
+          scope: scope,
+        })
+      ) {
+        continue;
+      }
+
+      const value = getRuntimeStateValue(stateKey, {
         scope: scope,
-      })
-    ) {
+      });
+      const nested = resolveValueBySegments(value, segments.slice(length));
+
       return {
-        found: false,
-        value: null,
+        found: nested.found,
+        value: nested.found ? cloneStateValue(nested.value) : null,
       };
     }
 
-    let value = getRuntimeStateValue(stateKey, {
-      scope: scope,
-    });
-    const nested = resolveValueBySegments(value, segments);
-
     return {
-      found: nested.found,
-      value: nested.found ? cloneStateValue(nested.value) : null,
+      found: false,
+      value: null,
     };
   }
 
@@ -2061,12 +2557,13 @@
 
     collectElementsWithDirectiveAttributes(root, showDirectiveNames()).forEach(
       function (element) {
+        const directive = directiveValue(element, showDirectiveNames());
+        const active = resolveStoreDirectiveActive(directive);
+
         applyDirectiveVisibility(
           element,
           "show",
-          resolveStoreDirectiveActive(
-            directiveValue(element, showDirectiveNames()),
-          ),
+          active,
           false,
         );
       },
@@ -2094,9 +2591,8 @@
 
     collectElementsWithDirectiveAttributes(root, textDirectiveNames()).forEach(
       function (element) {
-        const result = resolveStoreDirectiveValue(
-          directiveValue(element, textDirectiveNames()),
-        );
+        const directive = directiveValue(element, textDirectiveNames());
+        const result = resolveStoreDirectiveValue(directive);
         element.textContent = result.found
           ? formatStoreDirectiveTextValue(result.value)
           : "";
@@ -5124,11 +5620,11 @@
   }
 
   function syncAllRuntimeStateDirectives() {
-    document
-      .querySelectorAll('[data-volt-root="true"]')
-      .forEach(function (root) {
-        syncRuntimeStateDirectives(root);
-      });
+    const roots = document.querySelectorAll('[data-volt-root="true"]');
+
+    roots.forEach(function (root) {
+      syncRuntimeStateDirectives(root);
+    });
   }
 
   function elementIndex(elements, target) {
@@ -7880,6 +8376,8 @@
   }
 
   document.addEventListener("input", function (event) {
+    handleOnDirectiveEvent("input", event);
+
     const element = closestFromEventTarget(event, "input, textarea, select");
 
     if (!element) {
@@ -7913,6 +8411,8 @@
   });
 
   document.addEventListener("click", function (event) {
+    handleOnDirectiveEvent("click", event);
+
     const actionTrigger = closestFromEventTarget(
       event,
       "[volt-click], [volt\\:click]",
@@ -7942,6 +8442,20 @@
       });
 
       return;
+    }
+
+    const dispatchTrigger = closestFromEventTarget(
+      event,
+      "[volt-dispatch], [volt\\:dispatch]",
+    );
+
+    if (dispatchTrigger) {
+      emitDispatchDirective(
+        dispatchTrigger,
+        findRoot(dispatchTrigger),
+        directiveValue(dispatchTrigger, dispatchDirectiveNames()),
+        event,
+      );
     }
 
     const navigationTrigger = closestFromEventTarget(
@@ -8032,6 +8546,8 @@
   );
 
   document.addEventListener("focusin", function (event) {
+    handleOnDirectiveEvent("focus", event);
+
     const navigationTrigger = closestFromEventTarget(
       event,
       NAVIGATION_PREFETCH_SELECTOR,
@@ -8083,6 +8599,8 @@
   );
 
   document.addEventListener("focusout", function (event) {
+    handleOnDirectiveEvent("blur", event);
+
     const navigationTrigger = closestFromEventTarget(
       event,
       NAVIGATION_PREFETCH_SELECTOR,
@@ -8096,6 +8614,8 @@
   });
 
   document.addEventListener("submit", function (event) {
+    handleOnDirectiveEvent("submit", event);
+
     const form = closestFromEventTarget(
       event,
       "form[volt-submit], form[volt\\:submit]",
@@ -8122,6 +8642,18 @@
     ).catch(function (error) {
       console.error("VoltStack runtime error:", error);
     });
+  });
+
+  document.addEventListener("change", function (event) {
+    handleOnDirectiveEvent("change", event);
+  });
+
+  document.addEventListener("keydown", function (event) {
+    handleOnDirectiveEvent("keydown", event);
+  });
+
+  document.addEventListener("keyup", function (event) {
+    handleOnDirectiveEvent("keyup", event);
   });
 
   window.addEventListener("popstate", function () {
