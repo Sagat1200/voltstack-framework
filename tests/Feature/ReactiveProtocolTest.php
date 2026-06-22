@@ -14,6 +14,7 @@ use VoltStack\Runtime\Component\Component;
 use VoltStack\Runtime\Component\ComponentManager;
 use VoltStack\Runtime\Protocol\ActionEffectOptions;
 use VoltStack\Runtime\Protocol\ActionRuntimePolicyBuilder;
+use VoltStack\Runtime\Protocol\HtmlTargetEffectDiffer;
 
 final class ReactiveProtocolTest extends TestCase
 {
@@ -153,6 +154,43 @@ final class ReactiveProtocolTest extends TestCase
         self::assertStringContainsString('Saved: saved-from-submit', $payload['html']);
     }
 
+    public function test_it_allows_internal_sync_requests_to_apply_updates_without_a_public_action(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveInternalSyncComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveInternalSyncComponent::class,
+                'action' => '__volt_sync__',
+                'params' => [],
+                'updates' => [
+                    'title' => 'Synced from runtime',
+                ],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('__volt_sync__', $payload['meta']['action']);
+        self::assertSame('Synced from runtime', $payload['snapshot']['state']['title']);
+        self::assertCount(1, $payload['effects']);
+        self::assertSame('text.update', $payload['effects'][0]['type']);
+        self::assertSame('sync-title', $payload['effects'][0]['target']);
+        self::assertSame('Mirror: Synced from runtime', $payload['effects'][0]['value']);
+        self::assertStringContainsString('Synced from runtime', $payload['html']);
+    }
+
     public function test_it_returns_a_navigation_effect_when_the_action_redirects(): void
     {
         $app = new Application(sys_get_temp_dir());
@@ -216,6 +254,53 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('text.update', $payload['effects'][1]['type']);
         self::assertSame('counter-value', $payload['effects'][1]['target']);
         self::assertSame('1', $payload['effects'][1]['value']);
+    }
+
+    public function test_it_returns_targeted_effects_for_full_document_html_changes(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveDocumentTargetedComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveDocumentTargetedComponent::class,
+                'action' => 'rename',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertCount(1, $payload['effects']);
+        self::assertSame('text.update', $payload['effects'][0]['type']);
+        self::assertSame('doc-title', $payload['effects'][0]['target']);
+        self::assertSame('Renamed', $payload['effects'][0]['value']);
+    }
+
+    public function test_it_returns_targeted_effects_for_wrapped_root_with_full_document_html_changes(): void
+    {
+        $differ = new HtmlTargetEffectDiffer();
+
+        $previous = '<div data-volt-root="true"><!DOCTYPE html><html><head><title>Demo</title></head><body><main><span data-volt-target="doc-title">Initial</span></main></body></html></div>';
+        $next = '<div data-volt-root="true"><!DOCTYPE html><html><head><title>Demo</title></head><body><main><span data-volt-target="doc-title">Renamed</span></main></body></html></div>';
+
+        $effects = $differ->diff($previous, $next);
+
+        self::assertIsArray($effects);
+        self::assertCount(1, $effects);
+        self::assertSame('text.update', $effects[0]['type']);
+        self::assertSame('doc-title', $effects[0]['target']);
+        self::assertSame('Renamed', $effects[0]['value']);
     }
 
     public function test_it_returns_class_and_style_effects_for_semantic_target_changes(): void
@@ -734,6 +819,19 @@ final class TestReactiveRedirectComponent extends Component
     }
 }
 
+final class TestReactiveInternalSyncComponent extends Component
+{
+    public string $title = 'Initial title';
+
+    public function render(): string
+    {
+        return sprintf(
+            '<div data-volt-target="sync-title">Mirror: %s</div>',
+            e($this->title),
+        );
+    }
+}
+
 final class TestReactiveTargetedComponent extends Component
 {
     public int $count = 0;
@@ -752,6 +850,24 @@ final class TestReactiveTargetedComponent extends Component
             '<div><span data-volt-target="counter-value">%d</span><button data-volt-target="action-button" type="button"%s>Increment</button></div>',
             $this->count,
             $this->locked ? ' disabled' : '',
+        );
+    }
+}
+
+final class TestReactiveDocumentTargetedComponent extends Component
+{
+    public string $title = 'Initial';
+
+    public function rename(): void
+    {
+        $this->title = 'Renamed';
+    }
+
+    public function render(): string
+    {
+        return sprintf(
+            '<!DOCTYPE html><html><head><title>Demo</title></head><body><main><span data-volt-target="doc-title">%s</span></main></body></html>',
+            e($this->title),
         );
     }
 }

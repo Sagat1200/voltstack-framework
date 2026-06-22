@@ -137,9 +137,9 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 ### 7. Directives System
 
 - `[x]` `volt:html`
-- `[ ]` `volt:bind`
-- `[ ]` `volt:model.local`
-- `[ ]` `volt:model.sync`
+- `[x]` `volt:bind`
+- `[x]` `volt:model.local`
+- `[x]` `volt:model.sync`
 - `[x]` `volt:on`
 - `[x]` `volt:dispatch`
 - `[x]` `volt:focus`
@@ -336,11 +336,16 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` MVP de `volt:on` con `state:set`, `state:toggle`, `state:delete`, `dispatch:*` y modificadores `prevent`, `stop`, `once`, `self`
 - `[x]` MVP de `volt:dispatch` con eventos simples, multiples y convivencia con `volt:on` en `/runtimeEvents`
 - `[x]` MVP de `volt:html` con reemplazo completo de `innerHTML` y reescaneo del subarbol inyectado
+- `[x]` MVP de `volt:bind` con reflejo DOM <- state y restauracion de baseline por propiedad
+- `[x]` MVP de `volt:model.local` con binding bidireccional solo contra `window.Volt.state`
+- `[x]` MVP de `volt:model.sync` con actualizacion optimista del store, debounce fijo y sync backend via accion interna `__volt_sync__`
 - `[x]` MVP de `volt:focus` y `volt:autofocus.when` con enfoque reactivo por transicion `false -> true`
 - `[x]` MVP de `volt:portal` con movimiento real del nodo hacia targets globales del layout
 - `[-]` `volt:preserve` disponible como preserve opt-in de fragmentos top-level; `volt:persist` ya arranco como capa independiente sobre esa base
 - `[-]` MVP inicial de `volt:persist` montado sobre la base de `fragment cache SPA`, con registro runtime propio entre navegaciones
 - `[x]` demos `/runtimeHtml` y `/runtimeHtmlAlt` para validar contenido `client/shared`, reemplazo de subarbol y reactivacion de directivas internas
+- `[x]` demos `/runtimeBind` y `/runtimeBindAlt` para validar `value`, `checked`, `disabled`, `href`, `src`, `title` y `placeholder`
+- `[x]` demos `/runtimeModelLocal` y `/runtimeModelLocalAlt` para validar input, textarea, checkbox y select sin roundtrip backend
 - `[x]` demos `/runtimeFocus` y `/runtimeFocusAlt` para validar foco reactivo y autofocus en navegacion SPA
 - `[x]` demos `/runtimePortal` y `/runtimePortalAlt` para validar banner, modal y drawer portalizados
 - `[x]` demos `/runtimePersist`, `/runtimePersistBridge` y `/runtimePersistAlt` para validar origen, pantalla intermedia sin target y reinyeccion final
@@ -1035,14 +1040,15 @@ Rutas demo actuales:
 - `/runtimeHtml`: origen para probar preview HTML desde `client/shared state`, incluyendo contenido enriquecido y bloques con directivas internas
 - `/runtimeHtmlAlt`: destino para validar reinicio de contenido `client`, persistencia de `shared` y reactivacion del subarbol tras navegacion SPA
 
-## Contrato Propuesto: Volt Bind
+## Contrato Actual: Volt Bind
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` MVP inicial implementado en runtime
+- `[x]` demo dedicada creada en el skeleton
+- `[-]` pendiente validacion manual fina de comportamiento en navegador
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <input volt:bind:value="client:draft.note">
@@ -1052,16 +1058,17 @@ Declaracion propuesta:
 <img volt:bind:src="shared:media.previewUrl">
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `volt:bind:propiedad="origen"`
 - `propiedad` es el nombre de una propiedad DOM o de un atributo reflejado como `value`, `checked`, `disabled`, `hidden`, `href`, `src`, `title`
-- `origen` acepta una ref simple `client:path` o `shared:path`
+- el MVP actual acepta `volt:bind:propiedad`, `volt-bind-propiedad` y `data-volt-bind-propiedad`
+- `origen` reutiliza el resolvedor base de contenido del runtime
 - el `path` usa notacion con punto como `draft.note`, `ui.enabled` o `media.previewUrl`
 - un mismo nodo puede declarar multiples bindings en atributos distintos, por ejemplo `volt:bind:value` y `volt:bind:disabled`
 - cada binding es independiente y se resincroniza por separado
 
-Reglas propuestas:
+Reglas actuales:
 
 - `volt:bind` es una directiva de lectura DOM <- state; no escribe al store por si sola
 - al montar o resincronizar el DOM, el runtime resuelve la ref y actualiza la propiedad destino
@@ -1074,24 +1081,24 @@ Reglas propuestas:
 - `checked`, `disabled`, `hidden`, `required` y `readonly` usan `false` como valor por defecto
 - `href`, `src`, `title` y otras propiedades textuales eliminan el atributo reflejado si no habia valor inicial o restauran el original si existia
 - si el nodo ya tenia un valor inicial renderizado por servidor, el runtime lo considera baseline para restauracion cuando el binding queda vacio
-- una declaracion invalida no rompe otros bindings del nodo; el runtime la ignora y emite warning en modo debug
+- una declaracion invalida no rompe otros bindings del nodo; el runtime la ignora
 
-Semantica propuesta por tipo de propiedad:
+Semantica actual por tipo de propiedad:
 
 - `value`: escribe sobre `element.value` sin disparar eventos sinteticos
 - `checked`: escribe sobre `element.checked`
 - `disabled`, `hidden`, `required`, `readonly`: escriben sobre la propiedad booleana y mantienen consistente el atributo reflejado
 - `href`, `src`, `title`, `id`, `name`, `placeholder`: escriben sobre la propiedad si existe y sincronizan el atributo reflejado cuando aplique
-- si una propiedad no existe en el elemento destino, el runtime puede caer a `setAttribute` solo para esta primera version
+- si una propiedad no existe en el elemento destino, el runtime cae a `setAttribute` en este MVP
 
-Semantica propuesta de tipos:
+Semantica actual de tipos:
 
 - strings se escriben tal cual
 - numeros se convierten con `String(valor)` para propiedades textuales
 - booleanos se escriben solo en propiedades booleanas; en propiedades textuales se convierten a `true` o `false`
 - objetos o arreglos no son un target valido del MVP; el runtime los serializa con `JSON.stringify` solo como fallback documental
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - `volt:bind` no reemplaza en el MVP a `volt:text`, `volt:attr`, `volt:class`, `volt:style` ni `volt:model`
 - `volt:text` sigue siendo la opcion declarativa para `textContent`
@@ -1099,15 +1106,15 @@ Interaccion propuesta con otras directivas:
 - `volt:model` sigue siendo la opcion bidireccional o sincronizada con backend
 - `volt:bind` cubre el caso directo y uniforme de reflejar state en propiedades DOM
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales del MVP:
 
-- no soporta todavia expresiones compuestas, `??` ni comparaciones; solo refs simples
+- aunque el contrato objetivo es simple, el MVP actual reutiliza el resolvedor base del runtime
 - no soporta modificadores tipo `.number`, `.trim` o `.lazy`
 - no escribe al store; para eso siguen existiendo `volt:model` o `volt:on`
 - no hace diff profundo de objetos ni bindings a subpropiedades complejas del DOM
 - no resuelve todavia `style`, `class` o `dataset` como namespaces especiales dentro de `volt:bind`
 
-Rutas demo sugeridas:
+Rutas demo actuales:
 
 - `/runtimeBind`: origen para probar `value`, `checked`, `disabled`, `href` y `src` desde `client/shared state`
 - `/runtimeBindAlt`: destino para validar restauracion de baseline y reinicio de `client scope` en navegacion SPA
@@ -1496,14 +1503,15 @@ Rutas demo actuales:
 - `/runtimePersistBridge`: pantalla intermedia sin targets persistidos para comprobar que el registro sobrevive fuera del DOM visible
 - `/runtimePersistAlt`: destino final para validar reinyeccion real de la instancia viva tras una pantalla intermedia
 
-## Contrato Propuesto: Volt Model Local
+## Contrato Actual: Volt Model Local
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` MVP inicial implementado en runtime
+- `[x]` demo dedicada creada en el skeleton
+- `[-]` pendiente validacion manual fina de comportamiento en navegador
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <input volt:model.local="client:draft.note">
@@ -1512,15 +1520,16 @@ Declaracion propuesta:
 <select volt:model.local="shared:filters.category"></select>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `volt:model.local="origen"`
 - `origen` acepta una ref simple `client:path` o `shared:path`
 - el `path` usa notacion con punto como `draft.note`, `draft.body`, `ui.enabled` o `filters.category`
 - el binding es bidireccional entre control DOM y `window.Volt.state`, pero solo en el runtime frontend
 - cada control puede declarar una sola directiva `volt:model.local`
+- el MVP actual acepta `volt:model.local`, `volt-model-local` y `data-volt-model-local`
 
-Reglas propuestas:
+Reglas actuales:
 
 - al montar el nodo, el runtime lee el valor actual del store y lo refleja en el control correspondiente
 - cuando el usuario modifica el control, el runtime escribe el nuevo valor inmediatamente en `window.Volt.state`
@@ -1530,42 +1539,44 @@ Reglas propuestas:
 - al cambiar `window.Volt.state` por otras vias, el control vuelve a resincronizarse con el valor actual del store
 - esta directiva no dispara roundtrip al backend por si sola
 - al aplicar effects o navegar por SPA, el runtime vuelve a enlazar correctamente el control si sigue existiendo
-- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora y emite warning en modo debug
+- cuando el path aun no existe, el control conserva su baseline SSR hasta que llegue un valor desde state o desde la propia interaccion del usuario
+- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora
 
-Semantica propuesta:
+Semantica actual:
 
 - `volt:model.local` es la opcion para formularios puramente frontend o borradores temporales
 - la fuente de verdad durante la interaccion es `window.Volt.state`
 - si el path no existe, el runtime puede inicializarlo con el primer valor emitido por el control
 - el valor queda disponible inmediatamente para `volt:text`, `volt:show`, `volt:bind`, `volt:on` y otras directivas runtime
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - con `volt:text`, `volt:bind` o `volt:show`, los cambios del usuario deben reflejarse sin roundtrip
 - con `volt:focus`, el reenfoque no debe romper el valor local del control
 - con `volt:submit`, el formulario puede enviar despues el state local acumulado si el componente decide leerlo
 - con `volt:model.sync`, no deben coexistir ambas directivas en el mismo nodo
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales del MVP:
 
 - no soporta todavia modificadores como `.trim`, `.number`, `.lazy` o `.debounce`
 - no resuelve todavia colecciones complejas, arrays de checkboxes ni archivos
 - no sincroniza automaticamente con backend
 - no implementa validacion declarativa propia; depende de otras capas
 
-Rutas demo sugeridas:
+Rutas demo actuales:
 
 - `/runtimeModelLocal`: origen para probar inputs, textarea, checkbox y select ligados solo al store frontend
 - `/runtimeModelLocalAlt`: destino para validar reinicio de `client scope`, persistencia de `shared` y resincronizacion SPA
 
-## Contrato Propuesto: Volt Model Sync
+## Contrato Actual: Volt Model Sync
 
 Estado actual:
 
-- `[ ]` contrato tecnico redactado
-- `[ ]` implementacion runtime pendiente
+- `[x]` MVP inicial implementado en runtime
+- `[x]` demos dedicadas creadas en el skeleton
+- `[-]` pendiente validacion manual fina de comportamiento en navegador
 
-Declaracion propuesta:
+Declaracion actual:
 
 ```html
 <input volt:model.sync="client:draft.note">
@@ -1573,46 +1584,53 @@ Declaracion propuesta:
 <select volt:model.sync="shared:filters.category"></select>
 ```
 
-Gramatica propuesta:
+Gramatica actual:
 
 - formato base: `volt:model.sync="origen"`
 - `origen` acepta una ref simple `client:path` o `shared:path`
 - el `path` usa notacion con punto como `draft.note`, `draft.body` o `filters.category`
 - el binding es bidireccional: actualiza `window.Volt.state` y ademas agenda sincronizacion con backend segun la politica del runtime
 - cada control puede declarar una sola directiva `volt:model.sync`
+- el MVP actual acepta `volt:model.sync`, `volt-model-sync` y `data-volt-model-sync`
 
-Reglas propuestas:
+Reglas actuales:
 
 - al montar el nodo, el runtime refleja el valor actual del store en el control
 - cuando el usuario modifica el control, el runtime actualiza primero `window.Volt.state`
 - despues de actualizar el state local, el runtime agenda una sincronizacion con backend para el path afectado
-- la politica exacta de envio del MVP puede ser inmediata o con debounce fijo documental, pero debe ser consistente
-- si hay una sincronizacion en vuelo para el mismo nodo o path, el runtime puede colapsar cambios intermedios y quedarse con el ultimo valor conocido
+- la politica actual del MVP usa un debounce fijo de `220ms`
+- la sincronizacion backend se envia mediante la accion interna `__volt_sync__`, sin exigir un metodo publico del componente por campo
+- para el destino backend, el MVP usa primero las reglas declaradas en `data-volt-state-sync`, `volt-state-sync` o `volt:state-sync`
+- si no hay reglas explicitas de `state-sync`, el runtime usa el atributo `name` del control como fallback hacia `updates.<name>`
+- opcionalmente, el campo puede declarar `data-volt-model-sync-update`, `volt-model-sync-update` o `volt:model.sync.update` para definir el nombre exacto del update backend sin depender de `name`
+- si hay una sincronizacion pendiente del mismo control, el runtime colapsa el timer anterior y conserva solo el ultimo valor conocido
 - al recibir respuesta backend, el runtime resincroniza snapshot, state y UI con el valor confirmado
-- si la sincronizacion falla, el runtime puede mantener el valor local optimista y exponer el error a las capas `volt:error` o estado equivalente
-- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora y emite warning en modo debug
+- si la sincronizacion falla, el runtime conserva el valor local optimista y expone el error a las capas `volt:error` o estado equivalente
+- una declaracion invalida no rompe otras directivas del nodo; el runtime la ignora
 
-Semantica propuesta:
+Semantica actual:
 
 - `volt:model.sync` es la opcion para campos que deben sentirse reactivos pero tambien vivir respaldados por el backend
 - el usuario percibe actualizacion local inmediata, pero el sistema conserva una ruta clara de confirmacion server-driven
 - el store local actua como estado optimista hasta que llega la respuesta del backend
 
-Interaccion propuesta con otras directivas:
+Interaccion actual con otras directivas:
 
 - con `volt:dirty`, el cambio local debe marcar el control o formulario como sucio antes de la confirmacion del backend
 - con `volt:success` y `volt:error`, la respuesta de la sincronizacion puede alimentar feedback visual
 - con `volt:submit`, un formulario puede mezclar `model.sync` y submit explicito, pero el contrato debe evitar dobles envios accidentales
 - con `volt:model.local`, no deben coexistir ambas directivas en el mismo nodo
+- con `data-volt-state-sync`, un mismo control puede mapear el valor optimista a `params` o `updates` del protocolo reactivo existente
 
-Limitaciones propuestas del MVP:
+Limitaciones actuales del MVP:
 
 - no soporta todavia politicas configurables como `.lazy`, `.blur`, `.debounce(300)` o `.defer`
 - no soporta todavia uploads, archivos ni estructuras complejas
 - no resuelve conflictos avanzados entre valor optimista local y respuesta server si cambia el mismo campo desde otra fuente concurrente
+- aborta la request reactiva anterior del mismo componente cuando entra una nueva sincronizacion, igual que otras acciones del runtime
 - depende de una capa de transporte reactivo ya estable para funcionar bien
 
-Rutas demo sugeridas:
+Rutas demo actuales:
 
 - `/runtimeModelSync`: origen para probar sincronizacion optimista de inputs y selects con feedback visual
 - `/runtimeModelSyncAlt`: destino para validar resincronizacion, errores y comportamiento tras navegacion SPA

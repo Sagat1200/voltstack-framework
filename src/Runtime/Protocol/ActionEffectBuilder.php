@@ -39,6 +39,10 @@ final class ActionEffectBuilder
             return $this->finalizeEffects($effects, $options);
         }
 
+        if ($previousHtml === $nextHtml) {
+            return $this->finalizeEffects([], $options);
+        }
+
         return $this->finalizeEffects([[
             'type' => 'html.replace',
             'target' => 'root',

@@ -14,6 +14,8 @@ use VoltStack\Runtime\Component\ComponentManager;
 
 final class ProtocolController extends Controller
 {
+    private const INTERNAL_SYNC_ACTION = '__volt_sync__';
+
     public function __construct(
         private readonly ComponentManager $components,
         private readonly Validator $validator,
@@ -41,12 +43,21 @@ final class ProtocolController extends Controller
             $request,
         );
 
-        $this->components->applyUpdates($component, $payload->updates());
-        $previousSnapshot = $this->components->dehydrate($component, [
-            'action' => $payload->action(),
-        ]);
-        $previousHtml = $this->components->renderRoot($component, $previousSnapshot);
-        $actionResult = $this->components->callAction($component, $payload->action(), $payload->params(), $request);
+        if ($payload->action() === self::INTERNAL_SYNC_ACTION) {
+            $previousSnapshot = $this->components->dehydrate($component, [
+                'action' => $payload->action(),
+            ]);
+            $previousHtml = $this->components->renderRoot($component, $previousSnapshot);
+            $this->components->applyUpdates($component, $payload->updates());
+            $actionResult = null;
+        } else {
+            $this->components->applyUpdates($component, $payload->updates());
+            $previousSnapshot = $this->components->dehydrate($component, [
+                'action' => $payload->action(),
+            ]);
+            $previousHtml = $this->components->renderRoot($component, $previousSnapshot);
+            $actionResult = $this->components->callAction($component, $payload->action(), $payload->params(), $request);
+        }
 
         $snapshot = $this->components->dehydrate($component, [
             'action' => $payload->action(),

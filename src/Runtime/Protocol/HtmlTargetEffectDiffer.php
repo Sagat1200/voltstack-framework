@@ -52,10 +52,9 @@ final class HtmlTargetEffectDiffer
     private function extractTargets(string $html): ?array
     {
         $document = new DOMDocument('1.0', 'UTF-8');
-        $wrappedHtml = '<!DOCTYPE html><html><body>' . $html . '</body></html>';
 
         $previous = libxml_use_internal_errors(true);
-        $loaded = $document->loadHTML($wrappedHtml, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $loaded = $document->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 

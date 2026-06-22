@@ -21,6 +21,7 @@
     successMinClearDelays: new Map(),
     errorTimeouts: new Map(),
     dirtyDebounces: new Map(),
+    modelSyncDebounces: new WeakMap(),
     clientStateScope: null,
     clientStateValues: new Map(),
     sharedStateValues: new Map(),
@@ -36,6 +37,8 @@
   const NAVIGATION_CACHE_MAX_ENTRIES = 10;
   const NAVIGATION_HEURISTIC_DELAY = 180;
   const NAVIGATION_HEURISTIC_VIEWPORT_MARGIN = 240;
+  const MODEL_SYNC_INTERNAL_ACTION = "__volt_sync__";
+  const MODEL_SYNC_DEBOUNCE = 220;
   const NAVIGATION_PREFETCH_SELECTOR =
     "a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]";
   const NAVIGATION_CACHE_CONTROL_META_NAMES = [
@@ -1226,6 +1229,26 @@
     return storeDirectiveNames("html", suffix);
   }
 
+  function bindDirectiveNames() {
+    return ["volt:bind", "volt-bind", "data-volt-bind"];
+  }
+
+  function modelLocalDirectiveNames() {
+    return [
+      "volt:model.local",
+      "volt-model-local",
+      "data-volt-model-local",
+    ];
+  }
+
+  function modelSyncDirectiveNames() {
+    return [
+      "volt:model.sync",
+      "volt-model-sync",
+      "data-volt-model-sync",
+    ];
+  }
+
   function portalDirectiveNames() {
     return storeDirectiveNames("portal");
   }
@@ -2137,6 +2160,148 @@
     }
   }
 
+  function formatBindDirectiveValue(value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
+    }
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  function valuesAreSame(left, right) {
+    if (left === right) {
+      return true;
+    }
+
+    if (
+      typeof left === "number" &&
+      typeof right === "number" &&
+      Number.isNaN(left) &&
+      Number.isNaN(right)
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function normalizeBindDirectivePropertyName(name) {
+    if (typeof name !== "string" || name.trim() === "") {
+      return null;
+    }
+
+    const normalized = name
+      .trim()
+      .replace(/-([a-z])/g, function (_, character) {
+        return character.toUpperCase();
+      });
+
+    if (normalized.toLowerCase() === "readonly") {
+      return "readOnly";
+    }
+
+    return normalized;
+  }
+
+  function bindDirectiveReflectAttributeName(propertyName, rawName) {
+    if (typeof rawName === "string" && rawName.trim() !== "") {
+      return rawName
+        .trim()
+        .replace(/[A-Z]/g, function (character) {
+          return "-" + character.toLowerCase();
+        })
+        .toLowerCase();
+    }
+
+    if (typeof propertyName !== "string" || propertyName === "") {
+      return null;
+    }
+
+    return propertyName
+      .replace(/[A-Z]/g, function (character) {
+        return "-" + character.toLowerCase();
+      })
+      .toLowerCase();
+  }
+
+  function isBooleanBindDirectiveProperty(propertyName) {
+    return [
+      "checked",
+      "disabled",
+      "hidden",
+      "required",
+      "readOnly",
+      "selected",
+    ].indexOf(propertyName) !== -1;
+  }
+
+  function bindDirectiveEntries(element) {
+    if (!element || !element.attributes) {
+      return [];
+    }
+
+    return Array.from(element.attributes)
+      .map(function (attribute) {
+        const name = attribute && attribute.name ? attribute.name : "";
+        let match = name.match(/^volt:bind:([A-Za-z0-9_-]+)$/);
+
+        if (!match) {
+          match = name.match(/^volt-bind-([A-Za-z0-9_-]+)$/);
+        }
+
+        if (!match) {
+          match = name.match(/^data-volt-bind-([A-Za-z0-9_-]+)$/);
+        }
+
+        if (!match) {
+          return null;
+        }
+
+        const rawProperty = match[1];
+        const propertyName = normalizeBindDirectivePropertyName(rawProperty);
+
+        if (!propertyName) {
+          return null;
+        }
+
+        return {
+          attributeName: name,
+          rawProperty: rawProperty,
+          propertyName: propertyName,
+          expression: attribute.value || "",
+          reflectAttributeName: bindDirectiveReflectAttributeName(
+            propertyName,
+            rawProperty,
+          ),
+        };
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function parseModelLocalDirectiveValue(value) {
+    const expression = parseStoreDirectiveExpression(value);
+
+    if (!expression || expression.negate) {
+      return null;
+    }
+
+    return expression;
+  }
+
   function isDirectiveFocusableElement(element) {
     if (
       !element ||
@@ -2200,6 +2365,473 @@
     }
 
     return store.html;
+  }
+
+  function bindDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.bindings) {
+      store.bindings = {};
+    }
+
+    return store.bindings;
+  }
+
+  function modelLocalDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.modelLocal) {
+      store.modelLocal = {
+        baselineCaptured: false,
+        value: null,
+        checked: false,
+        selected: false,
+      };
+    }
+
+    return store.modelLocal;
+  }
+
+  function ensureModelLocalBaseline(element) {
+    const state = modelLocalDirectiveState(element);
+
+    if (state.baselineCaptured) {
+      return state;
+    }
+
+    state.baselineCaptured = true;
+    state.value = "value" in element ? element.value : null;
+    state.checked = "checked" in element ? !!element.checked : false;
+    state.selected = "selected" in element ? !!element.selected : false;
+    return state;
+  }
+
+  function modelLocalDirectiveValue(element) {
+    return directiveValue(element, modelLocalDirectiveNames());
+  }
+
+  function parseModelSyncDirectiveValue(value) {
+    return parseModelLocalDirectiveValue(value);
+  }
+
+  function modelSyncDirectiveValue(element) {
+    return directiveValue(element, modelSyncDirectiveNames());
+  }
+
+  function modelSyncUpdateField(element) {
+    const explicit = directiveValue(element, [
+      "data-volt-model-sync-update",
+      "volt-model-sync-update",
+      "volt:model.sync.update",
+    ]);
+
+    if (typeof explicit === "string" && explicit.trim() !== "") {
+      return explicit.trim();
+    }
+
+    const name = element && element.getAttribute ? element.getAttribute("name") : null;
+
+    return typeof name === "string" && name.trim() !== "" ? name.trim() : null;
+  }
+
+  function clearModelSyncDirectiveDebounce(element) {
+    if (!element || !runtime.modelSyncDebounces.has(element)) {
+      return;
+    }
+
+    clearTimeout(runtime.modelSyncDebounces.get(element));
+    runtime.modelSyncDebounces.delete(element);
+  }
+
+  function buildModelSyncDirectivePayload(root, element) {
+    if (!root || !element) {
+      return {
+        params: {},
+        updates: {},
+        shouldDispatch: false,
+      };
+    }
+
+    const rules = collectStateSyncRules(root, element);
+
+    if (rules.length > 0) {
+      return {
+        params: {},
+        updates: {},
+        shouldDispatch: true,
+      };
+    }
+
+    const updateField = modelSyncUpdateField(element);
+    const next = readModelLocalElementValue(element);
+
+    if (!updateField || !next.valid) {
+      return {
+        params: {},
+        updates: {},
+        shouldDispatch: false,
+      };
+    }
+
+    const updates = {};
+
+    updates[updateField] = next.value;
+
+    return {
+      params: {},
+      updates: updates,
+      shouldDispatch: true,
+    };
+  }
+
+  function scheduleModelSyncDirectiveDispatch(root, element) {
+    if (!root || !element) {
+      return false;
+    }
+
+    const payload = buildModelSyncDirectivePayload(root, element);
+
+    if (!payload.shouldDispatch) {
+      return false;
+    }
+
+    clearModelSyncDirectiveDebounce(element);
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.modelSyncDebounces.delete(element);
+
+      if (!element.isConnected) {
+        return;
+      }
+
+      const activeRoot = findRoot(element) || root;
+
+      if (!activeRoot || !activeRoot.isConnected) {
+        return;
+      }
+
+      const nextPayload = buildModelSyncDirectivePayload(activeRoot, element);
+
+      if (!nextPayload.shouldDispatch) {
+        return;
+      }
+
+      dispatchAction(
+        activeRoot,
+        MODEL_SYNC_INTERNAL_ACTION,
+        nextPayload.params,
+        nextPayload.updates,
+        element,
+      ).catch(function (error) {
+        console.error("VoltStack runtime error:", error);
+      });
+    }, MODEL_SYNC_DEBOUNCE);
+
+    runtime.modelSyncDebounces.set(element, timeoutId);
+    return true;
+  }
+
+  function elementSupportsModelLocal(element) {
+    if (!element || !element.tagName) {
+      return false;
+    }
+
+    const tagName = element.tagName.toLowerCase();
+
+    return tagName === "input" || tagName === "textarea" || tagName === "select";
+  }
+
+  function readModelLocalElementValue(element) {
+    if (!elementSupportsModelLocal(element)) {
+      return {
+        valid: false,
+        value: null,
+      };
+    }
+
+    const tagName = element.tagName.toLowerCase();
+
+    if (tagName === "textarea" || tagName === "select") {
+      return {
+        valid: true,
+        value: element.value,
+      };
+    }
+
+    const type = (element.type || "text").toLowerCase();
+
+    if (type === "checkbox") {
+      return {
+        valid: true,
+        value: !!element.checked,
+      };
+    }
+
+    if (type === "radio") {
+      if (!element.checked) {
+        return {
+          valid: false,
+          value: null,
+        };
+      }
+
+      return {
+        valid: true,
+        value: element.value,
+      };
+    }
+
+    return {
+      valid: true,
+      value: element.value,
+    };
+  }
+
+  function applyModelLocalElementValue(element, value, found) {
+    if (!elementSupportsModelLocal(element)) {
+      return;
+    }
+
+    const state = ensureModelLocalBaseline(element);
+    const tagName = element.tagName.toLowerCase();
+
+    if (tagName === "textarea" || tagName === "select") {
+      const nextValue = found ? formatBindDirectiveValue(value) : state.value || "";
+
+      if (element.value !== nextValue) {
+        element.value = nextValue;
+      }
+
+      return;
+    }
+
+    const type = (element.type || "text").toLowerCase();
+
+    if (type === "checkbox") {
+      const nextChecked = found ? !!value : !!state.checked;
+
+      if (!!element.checked !== nextChecked) {
+        element.checked = nextChecked;
+      }
+
+      return;
+    }
+
+    if (type === "radio") {
+      const nextChecked = found ? String(value) === String(element.value) : !!state.checked;
+
+      if (!!element.checked !== nextChecked) {
+        element.checked = nextChecked;
+      }
+
+      return;
+    }
+
+    const nextValue = found ? formatBindDirectiveValue(value) : state.value || "";
+
+    if (element.value !== nextValue) {
+      element.value = nextValue;
+    }
+  }
+
+  function updateModelLocalDirectiveFromElement(element, sourceAction) {
+    if (!elementSupportsModelLocal(element)) {
+      return false;
+    }
+
+    const modelValue = modelLocalDirectiveValue(element);
+    const expression = parseModelLocalDirectiveValue(modelValue);
+
+    if (!expression) {
+      return false;
+    }
+
+    const next = readModelLocalElementValue(element);
+
+    if (!next.valid) {
+      return false;
+    }
+
+    const current = getRuntimeStateValue(expression.path, {
+      scope: expression.scope,
+      fallback: null,
+    });
+
+    if (valuesAreSame(current, next.value)) {
+      return false;
+    }
+
+    setRuntimeStateValue(expression.path, next.value, {
+      scope: expression.scope,
+      action: sourceAction || "directive:model.local",
+    });
+
+    return true;
+  }
+
+  function updateModelSyncDirectiveFromElement(element, root, sourceAction) {
+    if (!elementSupportsModelLocal(element)) {
+      return false;
+    }
+
+    const modelValue = modelSyncDirectiveValue(element);
+    const expression = parseModelSyncDirectiveValue(modelValue);
+
+    if (!expression) {
+      return false;
+    }
+
+    const next = readModelLocalElementValue(element);
+
+    if (!next.valid) {
+      return false;
+    }
+
+    const current = getRuntimeStateValue(expression.path, {
+      scope: expression.scope,
+      fallback: null,
+    });
+    const changed = !valuesAreSame(current, next.value);
+
+    if (changed) {
+      setRuntimeStateValue(expression.path, next.value, {
+        scope: expression.scope,
+        action: sourceAction || "directive:model.sync",
+      });
+    }
+
+    return scheduleModelSyncDirectiveDispatch(root, element) || changed;
+  }
+
+  function ensureBindDirectiveBaseline(element, entry) {
+    const bindings = bindDirectiveState(element);
+    const key = entry.attributeName;
+
+    if (!bindings[key]) {
+      const reflectAttributeName = entry.reflectAttributeName;
+
+      bindings[key] = {
+        propertyName: entry.propertyName,
+        reflectAttributeName: reflectAttributeName,
+        hasProperty: entry.propertyName in element,
+        initialPropertyValue:
+          entry.propertyName in element ? element[entry.propertyName] : null,
+        hadAttribute:
+          !!reflectAttributeName && element.hasAttribute(reflectAttributeName),
+        initialAttributeValue:
+          reflectAttributeName && element.hasAttribute(reflectAttributeName)
+            ? element.getAttribute(reflectAttributeName)
+            : null,
+      };
+    }
+
+    return bindings[key];
+  }
+
+  function restoreBindDirectiveValue(element, binding) {
+    if (!element || !binding) {
+      return;
+    }
+
+    const propertyName = binding.propertyName;
+    const reflectAttributeName = binding.reflectAttributeName;
+
+    if (propertyName === "value") {
+      const value =
+        binding.hadAttribute && binding.initialAttributeValue !== null
+          ? binding.initialAttributeValue
+          : typeof binding.initialPropertyValue !== "undefined" &&
+              binding.initialPropertyValue !== null
+            ? String(binding.initialPropertyValue)
+            : "";
+
+      if ("value" in element) {
+        element.value = value;
+      }
+
+      if (reflectAttributeName) {
+        if (binding.hadAttribute && binding.initialAttributeValue !== null) {
+          element.setAttribute(reflectAttributeName, binding.initialAttributeValue);
+        } else {
+          element.removeAttribute(reflectAttributeName);
+        }
+      }
+
+      return;
+    }
+
+    if (isBooleanBindDirectiveProperty(propertyName)) {
+      if (propertyName in element) {
+        element[propertyName] = false;
+      }
+
+      if (reflectAttributeName) {
+        element.removeAttribute(reflectAttributeName);
+      }
+
+      return;
+    }
+
+    if (binding.hasProperty) {
+      if (
+        binding.initialPropertyValue === null ||
+        typeof binding.initialPropertyValue === "undefined"
+      ) {
+        element[propertyName] = "";
+      } else {
+        element[propertyName] = binding.initialPropertyValue;
+      }
+    }
+
+    if (reflectAttributeName) {
+      if (binding.hadAttribute && binding.initialAttributeValue !== null) {
+        element.setAttribute(reflectAttributeName, binding.initialAttributeValue);
+      } else {
+        element.removeAttribute(reflectAttributeName);
+      }
+    }
+  }
+
+  function applyBindDirectiveValue(element, entry, value, found) {
+    const binding = ensureBindDirectiveBaseline(element, entry);
+    const propertyName = entry.propertyName;
+    const reflectAttributeName = entry.reflectAttributeName;
+
+    if (!found || value === null || typeof value === "undefined") {
+      restoreBindDirectiveValue(element, binding);
+      return;
+    }
+
+    if (isBooleanBindDirectiveProperty(propertyName)) {
+      const nextValue = !!value;
+
+      if (propertyName in element) {
+        element[propertyName] = nextValue;
+      }
+
+      if (reflectAttributeName) {
+        if (nextValue) {
+          element.setAttribute(reflectAttributeName, reflectAttributeName);
+        } else {
+          element.removeAttribute(reflectAttributeName);
+        }
+      }
+
+      return;
+    }
+
+    const nextValue = formatBindDirectiveValue(value);
+
+    if (propertyName in element) {
+      element[propertyName] = nextValue;
+    } else if (reflectAttributeName) {
+      element.setAttribute(reflectAttributeName, nextValue);
+      return;
+    }
+
+    if (reflectAttributeName && propertyName !== "value") {
+      element.setAttribute(reflectAttributeName, nextValue);
+    }
   }
 
   function ensurePortalPlaceholder(element, state) {
@@ -2311,6 +2943,70 @@
     );
 
     return changed;
+  }
+
+  function syncBindDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    [root]
+      .concat(Array.from(root.querySelectorAll("*")))
+      .forEach(function (element) {
+      const entries = bindDirectiveEntries(element);
+
+      if (entries.length === 0) {
+        return;
+      }
+
+      entries.forEach(function (entry) {
+        const result = resolveStoreDirectiveValue(entry.expression);
+
+        applyBindDirectiveValue(element, entry, result.value, result.found);
+      });
+      });
+  }
+
+  function syncModelLocalDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    [root]
+      .concat(Array.from(root.querySelectorAll("*")))
+      .forEach(function (element) {
+        const value = modelLocalDirectiveValue(element);
+        const expression = parseModelLocalDirectiveValue(value);
+
+        if (!expression) {
+          return;
+        }
+
+        const result = runtimeStateValueByPath(expression.scope, expression.path);
+
+        applyModelLocalElementValue(element, result.value, result.found);
+      });
+  }
+
+  function syncModelSyncDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    [root]
+      .concat(Array.from(root.querySelectorAll("*")))
+      .forEach(function (element) {
+        const value = modelSyncDirectiveValue(element);
+        const expression = parseModelSyncDirectiveValue(value);
+
+        if (!expression) {
+          return;
+        }
+
+        const result = runtimeStateValueByPath(expression.scope, expression.path);
+
+        applyModelLocalElementValue(element, result.value, result.found);
+      });
   }
 
   function focusDirectiveState(element) {
@@ -4294,13 +4990,7 @@
       }
 
       if (rel === "stylesheet") {
-        return {
-          key: "style:" + href,
-          rel: "preload",
-          href: href,
-          as: "style",
-          crossOrigin: node.getAttribute("crossorigin") || null,
-        };
+        return null;
       }
 
       if (rel === "modulepreload") {
@@ -4916,6 +5606,8 @@
         classes: {},
         styles: {},
         html: {},
+        bindings: {},
+        modelLocal: null,
         portal: {},
         focus: {},
       };
@@ -5929,6 +6621,9 @@
     }
 
     syncTextDirectives(root);
+    syncModelLocalDirectives(root);
+    syncModelSyncDirectives(root);
+    syncBindDirectives(root);
     syncClassDirectives(root);
     syncAttrDirectives(root);
     syncStyleDirectives(root);
@@ -5952,6 +6647,32 @@
     }
 
     return -1;
+  }
+
+  function modelDescriptorMatches(root, modelName) {
+    if (!root || !modelName) {
+      return [];
+    }
+
+    return root.querySelectorAll(
+      '[volt-model="' +
+        modelName +
+        '"], [volt\\:model="' +
+        modelName +
+        '"], [volt-model-local="' +
+        modelName +
+        '"], [volt\\:model\\.local="' +
+        modelName +
+        '"], [data-volt-model-local="' +
+        modelName +
+        '"], [volt-model-sync="' +
+        modelName +
+        '"], [volt\\:model\\.sync="' +
+        modelName +
+        '"], [data-volt-model-sync="' +
+        modelName +
+        '"]',
+    );
   }
 
   function isTextSelectableElement(element) {
@@ -5997,10 +6718,13 @@
       };
     }
 
-    const modelName = directiveValue(element, ["volt-model", "volt:model"]);
+    const modelName =
+      directiveValue(element, ["volt-model", "volt:model"]) ||
+      directiveValue(element, modelLocalDirectiveNames()) ||
+      directiveValue(element, modelSyncDirectiveNames());
 
     if (modelName) {
-      const matches = root.querySelectorAll("[volt-model], [volt\\:model]");
+      const matches = modelDescriptorMatches(root, modelName);
       const index = elementIndex(matches, element);
 
       if (index !== -1) {
@@ -6072,13 +6796,7 @@
     }
 
     if (descriptor.strategy === "model" && descriptor.value) {
-      const matches = root.querySelectorAll(
-        '[volt-model="' +
-          descriptor.value +
-          '"], [volt\\:model="' +
-          descriptor.value +
-          '"]',
-      );
+      const matches = modelDescriptorMatches(root, descriptor.value);
 
       return matches[descriptor.index || 0] || null;
     }
@@ -6817,7 +7535,11 @@
       syncRuntimeStateDirectives(root);
     }
 
-    if (trigger && "disabled" in trigger) {
+    if (
+      trigger &&
+      "disabled" in trigger &&
+      (!meta || meta.action !== MODEL_SYNC_INTERNAL_ACTION)
+    ) {
       trigger.disabled = active;
     }
   }
@@ -8734,7 +9456,11 @@
       }),
     );
 
-    if (trigger && "disabled" in trigger) {
+    if (
+      trigger &&
+      "disabled" in trigger &&
+      action !== MODEL_SYNC_INTERNAL_ACTION
+    ) {
       trigger.disabled = true;
     }
 
@@ -8826,7 +9552,12 @@
           if (
             !result.preventsHtmlFallback &&
             payload.html &&
-            activeRoot.isConnected
+            activeRoot.isConnected &&
+            !(
+              action === MODEL_SYNC_INTERNAL_ACTION &&
+              Array.isArray(payload.effects) &&
+              payload.effects.length === 0
+            )
           ) {
             patchMeta.usedHtmlFallback = true;
             activeRoot.outerHTML = payload.html;
@@ -8911,6 +9642,9 @@
         element.type === "checkbox" ? !!element.checked : element.value;
       root.setAttribute("data-volt-snapshot", JSON.stringify(snapshot));
     }
+
+    updateModelLocalDirectiveFromElement(element, "directive:model.local:input");
+    updateModelSyncDirectiveFromElement(element, root, "directive:model.sync:input");
 
     scheduleDirtyDebounce(root, {
       component: component,
@@ -9158,6 +9892,17 @@
 
   document.addEventListener("change", function (event) {
     handleOnDirectiveEvent("change", event);
+
+    const element = closestFromEventTarget(event, "input, textarea, select");
+
+    if (!element) {
+      return;
+    }
+
+    const root = findRoot(element);
+
+    updateModelLocalDirectiveFromElement(element, "directive:model.local:change");
+    updateModelSyncDirectiveFromElement(element, root, "directive:model.sync:change");
   });
 
   document.addEventListener("keydown", function (event) {
