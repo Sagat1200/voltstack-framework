@@ -161,7 +161,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` `volt:show`
 - `[x]` `volt:if`
 - `[x]` `volt:for`
-- `[-]` directivas runtime mas expresivas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`)
+- `[x]` directivas runtime mas expresivas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`)
 - `[ ]` parser extensible de directivas frontend
 
 ### 8. Transition Engine
@@ -322,6 +322,7 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` demo `/runtimeState` y `/runtimeStateAlt` para validar reset por URL y persistencia global
 - `[x]` sincronizacion selectiva desde `client/shared state` hacia `params` o `updates`
 - `[x]` effects backend -> frontend para `state.set`, `state.merge`, `state.delete` y `state.clear`
+- `[x]` cobertura automatizada backend de `params + updates` para sincronizacion selectiva y mapeo explicito hacia `updates.*`
 - `[x]` MVP de `volt:show` con expresiones `client:path` y `shared:path`
 - `[x]` MVP de `volt:if` con mount/unmount por `client:path` y `shared:path`
 - `[x]` MVP de `volt:for` con repeticion sobre arreglos `client/shared` y placeholders simples
@@ -349,16 +350,19 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` demos `/runtimeFocus` y `/runtimeFocusAlt` para validar foco reactivo y autofocus en navegacion SPA
 - `[x]` demos `/runtimePortal` y `/runtimePortalAlt` para validar banner, modal y drawer portalizados
 - `[x]` demos `/runtimePersist`, `/runtimePersistBridge` y `/runtimePersistAlt` para validar origen, pantalla intermedia sin target y reinyeccion final
+- `[x]` pruebas automatizadas focalizadas del skeleton para contrato server-side de `fragment cache`, atributos declarativos de `prefetch/no-store` y estabilidad de `head/layout`
+- `[x]` pruebas automatizadas del skeleton para el contrato declarativo de `/runtimeModelSync` y la sincronizacion selectiva `state -> params/updates`
+- `[x]` validacion automatizada del subbloque de sincronizacion selectiva completada, ajustando expectativas de effects para no exigir `html.replace` cuando no existe diff HTML real
 
 ## Proximo Bloque Recomendado
 
 Orden sugerido para seguir avanzando:
 
 1. `fragment cache SPA`
-2. pruebas manuales y automatizadas de `fragment cache SPA`, `prefetch`/`preload` y `head` + layout fallback
+2. pruebas manuales de `fragment cache SPA`, `prefetch`/`preload` y `head` + layout fallback
 3. validacion manual fina de `politicas configurables por ruta para SPA vs full reload`
-4. sincronizacion selectiva frontend/backend
-5. expresiones compuestas para directivas runtime
+4. endurecer y ampliar la cobertura de `sincronizacion selectiva frontend/backend`
+5. ampliar la cobertura de expresiones compuestas para directivas runtime
 
 ## Bloque Cerrado Reciente
 
@@ -386,7 +390,7 @@ Checklist inmediato:
 - `[x]` evitar race conditions entre `prefetch` y `navigate`
 - `[x]` implementar preload de assets criticos del documento destino
 - `[-]` agregar pruebas manuales del flujo
-- `[ ]` agregar pruebas automatizadas focalizadas si aportan valor
+- `[x]` agregar pruebas automatizadas focalizadas si aportan valor
 
 Resultado esperado del bloque:
 

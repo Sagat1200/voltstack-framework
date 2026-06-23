@@ -191,6 +191,49 @@ final class ReactiveProtocolTest extends TestCase
         self::assertStringContainsString('Synced from runtime', $payload['html']);
     }
 
+    public function test_it_combines_selectively_synced_params_and_updates_before_running_an_action(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveSelectiveSyncComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveSelectiveSyncComponent::class,
+                'action' => 'persist',
+                'params' => [
+                    'alias' => 'client-alias-from-state',
+                    'category' => 'review',
+                ],
+                'updates' => [
+                    'title' => 'Synced title',
+                    'serverAliasMirror' => 'Synced alias mirror',
+                ],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('persist', $payload['meta']['action']);
+        self::assertSame('Synced title', $payload['snapshot']['state']['title']);
+        self::assertSame('Synced alias mirror', $payload['snapshot']['state']['serverAliasMirror']);
+        self::assertSame('client-alias-from-state', $payload['snapshot']['state']['savedAlias']);
+        self::assertSame('review', $payload['snapshot']['state']['savedCategory']);
+        self::assertStringContainsString('Title: Synced title', $payload['html']);
+        self::assertStringContainsString('Alias mirror: Synced alias mirror', $payload['html']);
+        self::assertStringContainsString('Saved alias: client-alias-from-state', $payload['html']);
+        self::assertStringContainsString('Saved category: review', $payload['html']);
+    }
+
     public function test_it_returns_a_navigation_effect_when_the_action_redirects(): void
     {
         $app = new Application(sys_get_temp_dir());
@@ -519,28 +562,27 @@ final class ReactiveProtocolTest extends TestCase
         /** @var array<string, mixed> $payload */
         $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
 
-        self::assertCount(5, $payload['effects']);
-        self::assertSame('html.replace', $payload['effects'][0]['type']);
+        self::assertCount(4, $payload['effects']);
+
+        self::assertSame('runtime.policy', $payload['effects'][0]['type']);
+        self::assertSame('submit', $payload['effects'][0]['scopeAction']);
+        self::assertSame('submit-form', $payload['effects'][0]['scopeTarget']);
+        self::assertSame('success', $payload['effects'][0]['state']);
 
         self::assertSame('runtime.policy', $payload['effects'][1]['type']);
-        self::assertSame('submit', $payload['effects'][1]['scopeAction']);
-        self::assertSame('submit-form', $payload['effects'][1]['scopeTarget']);
-        self::assertSame('success', $payload['effects'][1]['state']);
+        self::assertSame('increment', $payload['effects'][1]['scopeAction']);
+        self::assertSame('counter-panel', $payload['effects'][1]['scopeTarget']);
+        self::assertSame('loading', $payload['effects'][1]['state']);
 
         self::assertSame('runtime.policy', $payload['effects'][2]['type']);
-        self::assertSame('increment', $payload['effects'][2]['scopeAction']);
-        self::assertSame('counter-panel', $payload['effects'][2]['scopeTarget']);
-        self::assertSame('loading', $payload['effects'][2]['state']);
+        self::assertSame('update', $payload['effects'][2]['scopeAction']);
+        self::assertSame('record-row', $payload['effects'][2]['scopeTarget']);
+        self::assertSame('dirty', $payload['effects'][2]['state']);
 
         self::assertSame('runtime.policy', $payload['effects'][3]['type']);
-        self::assertSame('update', $payload['effects'][3]['scopeAction']);
-        self::assertSame('record-row', $payload['effects'][3]['scopeTarget']);
-        self::assertSame('dirty', $payload['effects'][3]['state']);
-
-        self::assertSame('runtime.policy', $payload['effects'][4]['type']);
-        self::assertSame('delete', $payload['effects'][4]['scopeAction']);
-        self::assertSame('danger-zone', $payload['effects'][4]['scopeTarget']);
-        self::assertSame('error', $payload['effects'][4]['state']);
+        self::assertSame('delete', $payload['effects'][3]['scopeAction']);
+        self::assertSame('danger-zone', $payload['effects'][3]['scopeTarget']);
+        self::assertSame('error', $payload['effects'][3]['state']);
     }
 
     public function test_it_restores_the_previous_scope_after_a_group_block(): void
@@ -568,15 +610,14 @@ final class ReactiveProtocolTest extends TestCase
         /** @var array<string, mixed> $payload */
         $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
 
-        self::assertCount(4, $payload['effects']);
-        self::assertSame('html.replace', $payload['effects'][0]['type']);
-        self::assertSame('focus', $payload['effects'][1]['type']);
+        self::assertCount(3, $payload['effects']);
+        self::assertSame('focus', $payload['effects'][0]['type']);
+        self::assertSame('title-input', $payload['effects'][0]['target']);
+        self::assertSame('dispatch.event', $payload['effects'][1]['type']);
         self::assertSame('title-input', $payload['effects'][1]['target']);
         self::assertSame('dispatch.event', $payload['effects'][2]['type']);
-        self::assertSame('title-input', $payload['effects'][2]['target']);
-        self::assertSame('dispatch.event', $payload['effects'][3]['type']);
-        self::assertArrayNotHasKey('target', $payload['effects'][3]);
-        self::assertSame('demo.outside-group', $payload['effects'][3]['event']);
+        self::assertArrayNotHasKey('target', $payload['effects'][2]);
+        self::assertSame('demo.outside-group', $payload['effects'][2]['event']);
     }
 
     public function test_it_returns_dom_append_for_stable_target_lists(): void
@@ -850,6 +891,34 @@ final class TestReactiveTargetedComponent extends Component
             '<div><span data-volt-target="counter-value">%d</span><button data-volt-target="action-button" type="button"%s>Increment</button></div>',
             $this->count,
             $this->locked ? ' disabled' : '',
+        );
+    }
+}
+
+final class TestReactiveSelectiveSyncComponent extends Component
+{
+    public string $title = 'Initial selective title';
+
+    public string $serverAliasMirror = 'Initial alias mirror';
+
+    public string $savedAlias = '';
+
+    public string $savedCategory = '';
+
+    public function persist(string $alias = '', string $category = ''): void
+    {
+        $this->savedAlias = $alias;
+        $this->savedCategory = $category;
+    }
+
+    public function render(): string
+    {
+        return sprintf(
+            '<div><span>Title: %s</span><span>Alias mirror: %s</span><span>Saved alias: %s</span><span>Saved category: %s</span></div>',
+            e($this->title),
+            e($this->serverAliasMirror),
+            e($this->savedAlias),
+            e($this->savedCategory),
         );
     }
 }
