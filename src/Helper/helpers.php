@@ -151,7 +151,7 @@ if (! function_exists('volt_runtime_script')) {
             throw new RuntimeException('The VoltStack frontend runtime script could not be found.');
         }
 
-        return "<script>\n" . file_get_contents($path) . "\n</script>";
+        return "<script data-volt-runtime=\"true\">\n" . file_get_contents($path) . "\n</script>";
     }
 }
 

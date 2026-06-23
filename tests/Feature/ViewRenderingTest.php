@@ -29,88 +29,90 @@ final class ViewRenderingTest extends TestCase
 <h1><?= e($title) ?></h1>
 <p><?= e($message) ?></p>
 PHP
-);
-}
+        );
+    }
 
-protected function tearDown(): void
-{
-$viewFile = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR .
-'home.volt.php';
-$viewsDirectory = dirname($viewFile);
-$resourcesDirectory = dirname($viewsDirectory);
+    protected function tearDown(): void
+    {
+        $viewFile = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.volt.php';
+        $viewsDirectory = dirname($viewFile);
+        $resourcesDirectory = dirname($viewsDirectory);
 
-if (is_file($viewFile)) {
-unlink($viewFile);
-}
+        if (is_file($viewFile)) {
+            unlink($viewFile);
+        }
 
-if (is_dir($viewsDirectory)) {
-rmdir($viewsDirectory);
-}
+        if (is_dir($viewsDirectory)) {
+            rmdir($viewsDirectory);
+        }
 
-if (is_dir($resourcesDirectory)) {
-rmdir($resourcesDirectory);
-}
+        if (is_dir($resourcesDirectory)) {
+            rmdir($resourcesDirectory);
+        }
 
-if (is_dir($this->basePath)) {
-rmdir($this->basePath);
-}
+        if (is_dir($this->basePath)) {
+            rmdir($this->basePath);
+        }
 
-parent::tearDown();
-}
+        parent::tearDown();
+    }
 
-public function test_controller_can_return_a_view_response_through_the_kernel(): void
-{
-$app = new Application($this->basePath);
-$router = $app->make(Router::class);
-$router->get('/home', [TestPageController::class, 'show']);
+    public function test_controller_can_return_a_view_response_through_the_kernel(): void
+    {
+        $app = new Application($this->basePath);
+        $router = $app->make(Router::class);
+        $router->get('/home', [TestPageController::class, 'show']);
 
-$response = $app->make(HttpKernel::class)->handle(Request::create('/home'));
+        $response = $app->make(HttpKernel::class)->handle(Request::create('/home'));
 
-self::assertSame(200, $response->statusCode());
-self::assertSame("<h1>VoltStack</h1>\n<p>Hello from the view layer.</p>", trim($response->content()));
-}
+        self::assertSame(200, $response->statusCode());
+        self::assertStringContainsString('<h1>VoltStack</h1>', $response->content());
+        self::assertStringContainsString('<p>Hello from the view layer.</p>', $response->content());
+        self::assertStringContainsString('data-volt-runtime="true"', $response->content());
+        self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
+    }
 
-public function test_view_and_response_helpers_are_registered_in_the_container_flow(): void
-{
-$app = new Application($this->basePath);
+    public function test_view_and_response_helpers_are_registered_in_the_container_flow(): void
+    {
+        $app = new Application($this->basePath);
 
-self::assertTrue($app->make(ViewFactory::class)->exists('home'));
-self::assertSame('application/json; charset=UTF-8', response()->json(['ok' => true])->headers()['Content-Type']);
-}
+        self::assertTrue($app->make(ViewFactory::class)->exists('home'));
+        self::assertSame('application/json; charset=UTF-8', response()->json(['ok' => true])->headers()['Content-Type']);
+    }
 
-public function test_it_prioritizes_volt_php_views_over_plain_php_views(): void
-{
-$phpFallback = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.php';
+    public function test_it_prioritizes_volt_php_views_over_plain_php_views(): void
+    {
+        $phpFallback = $this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'home.php';
 
-file_put_contents(
-    $phpFallback,
-    <<<'PHP'
+        file_put_contents(
+            $phpFallback,
+            <<<'PHP'
 <h1>Fallback</h1>
 PHP
-);
+        );
 
-$app = new Application($this->basePath);
+        $app = new Application($this->basePath);
 
-$html = $app->make(ViewFactory::class)->render('home', [
-    'title' => 'VoltStack',
-    'message' => 'Preferred .volt.php',
-]);
+        $html = $app->make(ViewFactory::class)->render('home', [
+            'title' => 'VoltStack',
+            'message' => 'Preferred .volt.php',
+        ]);
 
-self::assertStringContainsString('<h1>VoltStack</h1>', $html);
-self::assertStringContainsString('<p>Preferred .volt.php</p>', $html);
-self::assertStringNotContainsString('<h1>Fallback</h1>', $html);
+        self::assertStringContainsString('<h1>VoltStack</h1>', $html);
+        self::assertStringContainsString('<p>Preferred .volt.php</p>', $html);
+        self::assertStringNotContainsString('<h1>Fallback</h1>', $html);
 
-unlink($phpFallback);
-}
+        unlink($phpFallback);
+    }
 }
 
 final class TestPageController extends Controller
 {
-public function show(): \Quantum\View\View
-{
-return view('home', [
-'title' => 'VoltStack',
-'message' => 'Hello from the view layer.',
-]);
-}
+    public function show(): \Quantum\View\View
+    {
+        return view('home', [
+            'title' => 'VoltStack',
+            'message' => 'Hello from the view layer.',
+        ]);
+    }
 }

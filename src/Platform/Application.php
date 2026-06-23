@@ -10,6 +10,7 @@ use Quantum\Cache\CacheManager;
 use Quantum\Cache\Repository as CacheRepository;
 use Quantum\Container\Container;
 use Quantum\Container\Contracts\ContainerInterface;
+use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
 use Quantum\Http\ResponseFactory;
 use Quantum\HttpKernel\HttpKernel;
@@ -165,6 +166,10 @@ class Application extends Container
 
         if (! isset($this->bindings[ResponseFactory::class])) {
             $this->singleton(ResponseFactory::class);
+        }
+
+        if (! isset($this->bindings[HtmlDocumentBootstrapper::class])) {
+            $this->singleton(HtmlDocumentBootstrapper::class);
         }
 
         if (! isset($this->bindings[CacheManager::class])) {

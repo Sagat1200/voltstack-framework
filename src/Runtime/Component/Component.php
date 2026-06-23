@@ -34,7 +34,7 @@ abstract class Component
             ));
         }
 
-        return $this->renderInlineTemplate($template) . volt_runtime_script();
+        return $this->renderInlineTemplate($template);
     }
 
     public function setRequest(?Request $request): void
@@ -116,84 +116,84 @@ abstract class Component
             $remaining = substr($contents, $haltPosition + strlen($haltMarker));
             $closeTag = strpos($remaining, '?>');
 
-            return $closeTag === false
-                ? $remaining
-                : substr($remaining, $closeTag + 2);
-        }
+return $closeTag === false
+? $remaining
+: substr($remaining, $closeTag + 2);
+}
 
-        $closeTag = strpos($contents, '?>');
+$closeTag = strpos($contents, '?>');
 
-        if ($closeTag === false) {
-            return null;
-        }
+if ($closeTag === false) {
+return null;
+}
 
-        return substr($contents, $closeTag + 2);
-    }
+return substr($contents, $closeTag + 2);
+}
 
-    private function inlineTemplateSourcePath(): ?string
-    {
-        $app = Application::getInstance();
+private function inlineTemplateSourcePath(): ?string
+{
+$app = Application::getInstance();
 
-        if ($app !== null) {
-            $loader = $app->make(InlinePageLoader::class);
-            $sourcePath = $loader->sourceFileFor(static::class);
+if ($app !== null) {
+$loader = $app->make(InlinePageLoader::class);
+$sourcePath = $loader->sourceFileFor(static::class);
 
-            if (is_string($sourcePath) && $sourcePath !== '') {
-                return $sourcePath;
-            }
-        }
+if (is_string($sourcePath) && $sourcePath !== '') {
+return $sourcePath;
+}
+}
 
-        $file = (new ReflectionClass($this))->getFileName();
+$file = (new ReflectionClass($this))->getFileName();
 
-        return is_string($file) && is_file($file) ? $file : null;
-    }
+return is_string($file) && is_file($file) ? $file : null;
+}
 
-    /**
-     * @return array<string, mixed>
-     */
+/**
+* @return array<string, mixed>
+    */
     private function inlineTemplateData(): array
     {
-        $data = $this->viewData();
+    $data = $this->viewData();
 
-        foreach (get_object_vars($this) as $key => $value) {
-            $data[$key] = $value;
-        }
+    foreach (get_object_vars($this) as $key => $value) {
+    $data[$key] = $value;
+    }
 
-        return $data;
+    return $data;
     }
 
     private function renderInlineTemplate(string $template): string
     {
-        $app = Application::getInstance();
+    $app = Application::getInstance();
 
-        if ($app === null) {
-            return $this->interpolateTemplate($template);
-        }
+    if ($app === null) {
+    return $this->interpolateTemplate($template);
+    }
 
-        return $app->make(PhpViewEngine::class)->renderString(
-            $template,
-            $this->inlineTemplateData(),
-            cacheKey: static::class,
-            sourcePath: $this->inlineTemplateSourcePath(),
-        );
+    return $app->make(PhpViewEngine::class)->renderString(
+    $template,
+    $this->inlineTemplateData(),
+    cacheKey: static::class,
+    sourcePath: $this->inlineTemplateSourcePath(),
+    );
     }
 
     private function interpolateTemplate(string $template): string
     {
-        $variables = get_object_vars($this);
+    $variables = get_object_vars($this);
 
-        return (string) preg_replace_callback(
-            '/\{\{\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/',
-            static function (array $matches) use ($variables): string {
-                $value = $variables[$matches[1]] ?? '';
+    return (string) preg_replace_callback(
+    '/\{\{\s*\$([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/',
+    static function (array $matches) use ($variables): string {
+    $value = $variables[$matches[1]] ?? '';
 
-                if ($value === null) {
-                    return '';
-                }
-
-                return e(is_scalar($value) ? (string) $value : json_encode($value, JSON_THROW_ON_ERROR));
-            },
-            $template,
-        );
+    if ($value === null) {
+    return '';
     }
-}
+
+    return e(is_scalar($value) ? (string) $value : json_encode($value, JSON_THROW_ON_ERROR));
+    },
+    $template,
+    );
+    }
+    }

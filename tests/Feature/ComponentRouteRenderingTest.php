@@ -27,6 +27,7 @@ final class ComponentRouteRenderingTest extends TestCase
         self::assertStringContainsString('data-volt-csrf="', $response->content());
         self::assertStringContainsString('<section>Count: 7</section>', $response->content());
         self::assertStringContainsString('data-volt-snapshot=', $response->content());
+        self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
     }
 }
 

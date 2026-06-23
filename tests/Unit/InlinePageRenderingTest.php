@@ -20,7 +20,7 @@ final class InlinePageRenderingTest extends TestCase
 
         self::assertIsString($html);
         self::assertStringContainsString('<h1>Inline Title</h1>', $html);
-        self::assertStringContainsString('<script>', $html);
+        self::assertStringNotContainsString('data-volt-runtime="true"', $html);
     }
 
     public function test_it_renders_an_inline_page_template_with_a_layout(): void

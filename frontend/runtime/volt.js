@@ -1,4 +1,12 @@
 (function () {
+  if (typeof window !== "undefined" && window.__voltRuntimeBooted === true) {
+    return;
+  }
+
+  if (typeof window !== "undefined") {
+    window.__voltRuntimeBooted = true;
+  }
+
   const runtime = {
     navigationRequestId: 0,
     navigationController: null,

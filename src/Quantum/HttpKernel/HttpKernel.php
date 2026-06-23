@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Quantum\HttpKernel;
 
 use Quantum\Http\JsonResponse;
+use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
@@ -53,6 +54,7 @@ class HttpKernel implements KernelContract
         $this->app->boot();
         $scope = $this->app->make(ScopeManager::class);
         $scope->begin($request);
+        $response = null;
 
         try {
             $pipeline = new MiddlewarePipeline($this->app, $this->middlewares);
@@ -62,12 +64,14 @@ class HttpKernel implements KernelContract
                 fn(Request $request): mixed => $this->router->dispatch($request),
             );
 
-            return $this->toResponse($response);
+            $response = $this->toResponse($response);
         } catch (Throwable $exception) {
-            return $this->app->make(ExceptionHandlerContract::class)->render($request, $exception);
+            $response = $this->app->make(ExceptionHandlerContract::class)->render($request, $exception);
         } finally {
             $scope->end();
         }
+
+        return $this->bootstrapHtmlResponse($request, $response);
     }
 
     protected function toResponse(mixed $response): Response
@@ -97,5 +101,16 @@ class HttpKernel implements KernelContract
         }
 
         return new JsonResponse($response);
+    }
+
+    private function bootstrapHtmlResponse(Request $request, Response $response): Response
+    {
+        $bootstrapper = $this->app->make(HtmlDocumentBootstrapper::class);
+
+        if (! $bootstrapper->shouldBootstrap($request, $response)) {
+            return $response;
+        }
+
+        return $bootstrapper->bootstrap($response);
     }
 }
