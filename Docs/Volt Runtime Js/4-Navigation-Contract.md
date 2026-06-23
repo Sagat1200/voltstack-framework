@@ -4,6 +4,8 @@
 
 Formalizar el contrato de navegacion SPA del runtime Volt para documentos HTML completos, con y sin layout.
 
+Para una guia practica de integracion desde aplicaciones cliente, ver `5-Client-Integration-Guide.md`.
+
 ## Contrato Minimo Del Documento
 
 Un documento se considera SPA-capable cuando cumple lo siguiente:
@@ -72,6 +74,16 @@ El runtime deja la navegacion en manos del navegador cuando el enlace o la respu
 - respuestas no HTML
 
 Estos casos se consideran documentos especiales o externos y deben terminar en recarga completa o descarga nativa.
+
+## Paginas De Error
+
+Las respuestas HTML de error del framework, como `404` y `500`, se tratan como documentos `reload-only`.
+
+Motivos:
+
+- evitan intentar parchear una vista posiblemente inconsistente o incompleta
+- garantizan que la pagina de error se renderice como documento completo
+- simplifican el manejo de fallos criticos durante una navegacion SPA
 
 ## Reactividad Server-Driven
 

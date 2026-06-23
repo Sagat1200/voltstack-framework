@@ -69,6 +69,27 @@ final class HttpKernelTest extends TestCase
         self::assertSame(404, $response->statusCode());
         self::assertStringContainsString('Page Not Found', $response->content());
         self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertStringContainsString('<meta name="volt-document" content="reload"', $response->content());
+        self::assertStringContainsString('<meta name="volt-navigation-mode" content="reload"', $response->content());
+        self::assertStringContainsString('<body data-volt-document="reload">', $response->content());
+        self::assertStringNotContainsString('data-volt-navigation-mode="auto"', $response->content());
+    }
+
+    public function test_it_renders_server_errors_as_reload_only_documents(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/boom', static function (): never {
+            throw new \RuntimeException('Boom');
+        });
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/boom'));
+
+        self::assertSame(500, $response->statusCode());
+        self::assertStringContainsString('Server Error', $response->content());
+        self::assertStringContainsString('<meta name="volt-document" content="reload"', $response->content());
+        self::assertStringContainsString('<meta name="volt-navigation-mode" content="reload"', $response->content());
+        self::assertStringContainsString('<body data-volt-document="reload">', $response->content());
+        self::assertStringNotContainsString('data-volt-navigation-mode="auto"', $response->content());
     }
 
     public function test_it_bootstraps_document_contract_markers_for_full_html_documents(): void

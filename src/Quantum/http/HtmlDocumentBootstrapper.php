@@ -6,6 +6,9 @@ namespace Quantum\Http;
 
 final class HtmlDocumentBootstrapper
 {
+    private const DEFAULT_DOCUMENT_CONTRACT = 'spa';
+    private const RELOAD_DOCUMENT_CONTRACT = 'reload';
+    private const DEFAULT_NAVIGATION_MODE = 'auto';
     private const RUNTIME_MARKER = 'data-volt-runtime="true"';
     private const DOCUMENT_ATTRIBUTE_NAMES = [
         'data-volt-document',
@@ -84,16 +87,16 @@ final class HtmlDocumentBootstrapper
             return $content;
         }
 
-        $documentContract = $this->declaredDocumentContract($content) ?? $this->bodyDocumentContract($content);
+        $documentContract = $this->resolvedDocumentContract($content);
 
         $content = $this->ensureBodyAttribute(
             $content,
             self::DOCUMENT_ATTRIBUTE_NAMES,
-            $documentContract ?? 'spa',
+            $documentContract,
         );
 
-        if (($documentContract ?? 'spa') !== 'reload' && ! $this->declaresNavigationModeMeta($content)) {
-            $content = $this->ensureBodyAttribute($content, self::NAVIGATION_MODE_ATTRIBUTE_NAMES, 'auto');
+        if ($documentContract !== self::RELOAD_DOCUMENT_CONTRACT && ! $this->declaresNavigationModeMeta($content)) {
+            $content = $this->ensureBodyAttribute($content, self::NAVIGATION_MODE_ATTRIBUTE_NAMES, self::DEFAULT_NAVIGATION_MODE);
         }
 
         return $content;
@@ -181,9 +184,16 @@ final class HtmlDocumentBootstrapper
         $normalized = strtolower(trim($value));
 
         return match ($normalized) {
-            'reload', 'reload-only', 'static', 'non-spa', 'document' => 'reload',
-            default => 'spa',
+            'reload', 'reload-only', 'static', 'non-spa', 'document' => self::RELOAD_DOCUMENT_CONTRACT,
+            default => self::DEFAULT_DOCUMENT_CONTRACT,
         };
+    }
+
+    private function resolvedDocumentContract(string $content): string
+    {
+        return $this->declaredDocumentContract($content)
+            ?? $this->bodyDocumentContract($content)
+            ?? self::DEFAULT_DOCUMENT_CONTRACT;
     }
 
     private function hasContentType(Response $response): bool

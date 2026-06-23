@@ -68,6 +68,7 @@ Este documento funciona como checklist operativo. Cada accion debe marcarse al f
 - [x] Mantener fallback seguro cuando una respuesta no sea SPA-compatible.
 - [x] Verificar que cambios de estructura extrema, documentos especiales o paginas externas usen recarga completa.
 - [x] Documentar las razones por las que el runtime decide fallback.
+- [x] Definir que paginas de error 404/500 del framework se sirvan como documentos `reload-only`.
 
 ## Fase 6. Reactividad server-driven e islas interactivas
 
@@ -95,17 +96,18 @@ Este documento funciona como checklist operativo. Cada accion debe marcarse al f
 - [x] Agregar prueba para preservar la declaracion documental `reload` al bootstrapear HTML.
 - [x] Agregar prueba para documentos `reload-only` declarados por `meta` o por `body`.
 - [x] Agregar prueba para documentos especiales `attachment` y respuestas no HTML fuera del contrato SPA.
+- [x] Agregar prueba para paginas de error `404` y `500` como documentos `reload-only`.
 - [ ] Agregar prueba para preservar el comportamiento actual del protocolo reactivo.
 - [ ] Agregar prueba para paginas tradicionales con componentes interactivos embebidos.
 
 ## Fase 9. Documentacion final
 
-- [ ] Documentar el bootstrap global del runtime.
-- [ ] Documentar el contrato minimo para vistas tradicionales SPA-capable.
-- [ ] Documentar el caso de vistas sin layout.
-- [ ] Documentar el patron de islas reactivas.
-- [ ] Documentar la diferencia entre navegacion SPA y reactividad server-driven.
-- [ ] Actualizar ejemplos del skeleton para reflejar el nuevo comportamiento.
+- [x] Documentar el bootstrap global del runtime.
+- [x] Documentar el contrato minimo para vistas tradicionales SPA-capable.
+- [x] Documentar el caso de vistas sin layout.
+- [x] Documentar el patron de islas reactivas.
+- [x] Documentar la diferencia entre navegacion SPA y reactividad server-driven.
+- [x] Actualizar ejemplos del skeleton para reflejar el nuevo comportamiento.
 
 ## Fase 10. Validacion final
 

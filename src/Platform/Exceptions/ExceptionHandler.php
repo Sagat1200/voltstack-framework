@@ -91,7 +91,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
             } . '</p>';
 
         return sprintf(
-            '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>%1$s</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:40px;}main{max-width:720px;margin:0 auto;background:#111827;border:1px solid #334155;border-radius:12px;padding:32px;}h1{margin-top:0;}ul{padding-left:20px;}code{background:#1e293b;padding:2px 6px;border-radius:4px;}</style></head><body><main><h1>%1$s</h1>%2$s</main></body></html>',
+            '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="volt-document" content="reload" data-volt-head-key="error-document-reload"><meta name="volt-navigation-mode" content="reload" data-volt-head-key="error-navigation-mode-reload"><title>%1$s</title><style>body{font-family:Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:40px;}main{max-width:720px;margin:0 auto;background:#111827;border:1px solid #334155;border-radius:12px;padding:32px;}h1{margin-top:0;}ul{padding-left:20px;}code{background:#1e293b;padding:2px 6px;border-radius:4px;}</style></head><body data-volt-document="reload"><main><h1>%1$s</h1>%2$s</main></body></html>',
             htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             $body,
         );
