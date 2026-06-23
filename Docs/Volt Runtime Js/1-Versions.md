@@ -284,6 +284,159 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[ ]` medir costo de patch en acciones frecuentes
 - `[ ]` revisar crecimiento de listeners o timers tras muchas interacciones
 
+### I. Eficiencia Y Escalabilidad
+
+Objetivo:
+
+- detectar cuellos de botella reales en memoria, red, CPU, DOM e hidratacion
+- medir degradacion progresiva del runtime bajo uso prolongado
+- validar que SPA, acciones reactivas y cache sigan aportando valor bajo carga
+
+Checklist sugerido:
+
+- `[ ]` medir si el runtime consume demasiada memoria tras navegacion SPA prolongada
+- `[ ]` medir si existen fugas de memoria por listeners, timers, snapshots o nodos huerfanos
+- `[ ]` medir si los payloads de acciones y navegacion crecen demasiado con el tiempo
+- `[ ]` medir tamaño de `snapshot`, `updates`, `effects` y HTML devuelto por request
+- `[ ]` medir si el sistema hace demasiadas peticiones por una sola interaccion de usuario
+- `[ ]` validar que no haya requests duplicadas entre `prefetch`, `navigate` y acciones reactivas
+- `[ ]` medir latencia total de hidratacion/rehidratacion por componente y por pagina
+- `[ ]` medir tiempo de bootstrap del runtime tras carga inicial del documento
+- `[ ]` medir costo de patch DOM en componentes pequenos, medianos y grandes
+- `[ ]` medir costo de reconciliacion de `head`, layout y fragment cache en navegaciones repetidas
+- `[ ]` medir impacto de `volt:model.sync` bajo escritura rapida y multiples campos concurrentes
+- `[ ]` medir frecuencia de `abort`, `stale request` y retrabajo de red bajo concurrencia
+- `[ ]` medir crecimiento del numero de componentes activos, roots y snapshots registrados
+- `[ ]` medir cantidad de nodos DOM afectados por patch frente al cambio visual real
+- `[ ]` medir si hay layout thrashing o reflows costosos durante patch, focus o scroll restore
+- `[ ]` medir tiempo de ejecucion de directivas runtime complejas (`volt:if`, `volt:for`, `volt:show`, `volt:class`, `volt:style`)
+- `[ ]` medir costo de expresiones compuestas y multiples reglas declarativas sobre el mismo subarbol
+- `[ ]` medir hit ratio real de cache SPA, `prefetch`, `preload` y fragment cache
+- `[ ]` medir costo de invalidaciones frecuentes de cache y descarte de fragmentos preservados
+- `[ ]` medir duplicacion de assets, metas o trabajo innecesario en `head`
+- `[ ]` medir uso de CPU en navegacion continua, acciones encadenadas y formularios reactivos intensivos
+- `[ ]` medir presencia de long tasks en navegador durante navegacion o acciones backend->frontend
+- `[ ]` medir comportamiento con listas grandes, arboles DOM profundos y multiples componentes en pagina
+- `[ ]` medir degradacion tras sesiones largas: 50, 100, 500 navegaciones o acciones consecutivas
+- `[ ]` medir estabilidad de focus/scroll restore sin introducir costo excesivo de rehidratacion
+
+Metricas sugeridas para registrar:
+
+- memoria JS usada antes y despues de 10, 50 y 100 interacciones
+- tamaño promedio/maximo de payload request y response
+- cantidad de requests por flujo de usuario
+- tiempo de TTFB, tiempo total de request y tiempo de patch visual
+- tiempo de hidratacion por componente y tiempo total de rehidratacion por pagina
+- numero de roots activos, listeners, timers y nodos preservados
+- porcentaje de cache hit/miss/invalidate
+- cantidad de efectos emitidos por accion y cuantas mutaciones DOM producen
+
+Escenarios adicionales recomendados:
+
+- pruebas con red lenta, alta latencia y perdida parcial de paquetes
+- pruebas con CPU throttling y dispositivos de gama media/baja
+- pruebas con multiples tabs abiertas compartiendo `shared state` o navegando en paralelo
+- pruebas con paginas grandes que mezclen `volt:for`, `volt:model.sync`, `volt:portal` y fragment preserve
+- pruebas de regresion tras dejar la app abierta durante largos periodos
+- pruebas de stress sobre rutas con head dinamico, transitions y prefetch simultaneo
+- pruebas de observabilidad para confirmar que hooks runtime permiten localizar el cuello de botella
+- pruebas de costo del GC para detectar pausas visibles tras muchas acciones o navegaciones
+
+Metodologia sugerida:
+
+- definir un flujo fijo por escenario: carga inicial, 10 acciones, 10 navegaciones, 50 acciones, 100 navegaciones
+- medir siempre en dos condiciones: ambiente normal y ambiente degradado con `CPU throttling` + red lenta
+- capturar una linea base antes del cambio y otra despues del cambio para comparar tendencias
+- repetir cada medicion al menos 3 veces y registrar promedio, maximo y desviacion visible
+- separar mediciones de frontend, backend y red para no mezclar cuellos de botella
+- distinguir tiempo de request, tiempo de hidratacion y tiempo de patch visual final
+
+Herramientas sugeridas:
+
+- Chrome DevTools `Performance` para CPU, long tasks, reflows y costo de scripting
+- Chrome DevTools `Memory` para heap snapshots, detached nodes y crecimiento de memoria
+- Chrome DevTools `Network` para conteo de requests, tamaño de payloads, waterfall y duplicaciones
+- Lighthouse para una referencia rapida de performance general y main-thread blocking time
+- Performance API (`performance.mark`, `performance.measure`) para instrumentacion puntual del runtime
+- hooks runtime (`volt:request-*`, `volt:navigated`, `volt:fragment-*`, `volt:cache-*`) para correlacionar eventos
+- logs del servidor o profiling backend para TTFB, serializacion y costo de render/hidratacion
+
+Umbrales orientativos iniciales:
+
+- carga inicial del runtime: objetivo `< 150ms` en desktop medio y `< 300ms` en CPU degradada
+- navegacion SPA simple entre vistas compatibles: objetivo `< 120ms` de patch visual, alerta `> 250ms`
+- accion reactiva comun: objetivo `< 180ms` total visible, alerta `> 350ms`
+- rehidratacion de componente pequeno/mediano: objetivo `< 16ms` por componente visible, alerta `> 40ms`
+- payload JSON de accion frecuente: objetivo `< 25KB`, alerta `> 80KB`
+- HTML de respuesta para patch comun: objetivo `< 60KB`, alerta `> 150KB`
+- requests por interaccion simple: objetivo `1`, alerta `> 2` sin justificacion clara
+- crecimiento de memoria tras 100 interacciones repetibles: ideal `< 15%`, alerta `> 30%` sostenido
+- long tasks en navegacion o accion: ideal `0`, alerta si aparecen tareas `> 50ms` de forma recurrente
+- listeners/timers/roots activos: no deben crecer continuamente despues de volver al estado base
+
+Presupuestos recomendados por categoria:
+
+- memoria: heap estable tras volver al estado base y sin crecimiento monotono entre rondas
+- red: sin duplicados entre `prefetch`, `navigate` y acciones; cache hit observable donde aplique
+- DOM: mutaciones proporcionales al cambio real y sin reemplazos globales innecesarios
+- runtime state: snapshots y `effects` con crecimiento controlado y sin campos redundantes
+- head/layout: sin reinyeccion repetida de metas, estilos o scripts equivalentes
+
+Formato sugerido de registro:
+
+- escenario
+- hardware/red usada
+- numero de interacciones
+- memoria inicial/final/maxima
+- requests totales
+- payload promedio/maximo
+- tiempo promedio/maximo de request
+- tiempo promedio/maximo de patch o hidratacion
+- observaciones de GC, reflows, jank o duplicacion de trabajo
+
+Matriz operativa sugerida:
+
+| Escenario | Herramienta | Metrica principal | Umbral orientativo | Resultado | Observaciones |
+| --- | --- | --- | --- | --- | --- |
+| Carga inicial del documento con runtime | DevTools Performance + Network | tiempo de boot inicial, long tasks, requests iniciales | boot `< 150ms`, long tasks `0`, requests sin duplicados | `[ ]` | |
+| Navegacion SPA entre dos vistas compatibles | DevTools Performance + Network | tiempo de patch visual, requests por click | patch `< 120ms`, requests `1` | `[ ]` | |
+| Navegacion SPA repetida 50 veces | DevTools Memory + Network | crecimiento de heap, hit ratio cache, listeners/timers | memoria `< 15%`, sin crecimiento monotono | `[ ]` | |
+| Navegacion con `prefetch` + `navigate` | DevTools Network | requests duplicadas, cache hit/miss, waterfall | sin duplicados, reuse observable | `[ ]` | |
+| Accion reactiva simple | DevTools Performance + logs backend | tiempo total visible, TTFB, payload request/response | `< 180ms`, JSON `< 25KB` | `[ ]` | |
+| `volt:model.sync` con escritura rapida | DevTools Network + Performance | requests por rafaga, debounce efectivo, stale/abort | sin tormenta de requests, abort/stale controlados | `[ ]` | |
+| Rehidratacion de componente pequeno | Performance API + DevTools | tiempo de rehidratacion por componente | `< 16ms` | `[ ]` | |
+| Rehidratacion de pagina con multiples componentes | DevTools Performance | tiempo total de hidratacion y patch | alerta `> 250ms` | `[ ]` | |
+| Lista grande con `volt:for` | DevTools Performance + Memory | scripting, mutaciones DOM, heap | sin long tasks recurrentes `> 50ms` | `[ ]` | |
+| Directivas complejas (`volt:if`, `volt:show`, `volt:class`, `volt:style`) | DevTools Performance | costo de expresiones y mutaciones | sin jank visible ni reflows excesivos | `[ ]` | |
+| Fragment cache + preserve/reset | DevTools Memory + hooks runtime | reuso real, descarte correcto, memoria retenida | reuse correcto, sin nodos retenidos de mas | `[ ]` | |
+| Reconciliacion de `head` y layout | DevTools Elements + Network | duplicacion de metas/assets, costo de swap | sin reinyecciones redundantes | `[ ]` | |
+| Sesion larga de 100-500 interacciones | DevTools Memory + Performance | heap final, GC visible, estabilidad del runtime | sin degradacion sostenida ni fuga aparente | `[ ]` | |
+| CPU degradada + red lenta | DevTools throttling | resiliencia del runtime bajo estres | degradacion controlada, sin bloqueo severo | `[ ]` | |
+| Multiples tabs y estado compartido | DevTools + observacion funcional | consistencia, retrabajo de red, consumo extra | sin duplicacion injustificada ni drift de estado | `[ ]` | |
+
+Prioridad sugerida de ejecucion:
+
+1. carga inicial del documento con runtime
+2. navegacion SPA entre vistas compatibles
+3. accion reactiva simple
+4. `volt:model.sync` con escritura rapida
+5. navegacion con `prefetch` + `navigate`
+6. sesion larga de 100-500 interacciones
+
+Plantilla breve de resultado:
+
+```md
+- Escenario:
+- Build/commit:
+- Hardware:
+- Red:
+- Resultado:
+- Metrica principal:
+- Metrica maxima:
+- Conclusion:
+- Accion sugerida:
+```
+
 ## Bitacora De Avance
 
 Usar esta seccion para marcar hitos reales conforme avancemos.
@@ -353,19 +506,21 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` pruebas automatizadas focalizadas del skeleton para contrato server-side de `fragment cache`, atributos declarativos de `prefetch/no-store` y estabilidad de `head/layout`
 - `[x]` pruebas automatizadas del skeleton para el contrato declarativo de `/runtimeModelSync` y la sincronizacion selectiva `state -> params/updates`
 - `[x]` validacion automatizada del subbloque de sincronizacion selectiva completada, ajustando expectativas de effects para no exigir `html.replace` cuando no existe diff HTML real
+- `[x]` cobertura automatizada adicional de sincronizacion selectiva para `/runtimeModelSyncAlt` y para requests mixtos con `params + updates` de texto/booleanos en la misma accion
 - `[x]` pruebas automatizadas del skeleton para `/runtimeAdvancedDirectives`, cubriendo `volt:text` con `??`, expresiones compuestas en `volt:show` y `volt:if`, reglas multiples en `volt:class`/`volt:attr`/`volt:style` y casos `null` vs `undefined`
 - `[x]` validacion manual de `/runtimeAdvancedDirectives` cerrada con presets reproducibles, markers `data-runtime-check` y checklist dedicada en `6-Runtime-Advanced-Directives-Manual-Validation.md`
 - `[x]` validacion manual de `fragment cache SPA`, `prefetch`/`preload`, `head` + layout fallback y politicas `reload` cerrada con la checklist `7-Fragment-Cache-Prefetch-Manual-Validation.md`
+- `[x]` validacion manual de `politicas configurables por ruta para SPA vs full reload` cerrada con scaffolding en `NavigationPolicyPage`, `NavigationDocumentReloadPage` y la checklist `8-Navigation-Policy-Manual-Validation.md`
 
 ## Proximo Bloque Recomendado
 
 Orden sugerido para seguir avanzando:
 
-1. validacion manual fina de `politicas configurables por ruta para SPA vs full reload`
-2. endurecer y ampliar la cobertura de `sincronizacion selectiva frontend/backend`
-3. revisar si hace falta cobertura adicional para escenarios borde de `fragment cache SPA`
-4. revisar si hace falta cobertura adicional para `prefetch`/`preload` en navegador real
-5. consolidar el bloque activo y preparar el siguiente tramo del roadmap
+1. endurecer y ampliar la cobertura de `sincronizacion selectiva frontend/backend`
+2. revisar si hace falta cobertura adicional para escenarios borde de `fragment cache SPA`
+3. revisar si hace falta cobertura adicional para `prefetch`/`preload` en navegador real
+4. consolidar el bloque activo y preparar el siguiente tramo del roadmap
+5. revisar si conviene cerrar o reorganizar el roadmap de demos manuales ya completadas
 
 ## Bloque Cerrado Reciente
 

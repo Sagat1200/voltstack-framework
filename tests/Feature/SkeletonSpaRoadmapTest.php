@@ -68,11 +68,18 @@ final class SkeletonSpaRoadmapTest extends TestCase
             '<meta name="volt-navigation-mode" content="auto" data-volt-head-key="navigation-mode-auto">',
             $policy->content(),
         );
+        self::assertStringContainsString('data-runtime-check="policy-link-spa"', $policy->content());
         self::assertStringContainsString('volt:navigate="reload" volt:prefetch="none"', $policy->content());
+        self::assertStringContainsString('data-runtime-check="policy-link-reload"', $policy->content());
         self::assertStringContainsString(
             'href="/navigationDocumentReload" volt:navigate volt:prefetch="none" volt:cache="no-store"',
             $policy->content(),
         );
+        self::assertStringContainsString('data-runtime-check="policy-link-document-reload"', $policy->content());
+        self::assertStringContainsString('data-runtime-check="navigation-arrival-panel"', $policy->content());
+        self::assertStringContainsString('data-runtime-check="navigation-arrival-kind"', $policy->content());
+        self::assertStringContainsString('data-runtime-check="navigation-arrival-summary"', $policy->content());
+        self::assertStringContainsString('data-runtime-check="navigation-arrival-detail"', $policy->content());
 
         self::assertSame(200, $documentReload->statusCode(), $documentReload->content());
         self::assertStringContainsString(
@@ -83,6 +90,8 @@ final class SkeletonSpaRoadmapTest extends TestCase
             '<meta name="volt-navigation-mode" content="reload" data-volt-head-key="navigation-mode-reload">',
             $documentReload->content(),
         );
+        self::assertStringContainsString('data-runtime-check="document-reload-request-marker"', $documentReload->content());
+        self::assertStringContainsString('data-runtime-check="document-reload-back-to-lab"', $documentReload->content());
         self::assertStringContainsString('<body data-volt-document="spa" data-volt-navigation-mode="auto" data-volt-layout="app"', $documentReload->content());
     }
 
@@ -131,6 +140,81 @@ final class SkeletonSpaRoadmapTest extends TestCase
         );
         self::assertStringContainsString(
             'volt:success="__volt_sync__"',
+            $response->content(),
+        );
+    }
+
+    public function test_runtime_model_sync_alt_demo_exposes_client_reset_and_shared_scope_contract_markers(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeModelSyncAlt');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString(
+            '<meta name="volt-navigation-mode" content="auto" data-volt-head-key="runtime-model-sync-alt-mode">',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'name="serverTitle" volt:model.sync="client:sync.title"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'name="serverEnabled" volt:model.sync="shared:sync.enabled"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'name="serverCategory" volt:model.sync="shared:sync.category"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-volt-state-sync="client:sync.alias->updates.serverAliasMirror"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-client-title-field"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-shared-enabled-field"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-shared-category-field"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-alias-field"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-client-title-store"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-shared-enabled-store"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-shared-category-store"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-client-alias-store"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-server-title"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-server-enabled"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-server-category"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="runtime-model-sync-alt-server-alias"',
             $response->content(),
         );
     }

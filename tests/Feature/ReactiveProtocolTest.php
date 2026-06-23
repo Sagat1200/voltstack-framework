@@ -234,6 +234,54 @@ final class ReactiveProtocolTest extends TestCase
         self::assertStringContainsString('Saved category: review', $payload['html']);
     }
 
+    public function test_it_combines_boolean_and_text_updates_with_selectively_synced_params_in_the_same_request(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveSelectiveSyncComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveSelectiveSyncComponent::class,
+                'action' => 'persist',
+                'params' => [
+                    'alias' => 'second-alias',
+                    'category' => 'done',
+                    'note' => 'queued-from-client',
+                ],
+                'updates' => [
+                    'title' => 'Second synced title',
+                    'body' => 'Second synced body',
+                    'serverEnabled' => true,
+                    'serverAliasMirror' => 'Second alias mirror',
+                ],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('persist', $payload['meta']['action']);
+        self::assertSame('Second synced title', $payload['snapshot']['state']['title']);
+        self::assertSame('Second synced body', $payload['snapshot']['state']['body']);
+        self::assertTrue($payload['snapshot']['state']['serverEnabled']);
+        self::assertSame('Second alias mirror', $payload['snapshot']['state']['serverAliasMirror']);
+        self::assertSame('second-alias', $payload['snapshot']['state']['savedAlias']);
+        self::assertSame('done', $payload['snapshot']['state']['savedCategory']);
+        self::assertSame('queued-from-client', $payload['snapshot']['state']['savedNote']);
+        self::assertStringContainsString('Body: Second synced body', $payload['html']);
+        self::assertStringContainsString('Enabled: true', $payload['html']);
+        self::assertStringContainsString('Saved note: queued-from-client', $payload['html']);
+    }
+
     public function test_it_returns_a_navigation_effect_when_the_action_redirects(): void
     {
         $app = new Application(sys_get_temp_dir());
@@ -899,26 +947,36 @@ final class TestReactiveSelectiveSyncComponent extends Component
 {
     public string $title = 'Initial selective title';
 
+    public string $body = 'Initial selective body';
+
+    public bool $serverEnabled = false;
+
     public string $serverAliasMirror = 'Initial alias mirror';
 
     public string $savedAlias = '';
 
     public string $savedCategory = '';
 
-    public function persist(string $alias = '', string $category = ''): void
+    public string $savedNote = '';
+
+    public function persist(string $alias = '', string $category = '', string $note = ''): void
     {
         $this->savedAlias = $alias;
         $this->savedCategory = $category;
+        $this->savedNote = $note;
     }
 
     public function render(): string
     {
         return sprintf(
-            '<div><span>Title: %s</span><span>Alias mirror: %s</span><span>Saved alias: %s</span><span>Saved category: %s</span></div>',
+            '<div><span>Title: %s</span><span>Body: %s</span><span>Enabled: %s</span><span>Alias mirror: %s</span><span>Saved alias: %s</span><span>Saved category: %s</span><span>Saved note: %s</span></div>',
             e($this->title),
+            e($this->body),
+            $this->serverEnabled ? 'true' : 'false',
             e($this->serverAliasMirror),
             e($this->savedAlias),
             e($this->savedCategory),
+            e($this->savedNote),
         );
     }
 }
