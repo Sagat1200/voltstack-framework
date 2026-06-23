@@ -55,19 +55,19 @@ Este documento funciona como checklist operativo. Cada accion debe marcarse al f
 
 ## Fase 4. Contrato de documento SPA
 
-- [ ] Definir metadatos minimos del documento para navegacion SPA.
-- [ ] Definir una marca estable para distinguir documentos compatibles.
+- [x] Definir metadatos minimos del documento para navegacion SPA.
+- [x] Definir una marca estable para distinguir documentos compatibles.
 - [ ] Documentar como identificar layout compartido sin volverlo obligatorio.
-- [ ] Documentar como debe comportarse el runtime cuando detecta cambio estructural fuerte entre documentos.
-- [ ] Ajustar el runtime para usar ese contrato de forma consistente en navegacion y fallback.
+- [x] Documentar como debe comportarse el runtime cuando detecta cambio estructural fuerte entre documentos.
+- [x] Ajustar el runtime para usar ese contrato de forma consistente en navegacion y fallback.
 
 ## Fase 5. Reglas de fallback y compatibilidad
 
-- [ ] Definir explicitamente los modos `spa`, `reload` y `auto`.
-- [ ] Permitir que una pagina o respuesta fuerce `reload` de manera declarativa.
-- [ ] Mantener fallback seguro cuando una respuesta no sea SPA-compatible.
-- [ ] Verificar que cambios de estructura extrema, documentos especiales o paginas externas usen recarga completa.
-- [ ] Documentar las razones por las que el runtime decide fallback.
+- [x] Definir explicitamente los modos `spa`, `reload` y `auto`.
+- [x] Permitir que una pagina o respuesta fuerce `reload` de manera declarativa.
+- [x] Mantener fallback seguro cuando una respuesta no sea SPA-compatible.
+- [x] Verificar que cambios de estructura extrema, documentos especiales o paginas externas usen recarga completa.
+- [x] Documentar las razones por las que el runtime decide fallback.
 
 ## Fase 6. Reactividad server-driven e islas interactivas
 
@@ -92,7 +92,9 @@ Este documento funciona como checklist operativo. Cada accion debe marcarse al f
 - [ ] Agregar prueba para confirmar que una vista tradicional navega por SPA desde el primer click.
 - [x] Agregar prueba para confirmar que una pagina `Component` no duplica el runtime.
 - [x] Agregar prueba para respuestas HTML sin layout.
-- [ ] Agregar prueba para fallback a reload cuando una respuesta no sea compatible.
+- [x] Agregar prueba para preservar la declaracion documental `reload` al bootstrapear HTML.
+- [x] Agregar prueba para documentos `reload-only` declarados por `meta` o por `body`.
+- [x] Agregar prueba para documentos especiales `attachment` y respuestas no HTML fuera del contrato SPA.
 - [ ] Agregar prueba para preservar el comportamiento actual del protocolo reactivo.
 - [ ] Agregar prueba para paginas tradicionales con componentes interactivos embebidos.
 

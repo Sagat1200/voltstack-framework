@@ -57,6 +57,7 @@
     "volt-navigation-mode",
     "volt:navigation-mode",
   ];
+  const DOCUMENT_CONTRACT_META_NAMES = ["volt-document", "volt:document"];
   const NAVIGATION_PAGE_TRANSITION_META_NAMES = [
     "volt-page-transition",
     "volt:page-transition",
@@ -4083,6 +4084,43 @@
     };
   }
 
+  function parseDocumentContract(value, source) {
+    const normalized =
+      typeof value === "string" ? value.trim().toLowerCase() : "";
+
+    if (
+      normalized === "reload" ||
+      normalized === "reload-only" ||
+      normalized === "static" ||
+      normalized === "non-spa" ||
+      normalized === "document"
+    ) {
+      return {
+        mode: "reload",
+        raw: normalized,
+        source: source || "default",
+      };
+    }
+
+    if (
+      normalized === "spa" ||
+      normalized === "interactive" ||
+      normalized === "reactive"
+    ) {
+      return {
+        mode: "spa",
+        raw: normalized,
+        source: source || "default",
+      };
+    }
+
+    return {
+      mode: "auto",
+      raw: normalized,
+      source: source || "default",
+    };
+  }
+
   function navigationModeForElement(element) {
     if (!element || typeof element.getAttribute !== "function") {
       return parseNavigationMode("", "default");
@@ -4151,6 +4189,44 @@
     }
 
     return parseNavigationMode("", "default");
+  }
+
+  function documentContractForDocument(doc) {
+    if (!doc || typeof doc !== "object") {
+      return parseDocumentContract("", "default");
+    }
+
+    const declaredMeta = firstDocumentMetaValue(doc, DOCUMENT_CONTRACT_META_NAMES);
+
+    if (declaredMeta !== null) {
+      return parseDocumentContract(declaredMeta, "document");
+    }
+
+    if (doc.body && typeof doc.body.getAttribute === "function") {
+      const attribute = directiveAttribute(doc.body, [
+        "data-volt-document",
+        "volt-document",
+        "volt:document",
+      ]);
+
+      if (attribute) {
+        return parseDocumentContract(attribute.value || "", "body");
+      }
+    }
+
+    if (doc.documentElement && typeof doc.documentElement.getAttribute === "function") {
+      const attribute = directiveAttribute(doc.documentElement, [
+        "data-volt-document",
+        "volt-document",
+        "volt:document",
+      ]);
+
+      if (attribute) {
+        return parseDocumentContract(attribute.value || "", "html");
+      }
+    }
+
+    return parseDocumentContract("", "default");
   }
 
   function shouldPrefetchForNavigationMode(mode) {
@@ -7787,6 +7863,10 @@
       return false;
     }
 
+    if (documentContractForDocument(document).mode === "reload") {
+      return false;
+    }
+
     return true;
   }
 
@@ -9170,6 +9250,7 @@
     );
 
     let outcome = "success";
+    let fallbackReason = null;
 
     try {
       if (
@@ -9237,6 +9318,9 @@
           : payload.navigationMode && typeof payload.navigationMode === "object"
             ? payload.navigationMode
             : requestedNavigationMode;
+      const payloadDocumentContract = payload.document
+        ? documentContractForDocument(payload.document)
+        : parseDocumentContract("", "default");
       const payloadPageTransition =
         payload.document || (payload && typeof payload.html === "string")
           ? pageTransitionForPayload(payload)
@@ -9246,6 +9330,17 @@
 
       if (shouldFallbackForLayoutChange(payload.document)) {
         outcome = "layout-fallback";
+        fallbackReason = "layout-mismatch";
+
+        if (settings.fallback !== false) {
+          window.location.assign(payload.finalUrl);
+          return;
+        }
+      }
+
+      if (payloadDocumentContract.mode === "reload") {
+        outcome = "document-fallback";
+        fallbackReason = "document-reload-only";
 
         if (settings.fallback !== false) {
           window.location.assign(payload.finalUrl);
@@ -9255,6 +9350,7 @@
 
       if (payloadNavigationMode && payloadNavigationMode.mode === "reload") {
         outcome = "policy-reload";
+        fallbackReason = "document-policy-reload";
 
         if (settings.fallback !== false) {
           window.location.assign(payload.finalUrl);
@@ -9378,6 +9474,7 @@
       }
 
       outcome = "error";
+      fallbackReason = settings.fallback !== false ? "request-error" : null;
       emitRuntimeHook(
         "volt:request-error",
         requestHookDetail("navigation", requestMeta, {
@@ -9409,6 +9506,7 @@
         requestHookDetail("navigation", requestMeta, {
           url: normalizedUrl,
           outcome: outcome,
+          fallbackReason: fallbackReason,
         }),
         document,
       );

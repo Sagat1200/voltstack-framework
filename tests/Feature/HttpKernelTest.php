@@ -70,6 +70,87 @@ final class HttpKernelTest extends TestCase
         self::assertStringContainsString('Page Not Found', $response->content());
         self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
     }
+
+    public function test_it_bootstraps_document_contract_markers_for_full_html_documents(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document', fn() => '<!DOCTYPE html><html><body><main>Document</main></body></html>');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document'));
+
+        self::assertStringContainsString('<body data-volt-document="spa" data-volt-navigation-mode="auto">', $response->content());
+        self::assertStringContainsString('data-volt-runtime="true"', $response->content());
+    }
+
+    public function test_it_preserves_declared_document_navigation_mode_when_bootstrapping_html(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-reload', fn() => '<!DOCTYPE html><html><head><meta name="volt-navigation-mode" content="reload"></head><body><main>Reload</main></body></html>');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-reload'));
+
+        self::assertStringContainsString('<meta name="volt-navigation-mode" content="reload">', $response->content());
+        self::assertStringContainsString('<body data-volt-document="spa">', $response->content());
+        self::assertStringNotContainsString('data-volt-navigation-mode="auto"', $response->content());
+    }
+
+    public function test_it_marks_reload_only_documents_without_forcing_auto_navigation_mode(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-reload-only', fn() => '<!DOCTYPE html><html><head><meta name="volt-document" content="reload-only"></head><body><main>Reload only</main></body></html>');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-reload-only'));
+
+        self::assertStringContainsString('<meta name="volt-document" content="reload-only">', $response->content());
+        self::assertStringContainsString('<body data-volt-document="reload">', $response->content());
+        self::assertStringNotContainsString('data-volt-navigation-mode="auto"', $response->content());
+    }
+
+    public function test_it_preserves_explicit_body_level_reload_only_document_marker(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-body-reload-only', fn() => '<!DOCTYPE html><html><body data-volt-document="reload"><main>Reload body</main></body></html>');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-body-reload-only'));
+
+        self::assertStringContainsString('<body data-volt-document="reload">', $response->content());
+        self::assertStringNotContainsString('data-volt-navigation-mode="auto"', $response->content());
+    }
+
+    public function test_it_does_not_bootstrap_attachment_responses_as_spa_documents(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/export', fn() => new Response(
+            '<!DOCTYPE html><html><body><main>Export</main></body></html>',
+            200,
+            [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="report.html"',
+            ],
+        ));
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/export'));
+
+        self::assertStringNotContainsString('data-volt-runtime="true"', $response->content());
+        self::assertStringNotContainsString('data-volt-document="spa"', $response->content());
+        self::assertSame('attachment; filename="report.html"', $response->headers()['Content-Disposition']);
+    }
+
+    public function test_it_does_not_bootstrap_non_html_download_like_responses(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/report-json', fn() => new Response(
+            '{"ok":true}',
+            200,
+            ['Content-Type' => 'application/json; charset=UTF-8'],
+        ));
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/report-json'));
+
+        self::assertSame('{"ok":true}', $response->content());
+        self::assertStringNotContainsString('data-volt-runtime="true"', $response->content());
+        self::assertSame('application/json; charset=UTF-8', $response->headers()['Content-Type']);
+    }
 }
 
 final class TestInvokableController
