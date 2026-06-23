@@ -135,6 +135,132 @@ final class SkeletonSpaRoadmapTest extends TestCase
         );
     }
 
+    public function test_runtime_advanced_directives_demo_exposes_compound_expression_contract_markers(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeAdvancedDirectives');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString(
+            '<meta name="volt-navigation-mode" content="auto" data-volt-head-key="runtime-advanced-directives-mode">',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:text="client:draft.note ?? shared:draft.note ?? \'Sin nota disponible\'"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:show="client:ui.showClientPanel && !shared:ui.showSharedPanel"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:if="shared:ui.mountSharedPanel || (client:ui.mountClientPanel && !shared:ui.showSharedPanel)"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:class="client:ui.highlightClientCard && !shared:ui.lockSharedAction -> ring-4 ring-cyan-400 shadow-lg shadow-cyan-950/40 | shared:ui.highlightSharedCard -> -translate-y-1 shadow-xl shadow-fuchsia-950/30"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:attr="client:ui.lockClientAction && !shared:ui.lockSharedAction -> disabled=disabled, aria-disabled=true, data-lock=client-only | shared:ui.lockSharedAction -> disabled=disabled, aria-disabled=true, data-lock=shared, title=Bloqueado por shared"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:style="client:ui.softenClientCard && !shared:ui.softenSharedCard -> opacity:0.55; transform:scale(0.98) translateY(6px) | shared:ui.softenSharedCard -> opacity:0.85; box-shadow:0 18px 40px rgba(217,70,239,0.22); outline:1px solid rgba(217,70,239,0.4)"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-volt-state-action="preset-text-shared-fallback"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-volt-state-action="preset-multi-rule-shared"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-preset-status',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="text-fallback-result"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="show-compound-panel"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="if-compound-panel"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="class-multi-card"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="attr-multi-button"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="style-multi-card"',
+            $response->content(),
+        );
+    }
+
+    public function test_runtime_advanced_directives_demo_exposes_relational_and_null_undefined_examples(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeAdvancedDirectives');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString(
+            'volt:show="client:counter >= 2 && shared:counter < 3"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:show="client:counter >= shared:counter"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:if="shared:draft.note == \'activar\' || client:draft.note != \'pausa\'"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:if="shared:draft.note === \'activar\' || client:draft.note !== \'pausa\'"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:show="client:edge.nullValue == shared:edge.undefinedValue"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:show="client:edge.nullValue === shared:edge.undefinedValue"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:show="client:edge.undefinedValue == shared:edge.nullValue"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'volt:show="shared:edge.undefinedValue == null && shared:edge.undefinedValue !== null"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="relational-threshold-panel"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="relational-ref-panel"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="null-undefined-flex-panel"',
+            $response->content(),
+        );
+        self::assertStringContainsString(
+            'data-runtime-check="null-undefined-strict-panel"',
+            $response->content(),
+        );
+    }
+
     private function handleSkeletonRequest(string $path): Response
     {
         $app = new Application(self::$skeletonBasePath);

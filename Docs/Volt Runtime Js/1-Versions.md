@@ -353,16 +353,19 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` pruebas automatizadas focalizadas del skeleton para contrato server-side de `fragment cache`, atributos declarativos de `prefetch/no-store` y estabilidad de `head/layout`
 - `[x]` pruebas automatizadas del skeleton para el contrato declarativo de `/runtimeModelSync` y la sincronizacion selectiva `state -> params/updates`
 - `[x]` validacion automatizada del subbloque de sincronizacion selectiva completada, ajustando expectativas de effects para no exigir `html.replace` cuando no existe diff HTML real
+- `[x]` pruebas automatizadas del skeleton para `/runtimeAdvancedDirectives`, cubriendo `volt:text` con `??`, expresiones compuestas en `volt:show` y `volt:if`, reglas multiples en `volt:class`/`volt:attr`/`volt:style` y casos `null` vs `undefined`
+- `[x]` validacion manual de `/runtimeAdvancedDirectives` cerrada con presets reproducibles, markers `data-runtime-check` y checklist dedicada en `6-Runtime-Advanced-Directives-Manual-Validation.md`
+- `[x]` validacion manual de `fragment cache SPA`, `prefetch`/`preload`, `head` + layout fallback y politicas `reload` cerrada con la checklist `7-Fragment-Cache-Prefetch-Manual-Validation.md`
 
 ## Proximo Bloque Recomendado
 
 Orden sugerido para seguir avanzando:
 
-1. `fragment cache SPA`
-2. pruebas manuales de `fragment cache SPA`, `prefetch`/`preload` y `head` + layout fallback
-3. validacion manual fina de `politicas configurables por ruta para SPA vs full reload`
-4. endurecer y ampliar la cobertura de `sincronizacion selectiva frontend/backend`
-5. ampliar la cobertura de expresiones compuestas para directivas runtime
+1. validacion manual fina de `politicas configurables por ruta para SPA vs full reload`
+2. endurecer y ampliar la cobertura de `sincronizacion selectiva frontend/backend`
+3. revisar si hace falta cobertura adicional para escenarios borde de `fragment cache SPA`
+4. revisar si hace falta cobertura adicional para `prefetch`/`preload` en navegador real
+5. consolidar el bloque activo y preparar el siguiente tramo del roadmap
 
 ## Bloque Cerrado Reciente
 
@@ -708,7 +711,7 @@ Checklist inmediato:
 - `[x]` definir una convencion declarativa para preservar fragmentos
 - `[x]` implementar una primera preservacion opt-in de formularios entre pantallas
 - `[x]` implementar una primera preservacion opt-in de componentes vivos entre navegaciones
-- `[ ]` agregar pruebas manuales focalizadas para reuse, invalidez y fallback seguro
+- `[x]` agregar pruebas manuales focalizadas para reuse, invalidez y fallback seguro; validadas con la checklist `7-Fragment-Cache-Prefetch-Manual-Validation.md`
 
 Resultado esperado del bloque:
 
