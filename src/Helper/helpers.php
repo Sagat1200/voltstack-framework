@@ -142,8 +142,8 @@ if (! function_exists('e')) {
     }
 }
 
-if (! function_exists('volt_runtime_script')) {
-    function volt_runtime_script(): string
+if (! function_exists('volt_runtime_path')) {
+    function volt_runtime_path(): string
     {
         $path = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'runtime' . DIRECTORY_SEPARATOR . 'volt.js';
 
@@ -151,7 +151,50 @@ if (! function_exists('volt_runtime_script')) {
             throw new RuntimeException('The VoltStack frontend runtime script could not be found.');
         }
 
-        return "<script data-volt-runtime=\"true\">\n" . file_get_contents($path) . "\n</script>";
+        return $path;
+    }
+}
+
+if (! function_exists('volt_runtime_contents')) {
+    function volt_runtime_contents(): string
+    {
+        $contents = file_get_contents(volt_runtime_path());
+
+        if (! is_string($contents)) {
+            throw new RuntimeException('The VoltStack frontend runtime script could not be read.');
+        }
+
+        return $contents;
+    }
+}
+
+if (! function_exists('volt_runtime_version')) {
+    function volt_runtime_version(): string
+    {
+        $timestamp = filemtime(volt_runtime_path());
+
+        if ($timestamp === false) {
+            return '0';
+        }
+
+        return (string) $timestamp;
+    }
+}
+
+if (! function_exists('volt_runtime_url')) {
+    function volt_runtime_url(): string
+    {
+        return '/_volt/runtime.js?v=' . rawurlencode(volt_runtime_version());
+    }
+}
+
+if (! function_exists('volt_runtime_script')) {
+    function volt_runtime_script(): string
+    {
+        return sprintf(
+            '<script data-volt-runtime="true" src="%s" defer></script>',
+            e(volt_runtime_url()),
+        );
     }
 }
 

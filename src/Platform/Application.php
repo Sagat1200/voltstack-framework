@@ -34,6 +34,7 @@ use VoltStack\Runtime\Hydration\Dehydrator;
 use VoltStack\Runtime\Hydration\Hydrator;
 use VoltStack\Runtime\Protocol\Checksum;
 use VoltStack\Runtime\Protocol\ProtocolController;
+use VoltStack\Runtime\Protocol\RuntimeAssetController;
 use RuntimeException;
 
 class Application extends Container
@@ -244,6 +245,7 @@ class Application extends Container
         if (! isset($this->bindings[Router::class])) {
             $this->singleton(Router::class, function (Application $app): Router {
                 $router = new Router($app);
+                $router->get('/_volt/runtime.js', RuntimeAssetController::class);
                 $router->post('/_volt/action', ProtocolController::class);
 
                 return $router;

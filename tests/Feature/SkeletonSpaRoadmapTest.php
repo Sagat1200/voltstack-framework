@@ -107,6 +107,7 @@ final class SkeletonSpaRoadmapTest extends TestCase
         );
         self::assertStringContainsString('<body data-volt-document="spa" data-volt-navigation-mode="auto" data-volt-layout="app"', $response->content());
         self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
+        self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
     }
 
     public function test_runtime_model_sync_demo_exposes_selective_state_sync_contract_markers(): void
@@ -348,16 +349,21 @@ final class SkeletonSpaRoadmapTest extends TestCase
     public function test_runtime_events_demo_exposes_runtime_hook_lab_and_public_runtime_apis(): void
     {
         $response = $this->handleSkeletonRequest('/runtimeEvents');
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
 
         self::assertSame(200, $response->statusCode(), $response->content());
         self::assertStringContainsString('data-runtime-events-demo', $response->content());
-        self::assertStringContainsString('volt:request-finish', $response->content());
-        self::assertStringContainsString('volt:component-destroyed', $response->content());
-        self::assertStringContainsString('function cleanupRuntimeOrphans()', $response->content());
-        self::assertStringContainsString('navigationViewportTrackedElements: new Set(),', $response->content());
-        self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $response->content());
-        self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $response->content());
         self::assertStringContainsString('window.Volt.state ? window.Volt.state : null;', $response->content());
+        self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
+
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertSame('application/javascript; charset=UTF-8', $runtimeAsset->headers()['Content-Type']);
+        self::assertStringContainsString('volt:request-finish', $runtimeAsset->content());
+        self::assertStringContainsString('volt:component-destroyed', $runtimeAsset->content());
+        self::assertStringContainsString('function cleanupRuntimeOrphans()', $runtimeAsset->content());
+        self::assertStringContainsString('navigationViewportTrackedElements: new Set(),', $runtimeAsset->content());
+        self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $runtimeAsset->content());
+        self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $runtimeAsset->content());
     }
 
     private function handleSkeletonRequest(string $path): Response

@@ -69,11 +69,7 @@ PHP
         self::assertStringContainsString('<h1>VoltStack</h1>', $response->content());
         self::assertStringContainsString('<p>Hello from the view layer.</p>', $response->content());
         self::assertStringContainsString('data-volt-runtime="true"', $response->content());
-        self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $response->content());
-        self::assertStringContainsString('volt:component-destroyed', $response->content());
-        self::assertStringContainsString('function cleanupRuntimeOrphans()', $response->content());
-        self::assertStringContainsString('navigationViewportTrackedElements: new Set(),', $response->content());
-        self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $response->content());
+        self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
         self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
     }
 

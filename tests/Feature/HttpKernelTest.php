@@ -101,6 +101,23 @@ final class HttpKernelTest extends TestCase
 
         self::assertStringContainsString('<body data-volt-document="spa" data-volt-navigation-mode="auto">', $response->content());
         self::assertStringContainsString('data-volt-runtime="true"', $response->content());
+        self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
+    }
+
+    public function test_it_serves_the_runtime_as_a_cacheable_javascript_asset(): void
+    {
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/_volt/runtime.js'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('application/javascript; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertSame('public, max-age=31536000, immutable', $response->headers()['Cache-Control']);
+        self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
+        self::assertArrayHasKey('ETag', $response->headers());
+        self::assertArrayHasKey('Last-Modified', $response->headers());
+        self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $response->content());
+        self::assertStringContainsString('volt:component-destroyed', $response->content());
+        self::assertStringContainsString('function cleanupRuntimeOrphans()', $response->content());
+        self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $response->content());
     }
 
     public function test_it_preserves_declared_document_navigation_mode_when_bootstrapping_html(): void

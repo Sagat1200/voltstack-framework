@@ -28,6 +28,7 @@ final class ComponentRouteRenderingTest extends TestCase
         self::assertStringContainsString('<section>Count: 7</section>', $response->content());
         self::assertStringContainsString('data-volt-snapshot=', $response->content());
         self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
+        self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
     }
 }
 

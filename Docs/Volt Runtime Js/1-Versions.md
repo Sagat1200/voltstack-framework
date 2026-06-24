@@ -437,7 +437,7 @@ Plantilla breve de resultado:
 - Accion sugerida:
 ```
 
-Primera linea base local ejecutada:
+Primera linea base local ejecutada antes de externalizar el runtime:
 
 - entorno: `php -S 127.0.0.1:8000 -t public` sobre `app-skeleton`, midiendo 5 requests por ruta con `Invoke-WebRequest`
 - alcance de esta pasada: baseline HTTP local y peso de assets; aun no incluye `DevTools Performance`, memoria JS ni `patchDurationMs` real en navegador
@@ -469,6 +469,35 @@ Lectura operativa del baseline:
 - el costo de `app.js` y `app.css` del skeleton es bajo frente al HTML entregado
 - antes de optimizar `prefetch`, `fragment cache` o directivas finas, conviene atacar el peso/estrategia de entrega del runtime
 - el siguiente corte de eficiencia debe medir en navegador real: `boot`, `patchDurationMs`, `requestPayloadBytes`, `responsePayloadBytes`, long tasks y memoria tras navegacion prolongada
+
+Resultado despues de externalizar el runtime a `/_volt/runtime.js`:
+
+- contrato nuevo: el HTML inyecta `<script data-volt-runtime="true" src="/_volt/runtime.js?v=...">` con `defer`
+- el runtime ahora se sirve como asset separado con `Cache-Control: public, max-age=31536000, immutable`
+- linea base local repetida sobre el mismo entorno y las mismas rutas:
+
+| Ruta | Status | HTML promedio despues | Tiempo promedio despues | Pico observado despues |
+| --- | --- | --- | --- | --- |
+| `/` | `200` | `41071 B` | `273.43 ms` | `427.46 ms` |
+| `/runtimeEvents` | `200` | `45535 B` | `234.49 ms` | `245.72 ms` |
+| `/runtimeModelSync` | `200` | `29080 B` | `222.71 ms` | `230.54 ms` |
+| `/fragmentCache` | `200` | `38205 B` | `226.02 ms` | `231.05 ms` |
+| `/navigationPolicy` | `200` | `26321 B` | `218.29 ms` | `227.26 ms` |
+| `/_volt/runtime.js` | `200` | `275267 B` | `236.19 ms` | `268.23 ms` |
+
+Impacto observado:
+
+- `/`: de `316297 B` a `41071 B` en HTML inicial, una reduccion aproximada de `87.02%`
+- `/runtimeEvents`: de `320761 B` a `45535 B`, reduccion aproximada de `85.80%`
+- `/runtimeModelSync`: de `304306 B` a `29080 B`, reduccion aproximada de `90.44%`
+- `/fragmentCache`: de `313431 B` a `38205 B`, reduccion aproximada de `87.81%`
+- `/navigationPolicy`: de `301547 B` a `26321 B`, reduccion aproximada de `91.27%`
+
+Lectura operativa del cambio:
+
+- el costo fuerte ya no viaja duplicado en cada documento HTML
+- el runtime queda cacheable por navegador y reusable entre pantallas SPA y vistas tradicionales
+- la siguiente optimizacion natural ya no es externalizar, sino reducir el peso propio de [`volt.js`](file:///c:/W4/Packages/VoltStack/app-skeleton/vendor/voltstack/framework/frontend/runtime/volt.js) o introducir particion modular si el crecimiento continua
 
 ## Bitacora De Avance
 
@@ -550,6 +579,7 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` cleanup agresivo de listeners/handles huerfanos para prefetch viewport, intereses de prefetch, `modelSync` debounced y stores `.once` sobre nodos desconectados
 - `[x]` validacion ampliada del bloque de cleanup runtime ejecutada con `ReactiveProtocolTest`, `SkeletonSpaRoadmapTest`, `HttpKernelTest`, `ViewRenderingTest`, `ComponentRouteRenderingTest` e `InlinePageRenderingTest`
 - `[x]` primera linea base local de eficiencia ejecutada sobre `app-skeleton`, confirmando HTML inicial de `301-321 KB`, assets compilados pequenos (`15.6 KB` JS, `17.5 KB` CSS) y un runtime inline de `~275 KB` que domina el `87.03%` del HTML inicial en `/`
+- `[x]` externalizacion del runtime a `/_volt/runtime.js` con versionado por query string, cache HTTP y reduccion del HTML inicial hacia `26-46 KB` segun la ruta medida
 
 ## Proximo Bloque Recomendado
 
