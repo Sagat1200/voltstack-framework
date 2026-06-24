@@ -77,7 +77,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[ ]` retry automatico para errores transitorios
 - `[ ]` estrategia de timeout configurable
 - `[ ]` clasificacion formal de errores de protocolo
-- `[ ]` telemetria de latencia y payload
+- `[x]` telemetria de latencia y payload
 - `[ ]` serializacion incremental o streaming de responses
 
 ### 3. Component Runtime
@@ -86,9 +86,9 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` registro de snapshots en atributos DOM
 - `[x]` rehidratacion basica tras respuesta backend
 - `[x]` sync de snapshot tras patch
-- `[ ]` registro formal de componentes activos con API publica
-- `[ ]` destruccion explicita de componentes desmontados
-- `[ ]` cleanup agresivo de listeners huerfanos
+- `[x]` registro formal de componentes activos con API publica
+- `[x]` destruccion explicita de componentes desmontados
+- `[x]` cleanup agresivo de listeners huerfanos
 - `[ ]` nested components complejos
 - `[ ]` preservacion de componentes entre navegacion SPA
 
@@ -437,6 +437,39 @@ Plantilla breve de resultado:
 - Accion sugerida:
 ```
 
+Primera linea base local ejecutada:
+
+- entorno: `php -S 127.0.0.1:8000 -t public` sobre `app-skeleton`, midiendo 5 requests por ruta con `Invoke-WebRequest`
+- alcance de esta pasada: baseline HTTP local y peso de assets; aun no incluye `DevTools Performance`, memoria JS ni `patchDurationMs` real en navegador
+- rutas medidas: `/`, `/runtimeEvents`, `/runtimeModelSync`, `/fragmentCache`, `/navigationPolicy`
+- resultado base:
+
+| Ruta | Status | HTML promedio | Tiempo promedio | Pico observado |
+| --- | --- | --- | --- | --- |
+| `/` | `200` | `316297 B` | `555.90 ms` | `840.86 ms` |
+| `/runtimeEvents` | `200` | `320761 B` | `485.77 ms` | `694.35 ms` |
+| `/runtimeModelSync` | `200` | `304306 B` | `522.97 ms` | `610.86 ms` |
+| `/fragmentCache` | `200` | `313431 B` | `524.22 ms` | `647.59 ms` |
+| `/navigationPolicy` | `200` | `301547 B` | `405.37 ms` | `460.70 ms` |
+
+Peso de assets compilados:
+
+- `public/build/assets/app-5lWdl_Fp.js`: `15651 B`
+- `public/build/assets/app-CO_JpJeO.css`: `17527 B`
+
+Hallazgo inicial importante:
+
+- en `/`, el HTML total pesa `316297 B`
+- el runtime inline `data-volt-runtime="true"` pesa `275269 B`
+- eso representa aproximadamente `87.03%` del HTML inicial
+- el archivo fuente [`volt.js`](file:///c:/W4/Packages/VoltStack/app-skeleton/vendor/voltstack/framework/frontend/runtime/volt.js) pesa `275267 B`, lo que confirma que el principal costo inicial actual esta en el runtime embebido por documento
+
+Lectura operativa del baseline:
+
+- el costo de `app.js` y `app.css` del skeleton es bajo frente al HTML entregado
+- antes de optimizar `prefetch`, `fragment cache` o directivas finas, conviene atacar el peso/estrategia de entrega del runtime
+- el siguiente corte de eficiencia debe medir en navegador real: `boot`, `patchDurationMs`, `requestPayloadBytes`, `responsePayloadBytes`, long tasks y memoria tras navegacion prolongada
+
 ## Bitacora De Avance
 
 Usar esta seccion para marcar hitos reales conforme avancemos.
@@ -511,16 +544,22 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` validacion manual de `/runtimeAdvancedDirectives` cerrada con presets reproducibles, markers `data-runtime-check` y checklist dedicada en `6-Runtime-Advanced-Directives-Manual-Validation.md`
 - `[x]` validacion manual de `fragment cache SPA`, `prefetch`/`preload`, `head` + layout fallback y politicas `reload` cerrada con la checklist `7-Fragment-Cache-Prefetch-Manual-Validation.md`
 - `[x]` validacion manual de `politicas configurables por ruta para SPA vs full reload` cerrada con scaffolding en `NavigationPolicyPage`, `NavigationDocumentReloadPage` y la checklist `8-Navigation-Policy-Manual-Validation.md`
+- `[x]` telemetria minima del runtime para latencia, payload y patch, exponiendo metricas en `volt:request-finish`, `volt:after-patch` y `window.Volt.telemetry`
+- `[x]` registro formal de componentes activos con `window.Volt.components`, snapshot/summary/refresh y refresco automatico tras boot, patch y navegacion
+- `[x]` destruccion explicita de componentes desmontados, con limpieza de timers/estado por root, aborto de requests huerfanos y hook `volt:component-destroyed`
+- `[x]` cleanup agresivo de listeners/handles huerfanos para prefetch viewport, intereses de prefetch, `modelSync` debounced y stores `.once` sobre nodos desconectados
+- `[x]` validacion ampliada del bloque de cleanup runtime ejecutada con `ReactiveProtocolTest`, `SkeletonSpaRoadmapTest`, `HttpKernelTest`, `ViewRenderingTest`, `ComponentRouteRenderingTest` e `InlinePageRenderingTest`
+- `[x]` primera linea base local de eficiencia ejecutada sobre `app-skeleton`, confirmando HTML inicial de `301-321 KB`, assets compilados pequenos (`15.6 KB` JS, `17.5 KB` CSS) y un runtime inline de `~275 KB` que domina el `87.03%` del HTML inicial en `/`
 
 ## Proximo Bloque Recomendado
 
 Orden sugerido para seguir avanzando:
 
-1. endurecer y ampliar la cobertura de `sincronizacion selectiva frontend/backend`
-2. revisar si hace falta cobertura adicional para escenarios borde de `fragment cache SPA`
-3. revisar si hace falta cobertura adicional para `prefetch`/`preload` en navegador real
-4. consolidar el bloque activo y preparar el siguiente tramo del roadmap
-5. revisar si conviene cerrar o reorganizar el roadmap de demos manuales ya completadas
+1. ejecutar la matriz de eficiencia con la nueva `telemetria de latencia y payload`
+2. avanzar con `timeout configurable`
+3. avanzar con `clasificacion formal de errores de protocolo`
+4. revisar si ya conviene entrar a `nested components complejos`
+5. retomar `retry automatico` cuando ya exista timeout + taxonomia de errores
 
 ## Bloque Cerrado Reciente
 

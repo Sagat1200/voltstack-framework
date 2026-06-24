@@ -30,6 +30,7 @@
     errorTimeouts: new Map(),
     dirtyDebounces: new Map(),
     modelSyncDebounces: new WeakMap(),
+    modelSyncTrackedElements: new Set(),
     clientStateScope: null,
     clientStateValues: new Map(),
     sharedStateValues: new Map(),
@@ -39,6 +40,18 @@
     sharedStateGlobalSubscribers: new Set(),
     directiveSequence: 0,
     onDirectiveOnce: new WeakMap(),
+    onDirectiveTrackedElements: new Set(),
+    activeComponents: new Map(),
+    activeComponentsMeta: {
+      refreshedAt: null,
+      reason: "boot",
+      count: 0,
+    },
+    navigationPrefetchTrackedElements: new Set(),
+    navigationViewportTrackedElements: new Set(),
+    telemetryEntries: [],
+    telemetryMaxEntries: 60,
+    telemetrySequence: 0,
   };
 
   const NAVIGATION_CACHE_TTL = 5000;
@@ -264,6 +277,8 @@
     if (!runtime.onDirectiveOnce.has(element)) {
       runtime.onDirectiveOnce.set(element, new Set());
     }
+
+    runtime.onDirectiveTrackedElements.add(element);
 
     return runtime.onDirectiveOnce.get(element);
   }
@@ -736,6 +751,511 @@
     }
   }
 
+  function runtimeNow() {
+    if (
+      typeof performance !== "undefined" &&
+      performance &&
+      typeof performance.now === "function"
+    ) {
+      return performance.now();
+    }
+
+    return Date.now();
+  }
+
+  function roundedMetricValue(value) {
+    return typeof value === "number" && isFinite(value)
+      ? Math.round(value * 100) / 100
+      : null;
+  }
+
+  function serializedTextBytes(value) {
+    if (typeof value !== "string" || value === "") {
+      return 0;
+    }
+
+    if (typeof TextEncoder === "function") {
+      return new TextEncoder().encode(value).length;
+    }
+
+    try {
+      return unescape(encodeURIComponent(value)).length;
+    } catch (error) {
+      return value.length;
+    }
+  }
+
+  function serializedPayloadBytes(value) {
+    if (typeof value === "undefined") {
+      return 0;
+    }
+
+    if (typeof value === "string") {
+      return serializedTextBytes(value);
+    }
+
+    try {
+      return serializedTextBytes(JSON.stringify(value));
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  function normalizeTelemetryKinds(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const candidates = Array.isArray(settings.kinds)
+      ? settings.kinds
+      : settings.kind
+        ? [settings.kind]
+        : [];
+
+    return candidates
+      .map(function (kind) {
+        return typeof kind === "string" ? kind.trim() : "";
+      })
+      .filter(function (kind) {
+        return kind !== "";
+      });
+  }
+
+  function filteredTelemetryEntries(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const kinds = normalizeTelemetryKinds(settings);
+    const filtered =
+      kinds.length === 0
+        ? runtime.telemetryEntries
+        : runtime.telemetryEntries.filter(function (entry) {
+            return kinds.indexOf(entry.kind) !== -1;
+          });
+    const limit =
+      typeof settings.limit === "number" && settings.limit > 0
+        ? Math.floor(settings.limit)
+        : null;
+    const entries = limit ? filtered.slice(0, limit) : filtered.slice();
+
+    return entries.map(function (entry) {
+      return cloneStateValue(entry);
+    });
+  }
+
+  function summarizeTelemetryKind(entries, kind) {
+    const filtered = entries.filter(function (entry) {
+      return entry.kind === kind;
+    });
+    const outcomes = {};
+    let totalDurationMs = 0;
+    let durationSamples = 0;
+    let maxDurationMs = 0;
+    let totalRequestPayloadBytes = 0;
+    let requestPayloadSamples = 0;
+    let maxRequestPayloadBytes = 0;
+    let totalResponsePayloadBytes = 0;
+    let responsePayloadSamples = 0;
+    let maxResponsePayloadBytes = 0;
+    let totalPatchDurationMs = 0;
+    let patchSamples = 0;
+    let maxPatchDurationMs = 0;
+
+    filtered.forEach(function (entry) {
+      const outcome =
+        entry && typeof entry.outcome === "string" ? entry.outcome : "unknown";
+      const totalDuration =
+        typeof entry.totalDurationMs === "number" ? entry.totalDurationMs : null;
+      const requestPayload =
+        typeof entry.requestPayloadBytes === "number"
+          ? entry.requestPayloadBytes
+          : null;
+      const responsePayload =
+        typeof entry.responsePayloadBytes === "number"
+          ? entry.responsePayloadBytes
+          : null;
+      const patchDuration =
+        typeof entry.patchDurationMs === "number" ? entry.patchDurationMs : null;
+
+      outcomes[outcome] = (outcomes[outcome] || 0) + 1;
+
+      if (totalDuration !== null) {
+        totalDurationMs += totalDuration;
+        durationSamples += 1;
+        maxDurationMs = Math.max(maxDurationMs, totalDuration);
+      }
+
+      if (requestPayload !== null) {
+        totalRequestPayloadBytes += requestPayload;
+        requestPayloadSamples += 1;
+        maxRequestPayloadBytes = Math.max(maxRequestPayloadBytes, requestPayload);
+      }
+
+      if (responsePayload !== null) {
+        totalResponsePayloadBytes += responsePayload;
+        responsePayloadSamples += 1;
+        maxResponsePayloadBytes = Math.max(
+          maxResponsePayloadBytes,
+          responsePayload,
+        );
+      }
+
+      if (patchDuration !== null) {
+        totalPatchDurationMs += patchDuration;
+        patchSamples += 1;
+        maxPatchDurationMs = Math.max(maxPatchDurationMs, patchDuration);
+      }
+    });
+
+    return {
+      kind: kind,
+      count: filtered.length,
+      outcomes: outcomes,
+      averageDurationMs:
+        durationSamples > 0
+          ? roundedMetricValue(totalDurationMs / durationSamples)
+          : null,
+      maxDurationMs:
+        durationSamples > 0 ? roundedMetricValue(maxDurationMs) : null,
+      averageRequestPayloadBytes:
+        requestPayloadSamples > 0
+          ? Math.round(totalRequestPayloadBytes / requestPayloadSamples)
+          : null,
+      maxRequestPayloadBytes:
+        requestPayloadSamples > 0 ? maxRequestPayloadBytes : null,
+      averageResponsePayloadBytes:
+        responsePayloadSamples > 0
+          ? Math.round(totalResponsePayloadBytes / responsePayloadSamples)
+          : null,
+      maxResponsePayloadBytes:
+        responsePayloadSamples > 0 ? maxResponsePayloadBytes : null,
+      averagePatchDurationMs:
+        patchSamples > 0
+          ? roundedMetricValue(totalPatchDurationMs / patchSamples)
+          : null,
+      maxPatchDurationMs:
+        patchSamples > 0 ? roundedMetricValue(maxPatchDurationMs) : null,
+      latest:
+        filtered.length > 0 ? cloneStateValue(filtered[0]) : null,
+    };
+  }
+
+  function telemetrySummary(options) {
+    const entries = filteredTelemetryEntries(options);
+    const summary = {
+      totalEntries: entries.length,
+      maxEntries: runtime.telemetryMaxEntries,
+      navigation: summarizeTelemetryKind(entries, "navigation"),
+      action: summarizeTelemetryKind(entries, "action"),
+      patch: summarizeTelemetryKind(entries, "patch"),
+    };
+
+    return cloneStateValue(summary);
+  }
+
+  function recordRuntimeTelemetry(kind, detail) {
+    const entry = Object.assign(
+      {
+        kind: kind,
+        sequence: runtime.telemetrySequence + 1,
+        recordedAt: new Date().toISOString(),
+      },
+      cloneStateValue(detail || {}),
+    );
+
+    runtime.telemetrySequence = entry.sequence;
+    runtime.telemetryEntries.unshift(entry);
+
+    while (runtime.telemetryEntries.length > runtime.telemetryMaxEntries) {
+      runtime.telemetryEntries.pop();
+    }
+
+    return cloneStateValue(entry);
+  }
+
+  function resetRuntimeTelemetry() {
+    const cleared = runtime.telemetryEntries.length;
+
+    runtime.telemetryEntries = [];
+    runtime.telemetrySequence = 0;
+
+    return cleared;
+  }
+
+  function activeComponentRoots() {
+    return Array.prototype.slice.call(
+      document.querySelectorAll('[data-volt-root="true"]'),
+    );
+  }
+
+  function activeComponentKey(root, index) {
+    const component =
+      root && typeof root.getAttribute === "function"
+        ? root.getAttribute("data-volt-component") || "anonymous"
+        : "anonymous";
+    const descriptor = buildStableElementDescriptor(root);
+
+    if (descriptor && descriptor.value) {
+      return (
+        component +
+        "::" +
+        descriptor.strategy +
+        ":" +
+        String(descriptor.value)
+      );
+    }
+
+    return component + "::index:" + String(index);
+  }
+
+  function publicActiveComponentEntry(entry) {
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+
+    const sanitized = Object.assign({}, entry);
+    delete sanitized.rootRef;
+
+    return cloneStateValue(sanitized);
+  }
+
+  function describeActiveComponent(root, index, previousEntry) {
+    const snapshotAttribute =
+      root && typeof root.getAttribute === "function"
+        ? root.getAttribute("data-volt-snapshot")
+        : null;
+    const snapshot = root ? readSnapshot(root) : null;
+    const component =
+      root && typeof root.getAttribute === "function"
+        ? root.getAttribute("data-volt-component")
+        : null;
+    const descriptor = buildStableElementDescriptor(root);
+
+    return {
+      id: activeComponentKey(root, index),
+      index: index,
+      component: component,
+      endpoint:
+        root && typeof root.getAttribute === "function"
+          ? root.getAttribute("data-volt-endpoint") || "/_volt/action"
+          : "/_volt/action",
+      renderMode:
+        root && typeof root.getAttribute === "function"
+          ? root.getAttribute("data-volt-render-mode")
+          : null,
+      descriptor: descriptor,
+      hasSnapshot: !!snapshotAttribute,
+      snapshotBytes: serializedPayloadBytes(snapshotAttribute || ""),
+      snapshotStateKeys:
+        snapshot && snapshot.state && typeof snapshot.state === "object"
+          ? Object.keys(snapshot.state)
+          : [],
+      isConnected: !!(root && root.isConnected),
+      flags: {
+        loading:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-loading") === "true"
+          ),
+        dirty:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-dirty") === "true"
+          ),
+        error:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-error") === "true"
+          ),
+        success:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-success") === "true"
+          ),
+      },
+      firstSeenAt:
+        previousEntry && previousEntry.firstSeenAt
+          ? previousEntry.firstSeenAt
+          : new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+      rootRef: root || null,
+    };
+  }
+
+  function remainingComponentCount(entries, component) {
+    if (!component) {
+      return 0;
+    }
+
+    let count = 0;
+
+    entries.forEach(function (entry) {
+      if (entry && entry.component === component) {
+        count += 1;
+      }
+    });
+
+    return count;
+  }
+
+  function clearRuntimeRootState(root) {
+    if (!root) {
+      return;
+    }
+
+    clearLoadingDelay(root);
+    clearLoadingMinDuration(root);
+    clearSuccessTimeout(root);
+    clearSuccessMinDuration(root);
+    clearErrorTimeout(root);
+    clearDirtyDebounce(root);
+    runtime.loadingActivatedAt.delete(root);
+    runtime.successActivatedAt.delete(root);
+  }
+
+  function destroyUnmountedComponent(entry, remainingEntries, reason) {
+    if (!entry || typeof entry !== "object") {
+      return false;
+    }
+
+    const root = entry.rootRef || null;
+    const component = entry.component || null;
+
+    clearRuntimeRootState(root);
+
+    if (component && remainingComponentCount(remainingEntries, component) === 0) {
+      const requestState = runtime.componentRequestStates.get(component);
+
+      if (requestState && requestState.controller) {
+        requestState.controller.abort();
+      }
+
+      runtime.componentRequestStates.delete(component);
+      runtime.statePolicies.delete(component);
+    }
+
+    emitRuntimeHook(
+      "volt:component-destroyed",
+      {
+        id: entry.id || null,
+        component: component,
+        reason: reason || "unmounted",
+        descriptor: entry.descriptor || null,
+        remainingComponentRoots: remainingComponentCount(
+          remainingEntries,
+          component,
+        ),
+        activeComponentCount: remainingEntries.size,
+      },
+      document,
+    );
+
+    return true;
+  }
+
+  function destroyRemovedActiveComponents(previousEntries, nextEntries, reason) {
+    previousEntries.forEach(function (entry, key) {
+      if (!entry || typeof entry !== "object") {
+        return;
+      }
+
+      const previousRoot = entry.rootRef || null;
+      const nextEntry = nextEntries.get(key);
+      const nextRoot =
+        nextEntry && typeof nextEntry === "object" ? nextEntry.rootRef || null : null;
+
+      if (previousRoot && nextRoot === previousRoot) {
+        return;
+      }
+
+      destroyUnmountedComponent(entry, nextEntries, reason || "refresh");
+    });
+  }
+
+  function refreshActiveComponentsRegistry(reason) {
+    const previous = runtime.activeComponents;
+    const next = new Map();
+    const roots = activeComponentRoots();
+
+    roots.forEach(function (root, index) {
+      const key = activeComponentKey(root, index);
+      next.set(key, describeActiveComponent(root, index, previous.get(key)));
+    });
+
+    destroyRemovedActiveComponents(previous, next, reason || "refresh");
+    runtime.activeComponents = next;
+    runtime.activeComponentsMeta = {
+      refreshedAt: new Date().toISOString(),
+      reason: reason || "manual",
+      count: next.size,
+    };
+
+    return activeComponentsSnapshot();
+  }
+
+  function activeComponentsEntries(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const componentFilter =
+      typeof settings.component === "string" && settings.component.trim() !== ""
+        ? settings.component.trim()
+        : null;
+    const entries = Array.from(runtime.activeComponents.values()).filter(
+      function (entry) {
+        return componentFilter ? entry.component === componentFilter : true;
+      },
+    );
+
+    return entries.map(function (entry) {
+      return publicActiveComponentEntry(entry);
+    });
+  }
+
+  function activeComponentsSummary(options) {
+    const entries = activeComponentsEntries(options);
+    const components = {};
+
+    entries.forEach(function (entry) {
+      const name = entry.component || "anonymous";
+
+      if (!components[name]) {
+        components[name] = {
+          component: name,
+          count: 0,
+          totalSnapshotBytes: 0,
+          loading: 0,
+          dirty: 0,
+          error: 0,
+          success: 0,
+        };
+      }
+
+      components[name].count += 1;
+      components[name].totalSnapshotBytes += entry.snapshotBytes || 0;
+      components[name].loading += entry.flags && entry.flags.loading ? 1 : 0;
+      components[name].dirty += entry.flags && entry.flags.dirty ? 1 : 0;
+      components[name].error += entry.flags && entry.flags.error ? 1 : 0;
+      components[name].success += entry.flags && entry.flags.success ? 1 : 0;
+    });
+
+    return {
+      totalRoots: entries.length,
+      uniqueComponents: Object.keys(components).length,
+      refreshedAt: runtime.activeComponentsMeta.refreshedAt,
+      reason: runtime.activeComponentsMeta.reason,
+      components: Object.keys(components)
+        .sort()
+        .map(function (name) {
+          return cloneStateValue(components[name]);
+        }),
+    };
+  }
+
+  function activeComponentsSnapshot(options) {
+    return {
+      entries: activeComponentsEntries(options),
+      summary: activeComponentsSummary(options),
+    };
+  }
+
   function normalizeRuntimeStateScope(scope) {
     return scope === "shared" ? "shared" : "client";
   }
@@ -1189,6 +1709,79 @@
       },
       currentScope: function () {
         return currentClientStateScope();
+      },
+    };
+  }
+
+  function createPublicTelemetryApi() {
+    return {
+      entries: function (options) {
+        return filteredTelemetryEntries(options);
+      },
+      latest: function (options) {
+        const entries = filteredTelemetryEntries(
+          Object.assign({}, options || {}, {
+            limit: 1,
+          }),
+        );
+
+        return entries.length > 0 ? entries[0] : null;
+      },
+      summary: function (options) {
+        return telemetrySummary(options);
+      },
+      snapshot: function (options) {
+        return {
+          entries: filteredTelemetryEntries(options),
+          summary: telemetrySummary(options),
+          maxEntries: runtime.telemetryMaxEntries,
+        };
+      },
+      reset: function () {
+        return resetRuntimeTelemetry();
+      },
+      size: function () {
+        return runtime.telemetryEntries.length;
+      },
+      config: function () {
+        return {
+          maxEntries: runtime.telemetryMaxEntries,
+        };
+      },
+    };
+  }
+
+  function createPublicComponentsApi() {
+    return {
+      entries: function (options) {
+        return activeComponentsEntries(options);
+      },
+      all: function (options) {
+        return activeComponentsEntries(options);
+      },
+      summary: function (options) {
+        return activeComponentsSummary(options);
+      },
+      snapshot: function (options) {
+        return activeComponentsSnapshot(options);
+      },
+      count: function (options) {
+        return activeComponentsEntries(options).length;
+      },
+      names: function () {
+        return activeComponentsSummary().components.map(function (entry) {
+          return entry.component;
+        });
+      },
+      find: function (componentName) {
+        const entries = activeComponentsEntries({
+          component: componentName,
+        });
+
+        return entries.length > 0 ? entries[0] : null;
+      },
+      refresh: function (reason) {
+        return refreshActiveComponentsRegistry(reason || "manual");
       },
     };
   }
@@ -2450,6 +3043,7 @@
 
     clearTimeout(runtime.modelSyncDebounces.get(element));
     runtime.modelSyncDebounces.delete(element);
+    runtime.modelSyncTrackedElements.delete(element);
   }
 
   function buildModelSyncDirectivePayload(root, element) {
@@ -2508,6 +3102,7 @@
 
     const timeoutId = window.setTimeout(function () {
       runtime.modelSyncDebounces.delete(element);
+      runtime.modelSyncTrackedElements.delete(element);
 
       if (!element.isConnected) {
         return;
@@ -2537,6 +3132,7 @@
     }, MODEL_SYNC_DEBOUNCE);
 
     runtime.modelSyncDebounces.set(element, timeoutId);
+    runtime.modelSyncTrackedElements.add(element);
     return true;
   }
 
@@ -5196,6 +5792,7 @@
     }
 
     runtime.navigationPrefetchElements.set(element, normalizedUrl);
+    runtime.navigationPrefetchTrackedElements.add(element);
     runtime.navigationPrefetchInterest.set(
       normalizedUrl,
       (runtime.navigationPrefetchInterest.get(normalizedUrl) || 0) + 1,
@@ -5233,6 +5830,7 @@
     }
 
     runtime.navigationPrefetchElements.delete(element);
+    runtime.navigationPrefetchTrackedElements.delete(element);
 
     const nextCount = (runtime.navigationPrefetchInterest.get(url) || 0) - 1;
 
@@ -5477,7 +6075,58 @@
     return runtime.navigationViewportObserver;
   }
 
+  function cleanupRuntimeOrphans() {
+    runtime.navigationPrefetchTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      releasePrefetchInterest(element);
+    });
+
+    runtime.modelSyncTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      clearModelSyncDirectiveDebounce(element);
+    });
+
+    runtime.onDirectiveTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      runtime.onDirectiveOnce.delete(element);
+      runtime.onDirectiveTrackedElements.delete(element);
+    });
+
+    runtime.navigationViewportTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      if (runtime.navigationViewportObserver) {
+        runtime.navigationViewportObserver.unobserve(element);
+      }
+
+      runtime.navigationViewportObserved.delete(element);
+      runtime.navigationViewportTrackedElements.delete(element);
+    });
+
+    if (
+      runtime.navigationViewportTrackedElements.size === 0 &&
+      runtime.navigationViewportObserver
+    ) {
+      runtime.navigationViewportObserver.disconnect();
+      runtime.navigationViewportObserver = null;
+      runtime.navigationViewportObserved = new WeakSet();
+    }
+  }
+
   function registerViewportPrefetchTargets(root) {
+    cleanupRuntimeOrphans();
+
     const observer = ensureNavigationViewportObserver();
 
     if (!observer || !root || typeof root.querySelectorAll !== "function") {
@@ -5500,6 +6149,7 @@
         }
 
         runtime.navigationViewportObserved.add(link);
+        runtime.navigationViewportTrackedElements.add(link);
         observer.observe(link);
       });
   }
@@ -5582,6 +6232,7 @@
   }
 
   function scheduleHeuristicPrefetch(root) {
+    cleanupRuntimeOrphans();
     cancelHeuristicPrefetch();
 
     const candidateRoot =
@@ -6713,6 +7364,7 @@
     syncStyleDirectives(root);
     syncShowDirectives(root);
     syncFocusDirectives(root);
+    cleanupRuntimeOrphans();
   }
 
   function syncAllRuntimeStateDirectives() {
@@ -7377,7 +8029,15 @@
     const detail = meta && typeof meta === "object" ? meta : {};
     const focusState = captureFocusState(root);
     const scrollState = captureScrollState(root);
-    emitRuntimeHook("volt:before-patch", detail, root);
+    const patchStartedAt = runtimeNow();
+
+    emitRuntimeHook(
+      "volt:before-patch",
+      Object.assign({}, detail, {
+        patchStartedAt: roundedMetricValue(patchStartedAt),
+      }),
+      root,
+    );
     const result = await callback();
     const updatedRoot =
       root && root.isConnected
@@ -7385,17 +8045,43 @@
         : root && root.getAttribute
           ? findRootByComponent(root.getAttribute("data-volt-component"))
           : null;
+    const patchDurationMs = roundedMetricValue(runtimeNow() - patchStartedAt);
 
     if (updatedRoot) {
       restoreScrollState(updatedRoot, scrollState);
       restoreFocusState(updatedRoot, focusState);
     }
 
+    refreshActiveComponentsRegistry(
+      detail && detail.type ? "patch:" + detail.type : "patch",
+    );
+
+    const patchDetail = Object.assign({}, detail, {
+      patchDurationMs: patchDurationMs,
+      updatedRoot: updatedRoot || null,
+      activeComponentCount: runtime.activeComponents.size,
+    });
+
+    recordRuntimeTelemetry("patch", {
+      operationType: detail && detail.type ? detail.type : "unknown",
+      source: detail && detail.source ? detail.source : null,
+      component: detail && detail.component ? detail.component : null,
+      action: detail && detail.action ? detail.action : null,
+      url: detail && detail.url ? detail.url : null,
+      finalUrl: detail && detail.finalUrl ? detail.finalUrl : null,
+      effectCount:
+        detail && Array.isArray(detail.effects) ? detail.effects.length : 0,
+      effects:
+        detail && Array.isArray(detail.effects) ? detail.effects.slice() : [],
+      usedHtmlFallback:
+        detail && detail.usedHtmlFallback === true ? true : false,
+      patchDurationMs: patchDurationMs,
+      activeComponentCount: runtime.activeComponents.size,
+    });
+
     emitRuntimeHook(
       "volt:after-patch",
-      Object.assign({}, detail, {
-        updatedRoot: updatedRoot || null,
-      }),
+      patchDetail,
       updatedRoot || root || document,
     );
 
@@ -8673,6 +9359,9 @@
       fragmentSummary.persistentRegistrySize =
         restoredPersistent.registrySize || 0;
       syncAllRuntimeStateDirectives();
+      refreshActiveComponentsRegistry(
+        payloadMeta.type ? payloadMeta.type : "navigation",
+      );
       registerViewportPrefetchTargets(document);
       scheduleHeuristicPrefetch(document);
       await runPageTransitionPhase(document.body, "enter", pageTransition);
@@ -9231,6 +9920,20 @@
       requestId: requestId,
       trigger: triggerDescriptor(settings.trigger || null),
     };
+    const requestStartedAt = runtimeNow();
+    let finalUrl = normalizedUrl;
+    let responsePayloadBytes = 0;
+    let htmlBytes = 0;
+    let patchDurationMs = null;
+    let networkDurationMs = null;
+    let cacheHit = false;
+    let resolvedNavigationMode = requestedNavigationMode.mode;
+    let resolvedDocumentContract = null;
+    let resolvedPageTransition = null;
+    let preservedFragments = 0;
+    let discardedFragments = 0;
+    let persistedFragments = 0;
+    let persistentFragmentRegistrySize = 0;
     runtime.navigationController = controller;
 
     if (previousController) {
@@ -9267,6 +9970,7 @@
         : null;
 
       if (cachedPayload) {
+        cacheHit = true;
         emitNavigationCacheEvent("volt:cache-hit", {
           url: normalizedUrl,
           finalUrl: cachedPayload.finalUrl,
@@ -9293,13 +9997,20 @@
           },
         ));
 
+      finalUrl = payload && payload.finalUrl ? payload.finalUrl : normalizedUrl;
+      htmlBytes = serializedPayloadBytes(payload && payload.html ? payload.html : "");
+      responsePayloadBytes = htmlBytes;
+      networkDurationMs = cacheHit
+        ? 0
+        : roundedMetricValue(runtimeNow() - requestStartedAt);
+
       if (runtime.navigationRequestId !== requestId) {
         outcome = "stale";
         emitRuntimeHook(
           "volt:request-stale",
           requestHookDetail("navigation", requestMeta, {
             url: normalizedUrl,
-            finalUrl: payload.finalUrl,
+            finalUrl: finalUrl,
             outcome: outcome,
           }),
           document,
@@ -9327,6 +10038,11 @@
           : payload.pageTransition && typeof payload.pageTransition === "object"
             ? payload.pageTransition
             : parsePageTransition("", "default");
+      resolvedNavigationMode =
+        payloadNavigationMode && payloadNavigationMode.mode
+          ? payloadNavigationMode.mode
+          : requestedNavigationMode.mode;
+      resolvedDocumentContract = payloadDocumentContract.mode;
 
       if (shouldFallbackForLayoutChange(payload.document)) {
         outcome = "layout-fallback";
@@ -9362,16 +10078,14 @@
         settings.pageTransition,
         payloadPageTransition,
       );
+      resolvedPageTransition = pageTransition.name;
 
       emitRuntimeHook(
         "volt:before-navigate",
         {
           url: normalizedUrl,
-          finalUrl: payload.finalUrl,
-          navigationMode:
-            payloadNavigationMode && payloadNavigationMode.mode
-              ? payloadNavigationMode.mode
-              : requestedNavigationMode.mode,
+          finalUrl: finalUrl,
+          navigationMode: resolvedNavigationMode,
           pageTransition: pageTransition.name,
           pageTransitionSource: pageTransition.source || "default",
           pageTransitionMode: pageTransition.mode || "out-in",
@@ -9388,13 +10102,14 @@
         await runPageTransitionPhase(document.body, "leave", pageTransition);
       }
 
+      const patchStartedAt = runtimeNow();
       const navigationMutation = await withPreservedUiState(
         document.body,
         async function () {
           return applyDocumentPayload(payload.document, {
             source: "navigate",
             url: normalizedUrl,
-            finalUrl: payload.finalUrl,
+            finalUrl: finalUrl,
             cacheControl: payload.cacheControl,
             pageTransition: pageTransition,
           });
@@ -9402,32 +10117,50 @@
         {
           type: "navigation",
           url: normalizedUrl,
-          finalUrl: payload.finalUrl,
+          finalUrl: finalUrl,
         },
       );
+      patchDurationMs = roundedMetricValue(runtimeNow() - patchStartedAt);
+      preservedFragments =
+        navigationMutation &&
+        typeof navigationMutation.preservedCount === "number"
+          ? navigationMutation.preservedCount
+          : 0;
+      discardedFragments =
+        navigationMutation &&
+        typeof navigationMutation.discardedCount === "number"
+          ? navigationMutation.discardedCount
+          : 0;
+      persistedFragments =
+        navigationMutation &&
+        typeof navigationMutation.persistedCount === "number"
+          ? navigationMutation.persistedCount
+          : 0;
+      persistentFragmentRegistrySize =
+        navigationMutation &&
+        typeof navigationMutation.persistentRegistrySize === "number"
+          ? navigationMutation.persistentRegistrySize
+          : 0;
 
       if (settings.historyMode === "replace") {
-        window.history.replaceState({}, "", payload.finalUrl);
+        window.history.replaceState({}, "", finalUrl);
       } else if (settings.updateHistory !== false) {
-        window.history.pushState({}, "", payload.finalUrl);
+        window.history.pushState({}, "", finalUrl);
       }
 
       if (settings.preserveScroll !== true) {
         window.scrollTo(0, 0);
       }
 
-      transitionClientStateScope(payload.finalUrl, "navigation");
+      transitionClientStateScope(finalUrl, "navigation");
 
       emitRuntimeHook(
         "volt:navigated",
         {
           url: normalizedUrl,
-          finalUrl: payload.finalUrl,
+          finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
-          navigationMode:
-            payloadNavigationMode && payloadNavigationMode.mode
-              ? payloadNavigationMode.mode
-              : requestedNavigationMode.mode,
+          navigationMode: resolvedNavigationMode,
           pageTransition: pageTransition.name,
           pageTransitionSource: pageTransition.source || "default",
           pageTransitionMode: pageTransition.mode || "out-in",
@@ -9436,26 +10169,10 @@
               ? pageTransition.duration
               : null,
           pageTransitionProfile: pageTransition.profile || null,
-          preservedFragments:
-            navigationMutation &&
-            typeof navigationMutation.preservedCount === "number"
-              ? navigationMutation.preservedCount
-              : 0,
-          discardedFragments:
-            navigationMutation &&
-            typeof navigationMutation.discardedCount === "number"
-              ? navigationMutation.discardedCount
-              : 0,
-          persistedFragments:
-            navigationMutation &&
-            typeof navigationMutation.persistedCount === "number"
-              ? navigationMutation.persistedCount
-              : 0,
-          persistentFragmentRegistrySize:
-            navigationMutation &&
-            typeof navigationMutation.persistentRegistrySize === "number"
-              ? navigationMutation.persistentRegistrySize
-              : 0,
+          preservedFragments: preservedFragments,
+          discardedFragments: discardedFragments,
+          persistedFragments: persistedFragments,
+          persistentFragmentRegistrySize: persistentFragmentRegistrySize,
         },
         document,
       );
@@ -9466,6 +10183,7 @@
           "volt:request-abort",
           requestHookDetail("navigation", requestMeta, {
             url: normalizedUrl,
+          finalUrl: finalUrl,
             outcome: outcome,
           }),
           document,
@@ -9479,6 +10197,7 @@
         "volt:request-error",
         requestHookDetail("navigation", requestMeta, {
           url: normalizedUrl,
+          finalUrl: finalUrl,
           message:
             error && error.message ? error.message : "Navigation failed.",
           outcome: outcome,
@@ -9501,12 +10220,33 @@
         setNavigationState(false, settings.trigger || null);
       }
 
+      const finishDetail = requestHookDetail("navigation", requestMeta, {
+        url: normalizedUrl,
+        finalUrl: finalUrl,
+        outcome: outcome,
+        fallbackReason: fallbackReason,
+        cacheMode: cacheControl.mode,
+        cacheHit: cacheHit,
+        navigationMode: resolvedNavigationMode,
+        documentContract: resolvedDocumentContract,
+        pageTransition: resolvedPageTransition,
+        networkDurationMs: networkDurationMs,
+        patchDurationMs: patchDurationMs,
+        totalDurationMs: roundedMetricValue(runtimeNow() - requestStartedAt),
+        requestPayloadBytes: 0,
+        responsePayloadBytes: responsePayloadBytes,
+        htmlBytes: htmlBytes,
+        preservedFragments: preservedFragments,
+        discardedFragments: discardedFragments,
+        persistedFragments: persistedFragments,
+        persistentFragmentRegistrySize: persistentFragmentRegistrySize,
+      });
+      const telemetryEntry = recordRuntimeTelemetry("navigation", finishDetail);
+
       emitRuntimeHook(
         "volt:request-finish",
-        requestHookDetail("navigation", requestMeta, {
-          url: normalizedUrl,
-          outcome: outcome,
-          fallbackReason: fallbackReason,
+        Object.assign({}, finishDetail, {
+          telemetrySequence: telemetryEntry.sequence,
         }),
         document,
       );
@@ -9535,6 +10275,14 @@
       requestId: requestId,
       trigger: triggerDescriptor(trigger),
     };
+    const requestStartedAt = runtimeNow();
+    let requestPayloadBytes = 0;
+    let responsePayloadBytes = 0;
+    let htmlBytes = 0;
+    let snapshotBytes = 0;
+    let patchDurationMs = null;
+    let effectCount = 0;
+    let usedHtmlFallback = false;
     const syncedPayload = applySelectiveStateSync(
       root,
       trigger,
@@ -9573,13 +10321,29 @@
     scheduleLoadingDelay(root, trigger, requestMeta);
     emitRuntimeHook(
       "volt:request-start",
-      requestHookDetail("action", requestMeta),
+      requestHookDetail("action", requestMeta, {
+        selectiveSyncAppliedCount: Array.isArray(syncedPayload.applied)
+          ? syncedPayload.applied.length
+          : 0,
+        selectiveSyncSkippedCount: Array.isArray(syncedPayload.skipped)
+          ? syncedPayload.skipped.length
+          : 0,
+      }),
       resolveRuntimeRoot(root, component) || document,
     );
 
     let outcome = "success";
 
     try {
+      const requestBody = {
+        component: component,
+        action: action,
+        params: syncedPayload.params,
+        updates: syncedPayload.updates,
+        snapshot: JSON.parse(snapshot),
+      };
+      const serializedRequestBody = JSON.stringify(requestBody);
+      requestPayloadBytes = serializedPayloadBytes(serializedRequestBody);
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -9589,13 +10353,7 @@
         },
         credentials: "same-origin",
         signal: controller ? controller.signal : undefined,
-        body: JSON.stringify({
-          component: component,
-          action: action,
-          params: syncedPayload.params,
-          updates: syncedPayload.updates,
-          snapshot: JSON.parse(snapshot),
-        }),
+        body: serializedRequestBody,
       });
 
       let payload = null;
@@ -9605,6 +10363,15 @@
       } catch (error) {
         payload = null;
       }
+
+      responsePayloadBytes = serializedPayloadBytes(payload);
+      htmlBytes = serializedPayloadBytes(payload && payload.html ? payload.html : "");
+      snapshotBytes = serializedPayloadBytes(
+        payload && payload.snapshot ? payload.snapshot : null,
+      );
+      effectCount = Array.isArray(payload && payload.effects)
+        ? payload.effects.length
+        : 0;
 
       if (state && state.requestId !== requestId) {
         outcome = "stale";
@@ -9649,6 +10416,7 @@
 
       const patchRoot = resolveRuntimeRoot(root, component) || root;
 
+      const patchStartedAt = runtimeNow();
       await withPreservedUiState(
         patchRoot,
         async function () {
@@ -9682,6 +10450,8 @@
         },
         patchMeta,
       );
+      patchDurationMs = roundedMetricValue(runtimeNow() - patchStartedAt);
+      usedHtmlFallback = patchMeta.usedHtmlFallback === true;
 
       setDirtyState(component, false, requestMeta);
       setSuccessState(component, true, requestMeta);
@@ -9714,10 +10484,29 @@
         setLoadingState(component, false, trigger, requestMeta);
       }
 
+      const finishDetail = requestHookDetail("action", requestMeta, {
+        outcome: outcome,
+        requestPayloadBytes: requestPayloadBytes,
+        responsePayloadBytes: responsePayloadBytes,
+        htmlBytes: htmlBytes,
+        snapshotBytes: snapshotBytes,
+        patchDurationMs: patchDurationMs,
+        totalDurationMs: roundedMetricValue(runtimeNow() - requestStartedAt),
+        effectCount: effectCount,
+        usedHtmlFallback: usedHtmlFallback,
+        selectiveSyncAppliedCount: Array.isArray(syncedPayload.applied)
+          ? syncedPayload.applied.length
+          : 0,
+        selectiveSyncSkippedCount: Array.isArray(syncedPayload.skipped)
+          ? syncedPayload.skipped.length
+          : 0,
+      });
+      const telemetryEntry = recordRuntimeTelemetry("action", finishDetail);
+
       emitRuntimeHook(
         "volt:request-finish",
-        requestHookDetail("action", requestMeta, {
-          outcome: outcome,
+        Object.assign({}, finishDetail, {
+          telemetrySequence: telemetryEntry.sequence,
         }),
         resolveRuntimeRoot(root, component) || document,
       );
@@ -10041,9 +10830,12 @@
     return prefetchPage(url, options || {});
   };
   window.Volt.state = createPublicStateApi();
+  window.Volt.components = createPublicComponentsApi();
+  window.Volt.telemetry = createPublicTelemetryApi();
 
   function bootRuntimeDocumentFeatures() {
     syncAllRuntimeStateDirectives();
+    refreshActiveComponentsRegistry("boot");
     registerViewportPrefetchTargets(document);
     scheduleHeuristicPrefetch(document);
   }

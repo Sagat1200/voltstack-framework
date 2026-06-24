@@ -345,6 +345,21 @@ final class SkeletonSpaRoadmapTest extends TestCase
         );
     }
 
+    public function test_runtime_events_demo_exposes_runtime_hook_lab_and_public_runtime_apis(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeEvents');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('data-runtime-events-demo', $response->content());
+        self::assertStringContainsString('volt:request-finish', $response->content());
+        self::assertStringContainsString('volt:component-destroyed', $response->content());
+        self::assertStringContainsString('function cleanupRuntimeOrphans()', $response->content());
+        self::assertStringContainsString('navigationViewportTrackedElements: new Set(),', $response->content());
+        self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $response->content());
+        self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $response->content());
+        self::assertStringContainsString('window.Volt.state ? window.Volt.state : null;', $response->content());
+    }
+
     private function handleSkeletonRequest(string $path): Response
     {
         $app = new Application(self::$skeletonBasePath);
