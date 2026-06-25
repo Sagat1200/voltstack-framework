@@ -353,6 +353,10 @@ final class SkeletonSpaRoadmapTest extends TestCase
 
         self::assertSame(200, $response->statusCode(), $response->content());
         self::assertStringContainsString('data-runtime-events-demo', $response->content());
+        self::assertStringContainsString('data-runtime-efficiency-demo', $response->content());
+        self::assertStringContainsString('data-runtime-check="efficiency-navigation-performance"', $response->content());
+        self::assertStringContainsString('data-runtime-check="efficiency-summary-json"', $response->content());
+        self::assertStringContainsString('data-volt-efficiency-action="reset-telemetry"', $response->content());
         self::assertStringContainsString('window.Volt.state ? window.Volt.state : null;', $response->content());
         self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
 

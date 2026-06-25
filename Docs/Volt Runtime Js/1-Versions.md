@@ -497,7 +497,18 @@ Lectura operativa del cambio:
 
 - el costo fuerte ya no viaja duplicado en cada documento HTML
 - el runtime queda cacheable por navegador y reusable entre pantallas SPA y vistas tradicionales
-- la siguiente optimizacion natural ya no es externalizar, sino reducir el peso propio de [`volt.js`](file:///c:/W4/Packages/VoltStack/app-skeleton/vendor/voltstack/framework/frontend/runtime/volt.js) o introducir particion modular si el crecimiento continua
+- la particion modular del runtime ya esta aplicada a nivel fuente en `frontend/runtime/src/*.js`, manteniendo `frontend/runtime/volt.js` como bundle generado
+- el bloque anterior `10-directives-core.js` fue refinado en `10-directive-expression-utils.js`, `11-dom-model-directives.js`, `12-store-render-directives.js` y `13-state-sync-navigation.js` para separar parser/utilidades, directivas interactivas, render declarativo y contrato de navegacion
+- el bloque anterior `20-navigation-prefetch.js` fue refinado en `20-navigation-cache.js` y `21-navigation-prefetch.js` para separar cache/payloads de navegacion de la heuristica de prefetch y cleanup de handles
+- el bloque anterior `30-state-directives.js` fue refinado en `30-state-directives-core.js`, `31-state-runtime-sync.js` y `32-ui-preservation-hooks.js` para separar directivas, timers/sync y preservacion UI
+- el antiguo bloque mixto `40-runtime-operations.js` fue descompuesto en `40-patch-transitions.js`, `41-request-state.js`, `42-navigation-document.js`, `43-effects-patch.js`, `44-navigation-visit.js` y `45-action-dispatch.js` para mejorar mantenibilidad sin cambiar el contrato del bundle
+- la siguiente optimizacion natural ya no es partir el archivo por mantenibilidad, sino reducir el peso propio de [`volt.js`](file:///c:/W4/Packages/VoltStack/app-skeleton/vendor/voltstack/framework/frontend/runtime/volt.js)
+
+Instrumentacion util para navegador real:
+
+- `[x]` laboratorio de eficiencia incrustado en `/runtimeEvents`, leyendo `window.Volt.telemetry`, `window.Volt.components` y `performance`
+- `[x]` checklist manual dedicada en `9-Runtime-Efficiency-Browser-Validation.md`
+- `[x]` controles de refresco/reset para observar `navigation`, `action`, `patch`, payloads y roots activos sin abrir consola
 
 ## Bitacora De Avance
 
@@ -580,6 +591,12 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` validacion ampliada del bloque de cleanup runtime ejecutada con `ReactiveProtocolTest`, `SkeletonSpaRoadmapTest`, `HttpKernelTest`, `ViewRenderingTest`, `ComponentRouteRenderingTest` e `InlinePageRenderingTest`
 - `[x]` primera linea base local de eficiencia ejecutada sobre `app-skeleton`, confirmando HTML inicial de `301-321 KB`, assets compilados pequenos (`15.6 KB` JS, `17.5 KB` CSS) y un runtime inline de `~275 KB` que domina el `87.03%` del HTML inicial en `/`
 - `[x]` externalizacion del runtime a `/_volt/runtime.js` con versionado por query string, cache HTTP y reduccion del HTML inicial hacia `26-46 KB` segun la ruta medida
+- `[x]` pasada inicial de eficiencia en navegador aterrizada sobre `/runtimeEvents`, con panel de observabilidad para `navigation`, `action`, `patch`, payloads, roots activos y checklist `9-Runtime-Efficiency-Browser-Validation.md`
+- `[x]` modularizacion de la fuente del runtime en `frontend/runtime/src/*.js`, con `frontend/runtime/volt.js` generado por `php tools/build-runtime.php` y guia operativa en `frontend/runtime/src/README.md`
+- `[x]` refinamiento de la particion operativa del runtime, separando patch/transitions, estado de requests, documento SPA, effects, `visit()` y `dispatchAction()` en modulos fuente dedicados
+- `[x]` refinamiento del bloque de directivas de estado, separando core declarativo, timers/sync runtime y preservacion de UI en modulos fuente dedicados
+- `[x]` refinamiento del bloque de directivas base, separando parser/utilidades, directivas `bind/model/portal/focus`, render declarativo y contrato de navegacion en modulos fuente dedicados
+- `[x]` refinamiento del bloque de navegacion auxiliar, separando cache/payloads SPA del prefetch heuristico y cleanup de handles en modulos fuente dedicados
 
 ## Proximo Bloque Recomendado
 

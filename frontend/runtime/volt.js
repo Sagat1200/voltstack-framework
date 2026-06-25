@@ -1,3 +1,6 @@
+// Generated file. Do not edit directly.
+// Source: frontend/runtime/src/*.js
+// Rebuild: php tools/build-runtime.php
 (function () {
   if (typeof window !== "undefined" && window.__voltRuntimeBooted === true) {
     return;
@@ -10512,6 +10515,7 @@
       );
     }
   }
+
 
   document.addEventListener("input", function (event) {
     handleOnDirectiveEvent("input", event);
