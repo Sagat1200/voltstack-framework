@@ -8048,6 +8048,55 @@
     };
   }
 
+  function classifyPatchTelemetryOutcome(detail) {
+    const meta = detail && typeof detail === "object" ? detail : {};
+    const operationType =
+      typeof meta.type === "string" && meta.type !== "" ? meta.type : "unknown";
+    const action =
+      typeof meta.action === "string" && meta.action !== "" ? meta.action : null;
+    const effectCount = Array.isArray(meta.effects) ? meta.effects.length : 0;
+    const usedHtmlFallback = meta.usedHtmlFallback === true;
+    const isModelSync = action === MODEL_SYNC_INTERNAL_ACTION;
+
+    if (operationType === "navigation") {
+      return "navigation-patch";
+    }
+
+    if (operationType === "action") {
+      if (isModelSync) {
+        if (usedHtmlFallback) {
+          return "model-sync-html-fallback";
+        }
+
+        if (effectCount > 0) {
+          return "model-sync-effects";
+        }
+
+        return "model-sync-no-op";
+      }
+
+      if (usedHtmlFallback) {
+        return "action-html-fallback";
+      }
+
+      if (effectCount > 0) {
+        return "action-effects";
+      }
+
+      return "action-no-op";
+    }
+
+    if (usedHtmlFallback) {
+      return "html-fallback";
+    }
+
+    if (effectCount > 0) {
+      return "effects-only";
+    }
+
+    return "no-op";
+  }
+
   async function withPreservedUiState(root, callback, meta) {
     const detail = meta && typeof meta === "object" ? meta : {};
     const focusState = captureFocusState(root);
@@ -8086,6 +8135,7 @@
     });
 
     recordRuntimeTelemetry("patch", {
+      outcome: classifyPatchTelemetryOutcome(detail),
       operationType: detail && detail.type ? detail.type : "unknown",
       source: detail && detail.source ? detail.source : null,
       component: detail && detail.component ? detail.component : null,
