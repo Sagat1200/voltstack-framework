@@ -79,3 +79,16 @@ Cobertura adicional del contrato de errores del runtime:
 - `Telemetry navigation`: `aborted:1`, `http-error:1`, `success:4`, `timeout:1`
 - `Telemetry action`: `network-error:1`, `protocol-error:1`, `timeout:1`
 - `volt:error` validado con `CSRF` invalido y con laboratorio controlado en `/runtimeRequestLab`
+
+Cobertura adicional del retry seguro en navegacion `GET`:
+
+- ruta validada: `/runtimeRequestLabRetryOnce`
+- lectura observada en `Telemetry navigation`: `count = 5`
+- outcomes observados: `success:5`
+- `avg duration = 213.74 ms`
+- `max duration = 542.6 ms`
+- `avg response = 33860 B`
+- `max response = 58213 B`
+- `avg patch = 21.24 ms`
+- `max patch = 29 ms`
+- lectura operativa: resultado compatible con un fallo transitorio absorbido por el retry automatico, sin degradacion visible del patch DOM

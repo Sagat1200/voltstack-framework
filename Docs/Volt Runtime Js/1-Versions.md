@@ -33,7 +33,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` shared state global real
 - `[x]` directivas SPA avanzadas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`, `volt:for`)
 - `[ ]` effects de alto nivel (`toast`, `modal`)
-- `[ ]` retry system
+- `[-]` retry system
 - `[ ]` offline mode
 - `[ ]` extensibilidad formal del runtime
 - `[ ]` transportes avanzados (`WebSocket`, `SSE`, `streaming`)
@@ -74,7 +74,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` manejo de stale requests
 - `[x]` abort de request anterior concurrente
 - `[x]` manejo base de errores de request
-- `[ ]` retry automatico para errores transitorios
+- `[-]` retry automatico para errores transitorios
 - `[x]` estrategia de timeout configurable
 - `[x]` clasificacion formal de errores de protocolo
 - `[x]` telemetria de latencia y payload
@@ -191,7 +191,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 ### 10. Resilience Y Modo Offline
 
-- `[ ]` retry system
+- `[-]` retry system
 - `[ ]` offline snapshots
 - `[ ]` queued actions
 - `[ ]` sync recovery
@@ -611,13 +611,16 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` contrato formal de `timeout` y taxonomia de errores en el runtime: `aborted`, `stale`, `timeout`, `http-error`, `protocol-error`, `network-error`, `unexpected-error`
 - `[x]` laboratorio `/runtimeRequestLab` y destino `/runtimeRequestLabSlow` para reproducir `timeout`, `protocol-error`, `http-error`, `network-error` y concurrencia controlada
 - `[x]` validacion manual del nuevo contrato de errores con `Telemetry navigation` (`aborted`, `http-error`, `timeout`) y `Telemetry action` (`network-error`, `protocol-error`, `timeout`)
+- `[x]` retry automatico seguro para navegacion `GET` con politica declarativa/programatica, hook `volt:request-retry` y soporte inicial para errores transitorios
+- `[x]` destino `/runtimeRequestLabRetryOnce` y acceso desde la home para validar un fallo transitorio seguido de exito en el siguiente intento del runtime
+- `[x]` validacion manual inicial del retry de navegacion: `Telemetry navigation` con `count = 5`, `outcomes = success:5`, `avg duration = 213.74 ms`, `max duration = 542.6 ms`, `avg response = 33860 B`, `max response = 58213 B`, `avg patch = 21.24 ms`, `max patch = 29 ms`
 
 ## Proximo Bloque Recomendado
 
 Orden sugerido para seguir avanzando:
 
-1. avanzar con `retry automatico` seguro para navegacion `GET` y errores transitorios
-2. ampliar la validacion de concurrencia para distinguir formalmente `stale` vs `aborted` segun el flujo
+1. ampliar la validacion de concurrencia para distinguir formalmente `stale` vs `aborted` segun el flujo
+2. extender el `retry` seguro hacia una politica mas completa o decidir explicitamente si queda limitado a navegacion `GET`
 3. ejecutar la matriz de eficiencia con la nueva `telemetria de latencia y payload`
 4. revisar si ya conviene entrar a `nested components complejos`
 5. retomar `offline snapshots`, `queued actions` y `sync recovery` sobre la base del nuevo contrato de errores
