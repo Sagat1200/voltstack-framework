@@ -1,4 +1,4 @@
-﻿  async function dispatchAction(root, action, params, updates, trigger) {
+  async function dispatchAction(root, action, params, updates, trigger) {
     const snapshot = root.getAttribute("data-volt-snapshot");
     const component = root.getAttribute("data-volt-component");
     const endpoint = root.getAttribute("data-volt-endpoint") || "/_volt/action";
@@ -28,6 +28,13 @@
     let patchDurationMs = null;
     let effectCount = 0;
     let usedHtmlFallback = false;
+    const timeoutMs = resolveRequestTimeoutMs("action", null, [
+      trigger || null,
+      root,
+    ]);
+    let errorKind = null;
+    let errorMessage = null;
+    let responseStatus = null;
     const syncedPayload = applySelectiveStateSync(
       root,
       trigger,
@@ -42,7 +49,10 @@
     }
 
     if (previousController) {
-      previousController.abort();
+      abortControllerWithMeta(previousController, {
+        kind: "aborted",
+        message: "Action request was superseded by a newer request.",
+      });
     }
 
     clearDirtyDebounce(root);
@@ -73,6 +83,7 @@
         selectiveSyncSkippedCount: Array.isArray(syncedPayload.skipped)
           ? syncedPayload.skipped.length
           : 0,
+        timeoutMs: timeoutMs,
       }),
       resolveRuntimeRoot(root, component) || document,
     );
@@ -89,17 +100,24 @@
       };
       const serializedRequestBody = JSON.stringify(requestBody);
       requestPayloadBytes = serializedPayloadBytes(serializedRequestBody);
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Requested-With": "VoltStack",
-          "X-CSRF-TOKEN": csrf || "",
+      const response = await withRequestTimeout(
+        fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "VoltStack",
+            "X-CSRF-TOKEN": csrf || "",
+          },
+          credentials: "same-origin",
+          signal: controller ? controller.signal : undefined,
+          body: serializedRequestBody,
+        }),
+        controller,
+        timeoutMs,
+        {
+          message: "Action request timed out after " + timeoutMs + "ms.",
         },
-        credentials: "same-origin",
-        signal: controller ? controller.signal : undefined,
-        body: serializedRequestBody,
-      });
+      );
 
       let payload = null;
 
@@ -120,6 +138,7 @@
 
       if (state && state.requestId !== requestId) {
         outcome = "stale";
+        errorKind = "stale";
         emitRuntimeHook(
           "volt:request-stale",
           requestHookDetail("action", requestMeta, {
@@ -132,8 +151,16 @@
       }
 
       if (!response.ok) {
-        outcome = "error";
-        const errorDetail = responseErrorDetail(response, payload, requestMeta);
+        const errorDetail = responseErrorDetail(
+          "action",
+          response,
+          payload,
+          requestMeta,
+        );
+        outcome = errorDetail.errorKind;
+        errorKind = errorDetail.errorKind;
+        errorMessage = errorDetail.message;
+        responseStatus = response.status;
         setErrorState(component, true, errorDetail);
         emitRuntimeHook(
           "volt:request-error",
@@ -202,19 +229,47 @@
       setSuccessState(component, true, requestMeta);
     } catch (error) {
       if (isAbortError(error)) {
+        const abortDetail = requestAbortDetail(
+          "action",
+          requestMeta,
+          controller ? controller.signal : null,
+        );
+
+        if (abortDetail.errorKind === "timeout") {
+          const errorDetail = timeoutErrorDetail(
+            "action",
+            requestMeta,
+            controller ? controller.signal : null,
+          );
+          outcome = "timeout";
+          errorKind = errorDetail.errorKind;
+          errorMessage = errorDetail.message;
+          setErrorState(component, true, errorDetail);
+          emitRuntimeHook(
+            "volt:request-error",
+            errorDetail,
+            resolveRuntimeRoot(root, component) || document,
+          );
+          return;
+        }
+
         outcome = "aborted";
+        errorKind = abortDetail.errorKind;
+        errorMessage = abortDetail.message;
         emitRuntimeHook(
           "volt:request-abort",
-          requestHookDetail("action", requestMeta, {
-            outcome: outcome,
-          }),
+          abortDetail,
           resolveRuntimeRoot(root, component) || document,
         );
         return;
       }
 
-      outcome = "error";
-      const errorDetail = exceptionErrorDetail(error, requestMeta);
+      const errorDetail = exceptionErrorDetail("action", error, requestMeta);
+      outcome = errorDetail.errorKind;
+      errorKind = errorDetail.errorKind;
+      errorMessage = errorDetail.message;
+      responseStatus =
+        error && typeof error.status === "number" ? error.status : null;
       setErrorState(component, true, errorDetail);
       emitRuntimeHook(
         "volt:request-error",
@@ -231,6 +286,10 @@
 
       const finishDetail = requestHookDetail("action", requestMeta, {
         outcome: outcome,
+        errorKind: errorKind,
+        message: errorMessage,
+        status: responseStatus,
+        timeoutMs: timeoutMs,
         requestPayloadBytes: requestPayloadBytes,
         responsePayloadBytes: responsePayloadBytes,
         htmlBytes: htmlBytes,

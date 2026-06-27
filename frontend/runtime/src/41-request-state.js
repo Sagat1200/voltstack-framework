@@ -1,4 +1,4 @@
-﻿  function resolveRuntimeRoot(rootOrComponent, fallbackComponent) {
+  function resolveRuntimeRoot(rootOrComponent, fallbackComponent) {
     if (
       rootOrComponent &&
       typeof rootOrComponent === "object" &&
@@ -56,30 +56,529 @@
     );
   }
 
-  function responseErrorDetail(response, payload, meta) {
+  const REQUEST_TIMEOUT_ATTRIBUTE_NAMES = [
+    "data-volt-request-timeout",
+    "volt-request-timeout",
+    "volt:request-timeout",
+    "data-volt-timeout",
+    "volt-timeout",
+    "volt:timeout",
+  ];
+  const REQUEST_RETRY_ATTRIBUTE_NAMES = [
+    "data-volt-request-retry",
+    "volt-request-retry",
+    "volt:request-retry",
+    "data-volt-retry",
+    "volt-retry",
+    "volt:retry",
+  ];
+  const REQUEST_RETRY_DELAY_ATTRIBUTE_NAMES = [
+    "data-volt-request-retry-delay",
+    "volt-request-retry-delay",
+    "volt:request-retry-delay",
+    "data-volt-retry-delay",
+    "volt-retry-delay",
+    "volt:retry-delay",
+  ];
+  const REQUEST_ERROR_KINDS = [
+    "aborted",
+    "stale",
+    "timeout",
+    "http-error",
+    "protocol-error",
+    "network-error",
+    "unexpected-error",
+  ];
+
+  function normalizedRequestErrorKind(value, fallback) {
+    if (
+      typeof value === "string" &&
+      REQUEST_ERROR_KINDS.indexOf(value) !== -1
+    ) {
+      return value;
+    }
+
+    return fallback;
+  }
+
+  function requestTimeoutForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = directiveAttribute(element, REQUEST_TIMEOUT_ATTRIBUTE_NAMES);
+    return attribute ? parseDirectiveTimeout(attribute.value) : null;
+  }
+
+  function resolveRequestTimeoutMs(kind, options, elements) {
+    const settings = options && typeof options === "object" ? options : {};
+    const explicitTimeout =
+      Object.prototype.hasOwnProperty.call(settings, "timeout")
+        ? parseDirectiveTimeout(settings.timeout)
+        : null;
+
+    if (explicitTimeout !== null) {
+      return explicitTimeout;
+    }
+
+    if (Array.isArray(elements)) {
+      for (let index = 0; index < elements.length; index += 1) {
+        const elementTimeout = requestTimeoutForElement(elements[index]);
+
+        if (elementTimeout !== null) {
+          return elementTimeout;
+        }
+      }
+    }
+
+    return kind === "navigation"
+      ? NAVIGATION_REQUEST_TIMEOUT
+      : ACTION_REQUEST_TIMEOUT;
+  }
+
+  function retryAttemptsValue(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+    }
+
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === "") {
+      return null;
+    }
+
+    if (normalized === "true" || normalized === "on" || normalized === "yes") {
+      return 1;
+    }
+
+    if (normalized === "false" || normalized === "off" || normalized === "no") {
+      return 0;
+    }
+
+    const parsed = Number.parseInt(normalized, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  function requestRetryAttemptsForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = directiveAttribute(element, REQUEST_RETRY_ATTRIBUTE_NAMES);
+    return attribute ? retryAttemptsValue(attribute.value) : null;
+  }
+
+  function requestRetryDelayForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = directiveAttribute(
+      element,
+      REQUEST_RETRY_DELAY_ATTRIBUTE_NAMES,
+    );
+
+    return attribute ? parseDirectiveTimeout(attribute.value) : null;
+  }
+
+  function requestRetryStatusAllowed(status) {
+    return [408, 425, 429, 500, 502, 503, 504].indexOf(status) !== -1;
+  }
+
+  function resolveRequestRetryPolicy(kind, options, elements) {
+    const settings = options && typeof options === "object" ? options : {};
+    const explicitRetry = settings.retry;
+    let attempts = kind === "navigation" ? NAVIGATION_REQUEST_RETRY_ATTEMPTS : 0;
+    let delayMs =
+      kind === "navigation" ? NAVIGATION_REQUEST_RETRY_DELAY : 0;
+
+    if (Array.isArray(elements)) {
+      for (let index = 0; index < elements.length; index += 1) {
+        const elementAttempts = requestRetryAttemptsForElement(elements[index]);
+
+        if (elementAttempts !== null) {
+          attempts = elementAttempts;
+          break;
+        }
+      }
+
+      for (let index = 0; index < elements.length; index += 1) {
+        const elementDelay = requestRetryDelayForElement(elements[index]);
+
+        if (elementDelay !== null) {
+          delayMs = elementDelay;
+          break;
+        }
+      }
+    }
+
+    if (typeof explicitRetry === "boolean") {
+      attempts = explicitRetry ? attempts || 1 : 0;
+    } else if (typeof explicitRetry === "number") {
+      attempts = retryAttemptsValue(explicitRetry);
+    } else if (typeof explicitRetry === "string") {
+      const parsedAttempts = retryAttemptsValue(explicitRetry);
+
+      if (parsedAttempts !== null) {
+        attempts = parsedAttempts;
+      }
+    } else if (explicitRetry && typeof explicitRetry === "object") {
+      if (Object.prototype.hasOwnProperty.call(explicitRetry, "attempts")) {
+        const parsedAttempts = retryAttemptsValue(explicitRetry.attempts);
+
+        if (parsedAttempts !== null) {
+          attempts = parsedAttempts;
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(explicitRetry, "delay")) {
+        const parsedDelay = parseDirectiveTimeout(explicitRetry.delay);
+
+        if (parsedDelay !== null) {
+          delayMs = parsedDelay;
+        }
+      }
+    }
+
+    if (!Number.isFinite(attempts) || attempts < 0) {
+      attempts = 0;
+    }
+
+    if (!Number.isFinite(delayMs) || delayMs < 0) {
+      delayMs = 0;
+    }
+
+    return {
+      enabled: attempts > 0,
+      attempts: attempts,
+      delayMs: delayMs,
+    };
+  }
+
+  function shouldRetryNavigationRequest(errorDetail, policy, attemptIndex) {
+    if (
+      !policy ||
+      policy.enabled !== true ||
+      attemptIndex >= policy.attempts
+    ) {
+      return false;
+    }
+
+    if (!errorDetail || typeof errorDetail !== "object") {
+      return false;
+    }
+
+    if (
+      errorDetail.errorKind === "timeout" ||
+      errorDetail.errorKind === "network-error"
+    ) {
+      return true;
+    }
+
+    return (
+      errorDetail.errorKind === "http-error" &&
+      typeof errorDetail.status === "number" &&
+      requestRetryStatusAllowed(errorDetail.status)
+    );
+  }
+
+  function waitForRetryDelay(delayMs, signal) {
+    if (!delayMs || delayMs <= 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise(function (resolve, reject) {
+      let timeoutId = null;
+      let aborted = false;
+
+      function cleanup() {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+
+        if (signal && typeof signal.removeEventListener === "function") {
+          signal.removeEventListener("abort", handleAbort);
+        }
+      }
+
+      function handleAbort() {
+        if (aborted) {
+          return;
+        }
+
+        aborted = true;
+        cleanup();
+        const abortError = createRuntimeRequestError(
+          "aborted",
+          "Retry delay aborted.",
+          {
+            signal: signal || null,
+          },
+        );
+        abortError.name = "AbortError";
+        reject(
+          abortError,
+        );
+      }
+
+      if (signal && signal.aborted) {
+        handleAbort();
+        return;
+      }
+
+      timeoutId = window.setTimeout(function () {
+        cleanup();
+        resolve();
+      }, delayMs);
+
+      if (signal && typeof signal.addEventListener === "function") {
+        signal.addEventListener("abort", handleAbort, {
+          once: true,
+        });
+      }
+    });
+  }
+
+  function createRuntimeRequestError(errorKind, message, detail) {
+    const error = new Error(
+      typeof message === "string" && message !== ""
+        ? message
+        : "Unexpected runtime error.",
+    );
+
+    error.voltErrorKind = normalizedRequestErrorKind(
+      errorKind,
+      "unexpected-error",
+    );
+
+    if (detail && typeof detail === "object") {
+      Object.assign(error, detail);
+    }
+
+    return error;
+  }
+
+  function abortControllerWithMeta(controller, detail) {
+    if (!controller || typeof controller.abort !== "function") {
+      return;
+    }
+
+    if (controller.signal && typeof controller.signal === "object") {
+      controller.signal.__voltAbortMeta =
+        detail && typeof detail === "object"
+          ? Object.assign({}, detail)
+          : {
+              kind: "aborted",
+            };
+    }
+
+    controller.abort();
+  }
+
+  function requestAbortMeta(signal) {
+    if (!signal || typeof signal !== "object") {
+      return null;
+    }
+
+    const detail = signal.__voltAbortMeta;
+    return detail && typeof detail === "object" ? detail : null;
+  }
+
+  function withRequestTimeout(promise, controller, timeoutMs, detail) {
+    if (timeoutMs === null) {
+      return promise;
+    }
+
+    let timeoutId = null;
+    const timeoutDetail = detail && typeof detail === "object" ? detail : {};
+    const timeoutPromise = new Promise(function (_, reject) {
+      timeoutId = window.setTimeout(function () {
+        const message =
+          timeoutDetail.message ||
+          "Request timed out after " + timeoutMs + "ms.";
+
+        if (controller) {
+          abortControllerWithMeta(controller, {
+            kind: "timeout",
+            timeoutMs: timeoutMs,
+            message: message,
+          });
+        }
+
+        reject(
+          createRuntimeRequestError("timeout", message, {
+            timeoutMs: timeoutMs,
+          }),
+        );
+      }, timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(function () {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    });
+  }
+
+  function requestErrorDetail(kind, meta, errorKind, message, extra) {
+    const resolvedErrorKind = normalizedRequestErrorKind(
+      errorKind,
+      "unexpected-error",
+    );
+
+    return requestHookDetail(
+      kind,
+      meta,
+      Object.assign(
+        {
+          ok: false,
+          message:
+            typeof message === "string" && message !== ""
+              ? message
+              : "Unexpected runtime error.",
+          outcome: resolvedErrorKind,
+          errorKind: resolvedErrorKind,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function requestAbortDetail(kind, meta, signal, extra) {
+    const abortMeta = requestAbortMeta(signal);
+    const errorKind = normalizedRequestErrorKind(
+      abortMeta && abortMeta.kind ? abortMeta.kind : null,
+      "aborted",
+    );
+
+    return requestHookDetail(
+      kind,
+      meta,
+      Object.assign(
+        {
+          outcome: errorKind,
+          errorKind: errorKind,
+          message:
+            abortMeta && abortMeta.message
+              ? abortMeta.message
+              : errorKind === "timeout"
+                ? "Request timed out."
+                : "Request was aborted.",
+          timeoutMs:
+            abortMeta && typeof abortMeta.timeoutMs === "number"
+              ? abortMeta.timeoutMs
+              : null,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function timeoutErrorDetail(kind, meta, signal, extra) {
+    const abortMeta = requestAbortMeta(signal);
+    const message =
+      abortMeta && abortMeta.message
+        ? abortMeta.message
+        : "Request timed out.";
+
+    return requestErrorDetail(
+      kind,
+      meta,
+      "timeout",
+      message,
+      Object.assign(
+        {
+          timeoutMs:
+            abortMeta && typeof abortMeta.timeoutMs === "number"
+              ? abortMeta.timeoutMs
+              : null,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function responseErrorKind(response, payload) {
     const payloadError =
       payload && payload.error && typeof payload.error === "object"
         ? payload.error
         : {};
 
-    return requestHookDetail("action", meta, {
-      status: response.status,
-      ok: false,
-      message:
-        payloadError.message ||
-        "Request failed with status " + response.status + ".",
-      error: payloadError,
-      outcome: "error",
-    });
+    if (payloadError && typeof payloadError.kind === "string") {
+      return normalizedRequestErrorKind(payloadError.kind, "protocol-error");
+    }
+
+    if (payload && payload.error && typeof payload.error === "object") {
+      return "protocol-error";
+    }
+
+    return "http-error";
   }
 
-  function exceptionErrorDetail(error, meta) {
-    return requestHookDetail("action", meta, {
-      ok: false,
-      message:
-        error && error.message ? error.message : "Unexpected runtime error.",
-      outcome: "error",
-    });
+  function responseErrorDetail(kind, response, payload, meta, extra) {
+    const payloadError =
+      payload && payload.error && typeof payload.error === "object"
+        ? payload.error
+        : {};
+    const errorKind = responseErrorKind(response, payload);
+
+    return requestErrorDetail(
+      kind,
+      meta,
+      errorKind,
+      payloadError.message ||
+        "Request failed with status " + response.status + ".",
+      Object.assign(
+        {
+          status: response.status,
+          error: payloadError,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function exceptionErrorKind(error) {
+    if (!error || typeof error !== "object") {
+      return "unexpected-error";
+    }
+
+    if (typeof error.voltErrorKind === "string") {
+      return normalizedRequestErrorKind(
+        error.voltErrorKind,
+        "unexpected-error",
+      );
+    }
+
+    if (typeof error.errorKind === "string") {
+      return normalizedRequestErrorKind(error.errorKind, "unexpected-error");
+    }
+
+    if (error.name === "TypeError") {
+      return "network-error";
+    }
+
+    return "unexpected-error";
+  }
+
+  function exceptionErrorDetail(kind, error, meta, extra) {
+    const errorKind = exceptionErrorKind(error);
+
+    return requestErrorDetail(
+      kind,
+      meta,
+      errorKind,
+      error && error.message
+        ? error.message
+        : errorKind === "network-error"
+          ? "Network request failed."
+          : "Unexpected runtime error.",
+      extra,
+    );
   }
 
   function stateTargetValue(detail) {

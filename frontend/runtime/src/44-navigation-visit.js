@@ -1,4 +1,4 @@
-﻿  async function requestPage(url, signal) {
+  async function requestPage(url, signal) {
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -10,8 +10,14 @@
     });
 
     if (!response.ok) {
-      throw new Error(
+      throw createRuntimeRequestError(
+        "http-error",
         "Navigation request failed with status " + response.status + ".",
+        {
+          status: response.status,
+          ok: false,
+          url: url,
+        },
       );
     }
 
@@ -55,10 +61,27 @@
     let discardedFragments = 0;
     let persistedFragments = 0;
     let persistentFragmentRegistrySize = 0;
+    const timeoutMs = resolveRequestTimeoutMs("navigation", settings, [
+      settings.trigger || null,
+      document.body,
+      document.documentElement,
+    ]);
+    const retryPolicy = resolveRequestRetryPolicy("navigation", settings, [
+      settings.trigger || null,
+      document.body,
+      document.documentElement,
+    ]);
+    let retryCount = 0;
+    let errorKind = null;
+    let errorMessage = null;
+    let responseStatus = null;
     runtime.navigationController = controller;
 
     if (previousController) {
-      previousController.abort();
+      abortControllerWithMeta(previousController, {
+        kind: "aborted",
+        message: "Navigation request was superseded by a newer visit.",
+      });
     }
 
     setNavigationState(true, settings.trigger || null);
@@ -69,6 +92,9 @@
         historyMode: settings.historyMode || "push",
         cacheMode: cacheControl.mode,
         navigationMode: requestedNavigationMode.mode,
+        timeoutMs: timeoutMs,
+        retryAttempts: retryPolicy.attempts,
+        retryDelayMs: retryPolicy.delayMs,
       }),
       document,
     );
@@ -108,15 +134,85 @@
 
       const payload =
         cachedPayload ||
-        (await requestNavigationPayload(
-          normalizedUrl,
-          controller ? controller.signal : undefined,
-          "navigate",
-          {
-            cacheControl: cacheControl,
-            navigationMode: requestedNavigationMode,
-          },
-        ));
+        (await (async function () {
+          let attempt = 0;
+
+          while (true) {
+            try {
+              return await withRequestTimeout(
+                requestNavigationPayload(
+                  normalizedUrl,
+                  controller ? controller.signal : undefined,
+                  "navigate",
+                  {
+                    cacheControl: cacheControl,
+                    navigationMode: requestedNavigationMode,
+                  },
+                ),
+                controller,
+                timeoutMs,
+                {
+                  message:
+                    "Navigation request timed out after " + timeoutMs + "ms.",
+                },
+              );
+            } catch (error) {
+              if (isAbortError(error)) {
+                throw error;
+              }
+
+              const retryDetail = exceptionErrorDetail(
+                "navigation",
+                error,
+                requestMeta,
+                {
+                  url: normalizedUrl,
+                  finalUrl: finalUrl,
+                  status:
+                    error && typeof error.status === "number"
+                      ? error.status
+                      : null,
+                  retryAttempt: attempt + 1,
+                },
+              );
+
+              if (
+                !shouldRetryNavigationRequest(
+                  retryDetail,
+                  retryPolicy,
+                  attempt,
+                )
+              ) {
+                throw error;
+              }
+
+              retryCount = attempt + 1;
+              emitRuntimeHook(
+                "volt:request-retry",
+                requestHookDetail("navigation", requestMeta, {
+                  url: normalizedUrl,
+                  finalUrl: finalUrl,
+                  retryAttempt: retryCount,
+                  retryAttempts: retryPolicy.attempts,
+                  retryDelayMs: retryPolicy.delayMs,
+                  errorKind: retryDetail.errorKind,
+                  message: retryDetail.message,
+                  status:
+                    typeof retryDetail.status === "number"
+                      ? retryDetail.status
+                      : null,
+                }),
+                document,
+              );
+
+              await waitForRetryDelay(
+                retryPolicy.delayMs,
+                controller ? controller.signal : null,
+              );
+              attempt += 1;
+            }
+          }
+        })());
 
       finalUrl = payload && payload.finalUrl ? payload.finalUrl : normalizedUrl;
       htmlBytes = serializedPayloadBytes(payload && payload.html ? payload.html : "");
@@ -127,6 +223,7 @@
 
       if (runtime.navigationRequestId !== requestId) {
         outcome = "stale";
+        errorKind = "stale";
         emitRuntimeHook(
           "volt:request-stale",
           requestHookDetail("navigation", requestMeta, {
@@ -299,30 +396,64 @@
       );
     } catch (error) {
       if (isAbortError(error)) {
-        outcome = "aborted";
-        emitRuntimeHook(
-          "volt:request-abort",
-          requestHookDetail("navigation", requestMeta, {
+        const abortDetail = requestAbortDetail(
+          "navigation",
+          requestMeta,
+          controller ? controller.signal : null,
+          {
             url: normalizedUrl,
-          finalUrl: finalUrl,
-            outcome: outcome,
-          }),
-          document,
+            finalUrl: finalUrl,
+          },
         );
+
+        if (abortDetail.errorKind === "timeout") {
+          const errorDetail = timeoutErrorDetail(
+            "navigation",
+            requestMeta,
+            controller ? controller.signal : null,
+            {
+              url: normalizedUrl,
+              finalUrl: finalUrl,
+            },
+          );
+          outcome = "timeout";
+          errorKind = errorDetail.errorKind;
+          errorMessage = errorDetail.message;
+          fallbackReason = settings.fallback !== false ? "request-timeout" : null;
+          emitRuntimeHook("volt:request-error", errorDetail, document);
+
+          if (settings.fallback !== false) {
+            window.location.assign(normalizedUrl);
+            return;
+          }
+
+          throw error;
+        }
+
+        outcome = "aborted";
+        errorKind = abortDetail.errorKind;
+        errorMessage = abortDetail.message;
+        emitRuntimeHook("volt:request-abort", abortDetail, document);
         return;
       }
 
-      outcome = "error";
+      const errorDetail = exceptionErrorDetail("navigation", error, requestMeta, {
+        url: normalizedUrl,
+        finalUrl: finalUrl,
+        status:
+          error && typeof error.status === "number" ? error.status : null,
+      });
+      outcome = errorDetail.errorKind;
+      errorKind = errorDetail.errorKind;
+      errorMessage = errorDetail.message;
+      responseStatus =
+        errorDetail && typeof errorDetail.status === "number"
+          ? errorDetail.status
+          : null;
       fallbackReason = settings.fallback !== false ? "request-error" : null;
       emitRuntimeHook(
         "volt:request-error",
-        requestHookDetail("navigation", requestMeta, {
-          url: normalizedUrl,
-          finalUrl: finalUrl,
-          message:
-            error && error.message ? error.message : "Navigation failed.",
-          outcome: outcome,
-        }),
+        errorDetail,
         document,
       );
 
@@ -351,9 +482,16 @@
         navigationMode: resolvedNavigationMode,
         documentContract: resolvedDocumentContract,
         pageTransition: resolvedPageTransition,
+        timeoutMs: timeoutMs,
+        retryCount: retryCount,
+        retryAttempts: retryPolicy.attempts,
+        retryDelayMs: retryPolicy.delayMs,
         networkDurationMs: networkDurationMs,
         patchDurationMs: patchDurationMs,
         totalDurationMs: roundedMetricValue(runtimeNow() - requestStartedAt),
+        status: responseStatus,
+        errorKind: errorKind,
+        message: errorMessage,
         requestPayloadBytes: 0,
         responsePayloadBytes: responsePayloadBytes,
         htmlBytes: htmlBytes,

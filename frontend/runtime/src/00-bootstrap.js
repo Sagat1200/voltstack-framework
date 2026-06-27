@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   if (typeof window !== "undefined" && window.__voltRuntimeBooted === true) {
     return;
   }
@@ -56,8 +56,12 @@
 
   const NAVIGATION_CACHE_TTL = 5000;
   const NAVIGATION_CACHE_MAX_ENTRIES = 10;
+  const NAVIGATION_REQUEST_TIMEOUT = 8000;
+  const NAVIGATION_REQUEST_RETRY_ATTEMPTS = 1;
+  const NAVIGATION_REQUEST_RETRY_DELAY = 180;
   const NAVIGATION_HEURISTIC_DELAY = 180;
   const NAVIGATION_HEURISTIC_VIEWPORT_MARGIN = 240;
+  const ACTION_REQUEST_TIMEOUT = 8000;
   const MODEL_SYNC_INTERNAL_ACTION = "__volt_sync__";
   const MODEL_SYNC_DEBOUNCE = 220;
   const NAVIGATION_PREFETCH_SELECTOR =
@@ -1701,21 +1705,11 @@
 
   function createPublicStateApi() {
     return {
-      get: function (key, options) {
-        return getRuntimeStateValue(key, options);
-      },
-      set: function (key, value, options) {
-        return setRuntimeStateValue(key, value, options);
-      },
-      merge: function (key, value, options) {
-        return mergeRuntimeStateValue(key, value, options);
-      },
-      update: function (key, updater, options) {
-        return updateRuntimeStateValue(key, updater, options);
-      },
-      delete: function (key, options) {
-        return deleteRuntimeStateValue(key, options);
-      },
+      get: getRuntimeStateValue,
+      set: setRuntimeStateValue,
+      merge: mergeRuntimeStateValue,
+      update: updateRuntimeStateValue,
+      delete: deleteRuntimeStateValue,
       clear: function (options) {
         const settings = options && typeof options === "object" ? options : {};
         return clearRuntimeState(settings.scope, settings.reason || "manual");
@@ -1724,20 +1718,14 @@
         const settings = options && typeof options === "object" ? options : {};
         return runtimeStateSnapshot(settings.scope);
       },
-      subscribe: function (key, listener, options) {
-        return subscribeRuntimeState(key, listener, options);
-      },
-      currentScope: function () {
-        return currentClientStateScope();
-      },
+      subscribe: subscribeRuntimeState,
+      currentScope: currentClientStateScope,
     };
   }
 
   function createPublicTelemetryApi() {
     return {
-      entries: function (options) {
-        return filteredTelemetryEntries(options);
-      },
+      entries: filteredTelemetryEntries,
       latest: function (options) {
         const entries = filteredTelemetryEntries(
           Object.assign({}, options || {}, {
@@ -1747,9 +1735,7 @@
 
         return entries.length > 0 ? entries[0] : null;
       },
-      summary: function (options) {
-        return telemetrySummary(options);
-      },
+      summary: telemetrySummary,
       snapshot: function (options) {
         return {
           entries: filteredTelemetryEntries(options),
@@ -1757,9 +1743,7 @@
           maxEntries: runtime.telemetryMaxEntries,
         };
       },
-      reset: function () {
-        return resetRuntimeTelemetry();
-      },
+      reset: resetRuntimeTelemetry,
       size: function () {
         return runtime.telemetryEntries.length;
       },
@@ -1773,18 +1757,10 @@
 
   function createPublicComponentsApi() {
     return {
-      entries: function (options) {
-        return activeComponentsEntries(options);
-      },
-      all: function (options) {
-        return activeComponentsEntries(options);
-      },
-      summary: function (options) {
-        return activeComponentsSummary(options);
-      },
-      snapshot: function (options) {
-        return activeComponentsSnapshot(options);
-      },
+      entries: activeComponentsEntries,
+      all: activeComponentsEntries,
+      summary: activeComponentsSummary,
+      snapshot: activeComponentsSnapshot,
       count: function (options) {
         return activeComponentsEntries(options).length;
       },

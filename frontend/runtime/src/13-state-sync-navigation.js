@@ -1,4 +1,45 @@
-﻿  function parseStateSyncRuleValue(entry) {
+﻿  const STATE_SYNC_ATTRIBUTE_NAMES = [
+    "data-volt-state-sync",
+    "volt-state-sync",
+    "volt:state-sync",
+  ];
+  const NAVIGATION_MODE_ATTRIBUTE_NAMES = [
+    "data-volt-navigation-mode",
+    "volt-navigation-mode",
+    "volt:navigation-mode",
+  ];
+  const DOCUMENT_CONTRACT_ATTRIBUTE_NAMES = [
+    "data-volt-document",
+    "volt-document",
+    "volt:document",
+  ];
+  const PAGE_TRANSITION_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition",
+    "volt-page-transition",
+    "volt:page-transition",
+  ];
+  const PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition-profile",
+    "volt-page-transition-profile",
+    "volt:page-transition-profile",
+  ];
+  const PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition-duration",
+    "volt-page-transition-duration",
+    "volt:page-transition-duration",
+  ];
+  const PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition-mode",
+    "volt-page-transition-mode",
+    "volt:page-transition-mode",
+  ];
+  const FRAGMENT_CONTROL_ATTRIBUTE_NAMES = [
+    "data-volt-fragment-control",
+    "volt-fragment-control",
+    "volt:fragment-control",
+  ];
+
+  function parseStateSyncRuleValue(entry) {
     if (typeof entry !== "string") {
       return null;
     }
@@ -42,11 +83,7 @@
       return [];
     }
 
-    const value = directiveValue(element, [
-      "data-volt-state-sync",
-      "volt-state-sync",
-      "volt:state-sync",
-    ]);
+    const value = directiveValue(element, STATE_SYNC_ATTRIBUTE_NAMES);
     return parseStateSyncRules(value || "");
   }
 
@@ -460,11 +497,10 @@
       );
     }
 
-    const modeAttribute = directiveAttribute(element, [
-      "data-volt-navigation-mode",
-      "volt-navigation-mode",
-      "volt:navigation-mode",
-    ]);
+    const modeAttribute = directiveAttribute(
+      element,
+      NAVIGATION_MODE_ATTRIBUTE_NAMES,
+    );
 
     if (modeAttribute) {
       return parseNavigationMode(modeAttribute.value || "", modeAttribute.name);
@@ -499,11 +535,10 @@
     }
 
     if (doc.body && typeof doc.body.getAttribute === "function") {
-      const attribute = directiveAttribute(doc.body, [
-        "data-volt-navigation-mode",
-        "volt-navigation-mode",
-        "volt:navigation-mode",
-      ]);
+      const attribute = directiveAttribute(
+        doc.body,
+        NAVIGATION_MODE_ATTRIBUTE_NAMES,
+      );
 
       if (attribute) {
         return parseNavigationMode(attribute.value || "", "body");
@@ -525,11 +560,10 @@
     }
 
     if (doc.body && typeof doc.body.getAttribute === "function") {
-      const attribute = directiveAttribute(doc.body, [
-        "data-volt-document",
-        "volt-document",
-        "volt:document",
-      ]);
+      const attribute = directiveAttribute(
+        doc.body,
+        DOCUMENT_CONTRACT_ATTRIBUTE_NAMES,
+      );
 
       if (attribute) {
         return parseDocumentContract(attribute.value || "", "body");
@@ -537,11 +571,10 @@
     }
 
     if (doc.documentElement && typeof doc.documentElement.getAttribute === "function") {
-      const attribute = directiveAttribute(doc.documentElement, [
-        "data-volt-document",
-        "volt-document",
-        "volt:document",
-      ]);
+      const attribute = directiveAttribute(
+        doc.documentElement,
+        DOCUMENT_CONTRACT_ATTRIBUTE_NAMES,
+      );
 
       if (attribute) {
         return parseDocumentContract(attribute.value || "", "html");
@@ -771,26 +804,22 @@
   }
 
   function pageTransitionForElement(element) {
-    const transitionValue = firstAttributeValue(element, [
-      "data-volt-page-transition",
-      "volt-page-transition",
-      "volt:page-transition",
-    ]);
-    const profileValue = firstAttributeValue(element, [
-      "data-volt-page-transition-profile",
-      "volt-page-transition-profile",
-      "volt:page-transition-profile",
-    ]);
-    const durationValue = firstAttributeValue(element, [
-      "data-volt-page-transition-duration",
-      "volt-page-transition-duration",
-      "volt:page-transition-duration",
-    ]);
-    const modeValue = firstAttributeValue(element, [
-      "data-volt-page-transition-mode",
-      "volt-page-transition-mode",
-      "volt:page-transition-mode",
-    ]);
+    const transitionValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_ATTRIBUTE_NAMES,
+    );
+    const profileValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES,
+    );
+    const durationValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES,
+    );
+    const modeValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES,
+    );
 
     return createPageTransition(
       transitionValue,
@@ -812,17 +841,12 @@
     );
     const bodyTransition = firstAttributeValue(
       doc && doc.body ? doc.body : null,
-      [
-        "data-volt-page-transition",
-        "volt-page-transition",
-        "volt:page-transition",
-      ],
+      PAGE_TRANSITION_ATTRIBUTE_NAMES,
     );
-    const bodyProfile = firstAttributeValue(doc && doc.body ? doc.body : null, [
-      "data-volt-page-transition-profile",
-      "volt-page-transition-profile",
-      "volt:page-transition-profile",
-    ]);
+    const bodyProfile = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES,
+    );
     const transitionValue =
       documentTransition !== null ? documentTransition : bodyTransition || "";
     const profileValue =
@@ -832,18 +856,16 @@
         doc,
         NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES,
       ) ||
-      firstAttributeValue(doc && doc.body ? doc.body : null, [
-        "data-volt-page-transition-duration",
-        "volt-page-transition-duration",
-        "volt:page-transition-duration",
-      ]);
+      firstAttributeValue(
+        doc && doc.body ? doc.body : null,
+        PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES,
+      );
     const modeValue =
       firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES) ||
-      firstAttributeValue(doc && doc.body ? doc.body : null, [
-        "data-volt-page-transition-mode",
-        "volt-page-transition-mode",
-        "volt:page-transition-mode",
-      ]);
+      firstAttributeValue(
+        doc && doc.body ? doc.body : null,
+        PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES,
+      );
     const source =
       documentTransition !== null || documentProfile !== null
         ? "document"
@@ -1041,11 +1063,10 @@
     }
 
     if (doc.body && typeof doc.body.getAttribute === "function") {
-      const attribute = directiveAttribute(doc.body, [
-        "data-volt-fragment-control",
-        "volt-fragment-control",
-        "volt:fragment-control",
-      ]);
+      const attribute = directiveAttribute(
+        doc.body,
+        FRAGMENT_CONTROL_ATTRIBUTE_NAMES,
+      );
 
       if (attribute) {
         return parseFragmentControl(attribute.value, "body");

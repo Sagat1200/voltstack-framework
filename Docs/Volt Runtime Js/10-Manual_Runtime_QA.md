@@ -58,3 +58,24 @@ Usar esta tabla para registrar una pasada corta de validacion funcional en naveg
 - priorizar resiliencia (`timeout`, `retry`, clasificacion de errores)
 - priorizar UX runtime (`focus`, `scroll`, `states`)
 - priorizar performance (`payload`, `patch`, `volt.js`)
+
+### Ejecucion Reciente 2026-06-26
+
+Resultado validado manualmente en navegador real sobre las rutas demo actuales:
+
+- `QA-01 Runtime asset`: `OK`
+- `QA-03 Telemetria inicial`: `OK`
+- `QA-04 Accion reactiva`: `OK`
+- `QA-05 Model sync`: `OK`
+- `QA-06 Navegacion SPA`: `OK`
+- `QA-07 Persistencia del runtime`: `OK`
+- `QA-08 Abort y stale`: `OK` para `aborted`; `stale` queda reproducible via `/runtimeRequestLab`
+- `QA-09 Estado loading`: `OK`
+- `QA-11 Estado success`: `OK`
+- `QA-12 Estado error`: `OK`
+
+Cobertura adicional del contrato de errores del runtime:
+
+- `Telemetry navigation`: `aborted:1`, `http-error:1`, `success:4`, `timeout:1`
+- `Telemetry action`: `network-error:1`, `protocol-error:1`, `timeout:1`
+- `volt:error` validado con `CSRF` invalido y con laboratorio controlado en `/runtimeRequestLab`

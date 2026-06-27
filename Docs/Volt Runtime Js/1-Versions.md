@@ -75,8 +75,8 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` abort de request anterior concurrente
 - `[x]` manejo base de errores de request
 - `[ ]` retry automatico para errores transitorios
-- `[ ]` estrategia de timeout configurable
-- `[ ]` clasificacion formal de errores de protocolo
+- `[x]` estrategia de timeout configurable
+- `[x]` clasificacion formal de errores de protocolo
 - `[x]` telemetria de latencia y payload
 - `[ ]` serializacion incremental o streaming de responses
 
@@ -210,8 +210,8 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 ### A. Navegacion SPA
 
-- `[ ]` navegar entre dos vistas con mismo layout sin recarga completa
-- `[ ]` navegar entre layouts distintos y verificar fallback a full reload
+- `[x]` navegar entre dos vistas con mismo layout sin recarga completa
+- `[x]` navegar entre layouts distintos y verificar fallback a full reload
 - `[ ]` volver con `popstate` y validar contenido correcto
 - `[ ]` validar preservacion de scroll normal
 - `[ ]` validar `volt:preserve-scroll`
@@ -221,7 +221,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 ### B. Acciones Reactivas
 
-- `[ ]` click simple con `volt:click`
+- `[x]` click simple con `volt:click`
 - `[ ]` submit con `volt:submit`
 - `[ ]` sincronizacion de `volt:model`
 - `[ ]` actualizacion de snapshot tras response
@@ -231,7 +231,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 ### C. Estados Runtime
 
-- `[ ]` `loading` visible y oculto segun delay/min-duration
+- `[x]` `loading` visible y oculto segun delay/min-duration
 - `[ ]` `dirty` con debounce
 - `[ ]` `success` con timeout y min-duration
 - `[ ]` `error` con timeout
@@ -270,10 +270,10 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 ### G. Errores Y Seguridad
 
-- `[ ]` error de navegacion SPA
-- `[ ]` error de protocolo reactivo
-- `[ ]` error de validacion backend
-- `[ ]` CSRF invalido
+- `[x]` error de navegacion SPA
+- `[x]` error de protocolo reactivo
+- `[x]` error de validacion backend
+- `[x]` CSRF invalido
 - `[ ]` snapshot invalido
 - `[ ]` accion no permitida
 
@@ -504,6 +504,13 @@ Lectura operativa del cambio:
 - el antiguo bloque mixto `40-runtime-operations.js` fue descompuesto en `40-patch-transitions.js`, `41-request-state.js`, `42-navigation-document.js`, `43-effects-patch.js`, `44-navigation-visit.js` y `45-action-dispatch.js` para mejorar mantenibilidad sin cambiar el contrato del bundle
 - la siguiente optimizacion natural ya no es partir el archivo por mantenibilidad, sino reducir el peso propio de [`volt.js`](file:///c:/W4/Packages/VoltStack/app-skeleton/vendor/voltstack/framework/frontend/runtime/volt.js)
 
+Resultado despues de reducir el peso del runtime externo:
+
+- `[x]` minificacion dedicada del bundle generado con `php tools/minify-runtime.php`
+- `[x]` reduccion del runtime externo desde `~281 KB` sin minificar hacia `~109 KB` minificado en la primera pasada
+- `[x]` segunda pasada de recorte sobre `00-bootstrap.js` y `13-state-sync-navigation.js`
+- `[x]` el bundle actual de [`volt.js`](file:///c:/W4/Packages/VoltStack/app-skeleton/vendor/voltstack/framework/frontend/runtime/volt.js) queda estabilizado en `~112.73 KB` despues de incorporar `timeout` y taxonomia de errores
+
 Instrumentacion util para navegador real:
 
 - `[x]` laboratorio de eficiencia incrustado en `/runtimeEvents`, leyendo `window.Volt.telemetry`, `window.Volt.components` y `performance`
@@ -597,16 +604,23 @@ Usar esta seccion para marcar hitos reales conforme avancemos.
 - `[x]` refinamiento del bloque de directivas de estado, separando core declarativo, timers/sync runtime y preservacion de UI en modulos fuente dedicados
 - `[x]` refinamiento del bloque de directivas base, separando parser/utilidades, directivas `bind/model/portal/focus`, render declarativo y contrato de navegacion en modulos fuente dedicados
 - `[x]` refinamiento del bloque de navegacion auxiliar, separando cache/payloads SPA del prefetch heuristico y cleanup de handles en modulos fuente dedicados
+- `[x]` correccion de la telemetria de `Navigation timing` en `/runtimeEvents`, evitando lecturas prematuras con `0 ms` y mostrando `n/d` cuando la metrica aun no esta resuelta
+- `[x]` clasificacion formal de `Telemetry patch` para distinguir `navigation-patch`, `action-effects`, `model-sync-effects`, `model-sync-no-op` y variantes relacionadas
+- `[x]` validacion manual del runtime externalizado y cacheable en navegador real, con telemetria util en `/runtimeEvents` y checklist `10-Manual_Runtime_QA.md`
+- `[x]` validacion manual de `volt:model.sync`, estados `loading/success/error` y propagacion segura del error por `CSRF` invalido
+- `[x]` contrato formal de `timeout` y taxonomia de errores en el runtime: `aborted`, `stale`, `timeout`, `http-error`, `protocol-error`, `network-error`, `unexpected-error`
+- `[x]` laboratorio `/runtimeRequestLab` y destino `/runtimeRequestLabSlow` para reproducir `timeout`, `protocol-error`, `http-error`, `network-error` y concurrencia controlada
+- `[x]` validacion manual del nuevo contrato de errores con `Telemetry navigation` (`aborted`, `http-error`, `timeout`) y `Telemetry action` (`network-error`, `protocol-error`, `timeout`)
 
 ## Proximo Bloque Recomendado
 
 Orden sugerido para seguir avanzando:
 
-1. ejecutar la matriz de eficiencia con la nueva `telemetria de latencia y payload`
-2. avanzar con `timeout configurable`
-3. avanzar con `clasificacion formal de errores de protocolo`
+1. avanzar con `retry automatico` seguro para navegacion `GET` y errores transitorios
+2. ampliar la validacion de concurrencia para distinguir formalmente `stale` vs `aborted` segun el flujo
+3. ejecutar la matriz de eficiencia con la nueva `telemetria de latencia y payload`
 4. revisar si ya conviene entrar a `nested components complejos`
-5. retomar `retry automatico` cuando ya exista timeout + taxonomia de errores
+5. retomar `offline snapshots`, `queued actions` y `sync recovery` sobre la base del nuevo contrato de errores
 
 ## Bloque Cerrado Reciente
 
