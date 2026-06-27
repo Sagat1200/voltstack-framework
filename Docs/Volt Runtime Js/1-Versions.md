@@ -33,7 +33,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` shared state global real
 - `[x]` directivas SPA avanzadas (`volt:text`, `volt:class`, `volt:attr`, `volt:style`, `volt:show`, `volt:if`, `volt:for`)
 - `[ ]` effects de alto nivel (`toast`, `modal`)
-- `[-]` retry system
+- `[-]` retry system (`GET` en navegacion validado; acciones y offline aun pendientes)
 - `[ ]` offline mode
 - `[ ]` extensibilidad formal del runtime
 - `[ ]` transportes avanzados (`WebSocket`, `SSE`, `streaming`)
@@ -74,7 +74,8 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` manejo de stale requests
 - `[x]` abort de request anterior concurrente
 - `[x]` manejo base de errores de request
-- `[-]` retry automatico para errores transitorios
+- `[x]` retry automatico seguro para navegacion `GET` ante errores transitorios
+- `[ ]` extender retry hacia acciones reactivas o politicas adicionales segun contrato final
 - `[x]` estrategia de timeout configurable
 - `[x]` clasificacion formal de errores de protocolo
 - `[x]` telemetria de latencia y payload
@@ -191,7 +192,8 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 ### 10. Resilience Y Modo Offline
 
-- `[-]` retry system
+- `[-]` retry system parcial: navegacion `GET` validada; falta decidir alcance final para acciones y degradacion offline
+- `[ ]` retry coordinado con acciones reactivas
 - `[ ]` offline snapshots
 - `[ ]` queued actions
 - `[ ]` sync recovery
@@ -212,6 +214,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 
 - `[x]` navegar entre dos vistas con mismo layout sin recarga completa
 - `[x]` navegar entre layouts distintos y verificar fallback a full reload
+- `[x]` validar retry automatico de navegacion `GET` con fallo transitorio controlado
 - `[ ]` volver con `popstate` y validar contenido correcto
 - `[ ]` validar preservacion de scroll normal
 - `[ ]` validar `volt:preserve-scroll`
@@ -224,6 +227,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` click simple con `volt:click`
 - `[ ]` submit con `volt:submit`
 - `[ ]` sincronizacion de `volt:model`
+- `[ ]` validar retry o decision explicita de no-retry para acciones reactivas
 - `[ ]` actualizacion de snapshot tras response
 - `[ ]` stale request descartada correctamente
 - `[ ]` abort de request previa concurrente
@@ -274,6 +278,7 @@ Resumen del estado del runtime segun la documentacion y la implementacion observ
 - `[x]` error de protocolo reactivo
 - `[x]` error de validacion backend
 - `[x]` CSRF invalido
+- `[x]` fallo transitorio absorbido por retry seguro en navegacion `GET`
 - `[ ]` snapshot invalido
 - `[ ]` accion no permitida
 
