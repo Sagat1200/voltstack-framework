@@ -85,7 +85,7 @@ Criterio de cierre:
 - `[ ]` generar artefacto de coleccion
 - `[ ]` generar artefacto de tree o indice de matching
 - `[ ]` generar artefacto de metadata
-- `[ ]` generar artefacto de pipeline
+- `[x]` generar artefacto de pipeline
 
 Criterio de cierre:
 
@@ -184,15 +184,20 @@ Criterio de cierre:
 
 ### 3.9 Artifacts Y Cache
 
-- `[ ]` definir directorio de artefactos compilados
+- `[x]` definir directorio de artefactos compilados
 - `[ ]` guardar `collection`
 - `[ ]` guardar `tree`
 - `[ ]` guardar `metadata`
-- `[ ]` guardar `pipeline`
+- `[x]` guardar `pipeline`
 - `[ ]` guardar `version` o checksum minimo
 - `[ ]` implementar loader de artifacts para runtime
 - `[ ]` implementar invalidacion basica en desarrollo
 - `[ ]` evitar recompilacion durante request en produccion
+
+Nota del corte actual:
+
+- el artefacto de pipeline ya se guarda en `storage/framework/cache/routes/pipeline.php`
+- existe carga basica del artefacto mediante `PipelineArtifactStore`, pero el runtime todavia no arranca desde artifacts como fuente principal
 
 Criterio de cierre:
 
@@ -390,7 +395,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
 - `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta, grupos minimos (`prefix`, `domain`, `middleware`) y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
-- `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable y compilacion formal en memoria; falta persistir artefacto de pipeline
+- `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria y artefacto persistido; falta promover artifacts como fuente principal del runtime
 - `[x]` metadata minima consumible
 - `[ ]` artifacts de routing operativos
 - `[ ]` URL generator basico operativo

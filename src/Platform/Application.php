@@ -17,6 +17,7 @@ use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\Dispatching\ResponseNormalizer;
 use Quantum\Middlewares\CsrfMiddleware;
+use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
 use Quantum\Security\CsrfTokenManager;
 use Quantum\Validation\Validator;
@@ -261,6 +262,10 @@ class Application extends Container
 
                 return $router;
             });
+        }
+
+        if (! isset($this->bindings[PipelineArtifactStore::class])) {
+            $this->singleton(PipelineArtifactStore::class, fn(Application $app) => new PipelineArtifactStore($app));
         }
 
         if (! isset($this->bindings[ResponseNormalizer::class])) {
