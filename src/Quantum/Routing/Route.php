@@ -13,6 +13,7 @@ final class Route extends CompiledRoute
     private const SLUG_PATTERN = '[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*';
 
     private ?RouteCollection $collection = null;
+    private $middlewareResolver = null;
 
     public function __construct(RouteDefinition $definition)
     {
@@ -22,6 +23,11 @@ final class Route extends CompiledRoute
     public function attachCollection(RouteCollection $collection): void
     {
         $this->collection = $collection;
+    }
+
+    public function attachMiddlewareResolver(callable $resolver): void
+    {
+        $this->middlewareResolver = $resolver;
     }
 
     public function name(?string $name = null): string|static|null
@@ -109,6 +115,34 @@ final class Route extends CompiledRoute
     public function whereSlug(string|array $parameter): static
     {
         return $this->applyNamedConstraint($parameter, self::SLUG_PATTERN);
+    }
+
+    public function middleware(mixed $middleware): static
+    {
+        $middleware = $this->resolveMiddlewareInput($middleware);
+
+        if (is_array($middleware)) {
+            $this->replaceDefinition($this->definition()->withMiddlewares($middleware));
+
+            return $this;
+        }
+
+        $this->replaceDefinition($this->definition()->withMiddleware($middleware));
+
+        return $this;
+    }
+
+    private function resolveMiddlewareInput(mixed $middleware): mixed
+    {
+        if ($this->middlewareResolver === null) {
+            return $middleware;
+        }
+
+        if (is_array($middleware)) {
+            return array_map($this->middlewareResolver, array_values($middleware));
+        }
+
+        return ($this->middlewareResolver)($middleware);
     }
 
     private function applyNamedConstraint(string|array $parameter, string $pattern): static

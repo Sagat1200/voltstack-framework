@@ -52,7 +52,7 @@ Resultado esperado del primer ciclo:
 - `[x]` soportar nombre de ruta
 - `[ ]` soportar path
 - `[x]` soportar dominio opcional
-- `[ ]` soportar middleware declarativo por ruta
+- `[x]` soportar middleware declarativo por ruta
 - `[ ]` soportar metadata minima asociada a la ruta
 
 Criterio de cierre:
@@ -63,9 +63,9 @@ Criterio de cierre:
 
 - `[x]` implementar `RouteCollection`
 - `[x]` soportar registro de rutas individuales
-- `[ ]` soportar grupos con prefijo minimo
-- `[ ]` soportar middleware por grupo
-- `[ ]` soportar dominio por grupo
+- `[x]` soportar grupos con prefijo minimo
+- `[x]` soportar middleware por grupo
+- `[x]` soportar dominio por grupo
 - `[x]` detectar rutas duplicadas por `metodo + dominio + path`
 - `[x]` detectar nombres de ruta duplicados
 - `[x]` definir orden deterministico de compilacion
@@ -126,13 +126,13 @@ Criterio de cierre:
 
 ### 3.6 Middleware Pipeline
 
-- `[ ]` implementar pipeline global
-- `[ ]` implementar pipeline por grupo
-- `[ ]` implementar pipeline por ruta
-- `[ ]` soportar aliases minimos de middleware
-- `[ ]` ordenar middleware de forma deterministica
+- `[x]` implementar pipeline global
+- `[x]` implementar pipeline por grupo
+- `[x]` implementar pipeline por ruta
+- `[x]` soportar aliases minimos de middleware
+- `[x]` ordenar middleware de forma deterministica
 - `[ ]` eliminar duplicados simples durante compilacion
-- `[ ]` soportar contexto `HTTP`
+- `[x]` soportar contexto `HTTP`
 - `[ ]` reservar extension futura para `SPA` y `API` sin bloquear `V1`
 
 Criterio de cierre:
@@ -217,7 +217,7 @@ Criterio de cierre:
 - `[x]` confirmar comportamiento de `HEAD`
 - `[x]` confirmar comportamiento de `OPTIONS`
 - `[x]` confirmar que el dispatcher ejecuta controller y closure
-- `[ ]` confirmar que el pipeline corre en el orden esperado
+- `[x]` confirmar que el pipeline corre en el orden esperado
 - `[ ]` confirmar que `URL Generator` construye una ruta nombrada con parametros
 
 ### 4.2 Pruebas De Calidad Interna
@@ -234,7 +234,7 @@ Criterio de cierre:
 - `[x]` ruta duplicada detectada en compilacion
 - `[x]` nombre duplicado detectado en compilacion
 - `[ ]` constraint invalido detectado correctamente
-- `[ ]` middleware inexistente detectado antes de runtime
+- `[x]` middleware inexistente detectado antes de runtime
 - `[x]` dispatcher invalido produce error controlado
 - `[ ]` parametro requerido faltante en `URL Generator` produce error claro
 
@@ -251,7 +251,7 @@ Marcar `V1 Core Routing` como cerrado solo si todas estas condiciones se cumplen
 - `[x]` el sistema diferencia formalmente `404` y `405`
 - `[x]` el sistema emite `Allow` cuando aplica
 - `[x]` el dispatcher ejecuta endpoints basicos
-- `[ ]` el pipeline funciona con orden estable
+- `[x]` el pipeline funciona con orden estable
 - `[ ]` la metadata minima ya puede ser consumida por seguridad y runtime
 - `[ ]` los artifacts pueden cargarse en runtime
 - `[ ]` el URL generator basico funciona
@@ -378,9 +378,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` inicio de implementacion de `V1 Core Routing`
 - `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
-- `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
+- `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta, grupos minimos (`prefix`, `domain`, `middleware`) y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
-- `[ ]` pipeline compilado operativo
+- `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta y aliases minimos resueltos en registro; faltan deduplicacion y compilacion formal del pipeline
 - `[ ]` metadata minima consumible
 - `[ ]` artifacts de routing operativos
 - `[ ]` URL generator basico operativo

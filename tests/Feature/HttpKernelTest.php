@@ -86,6 +86,167 @@ final class HttpKernelTest extends TestCase
         self::assertSame('passed', $response->headers()['X-Middleware']);
     }
 
+    public function test_it_runs_route_middlewares_around_the_endpoint_dispatcher(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/route-middleware', fn() => new Response('ok'))
+            ->middleware(TestHeaderMiddleware::class);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/route-middleware'));
+
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_executes_global_and_route_middlewares_in_stable_order(): void
+    {
+        TestExecutionTrace::reset();
+
+        $router = $this->app->make(Router::class);
+        $router->get('/pipeline-order', function (): string {
+            TestExecutionTrace::push('action');
+
+            return 'ok';
+        })->middleware([
+            TestRouteTraceMiddleware::class,
+            static function (Request $request, \Closure $next): mixed {
+                TestExecutionTrace::push('route-closure-before');
+                $response = $next($request);
+                TestExecutionTrace::push('route-closure-after');
+
+                return $response;
+            },
+        ]);
+
+        $kernel = $this->app->make(HttpKernel::class);
+        $kernel->setMiddlewares([TestGlobalTraceMiddleware::class]);
+        $kernel->handle(Request::create('/pipeline-order'));
+
+        self::assertSame([
+            'global-before',
+            'route-before',
+            'route-closure-before',
+            'action',
+            'route-closure-after',
+            'route-after',
+            'global-after',
+        ], TestExecutionTrace::all());
+    }
+
+    public function test_it_applies_group_middlewares_to_registered_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->group(['middleware' => TestHeaderMiddleware::class], function (Router $router): void {
+            $router->get('/group-middleware', fn() => new Response('ok'));
+        });
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/group-middleware'));
+
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_composes_nested_group_middlewares_prefixes_and_route_middlewares_in_stable_order(): void
+    {
+        TestExecutionTrace::reset();
+
+        $router = $this->app->make(Router::class);
+        $router->group([
+            'prefix' => '/api',
+            'middleware' => TestOuterGroupTraceMiddleware::class,
+        ], function (Router $router): void {
+            $router->group([
+                'prefix' => '/v1',
+                'middleware' => TestInnerGroupTraceMiddleware::class,
+            ], function (Router $router): void {
+                $router->get('/users', function (): string {
+                    TestExecutionTrace::push('action');
+
+                    return 'ok';
+                })->middleware(TestRouteTraceMiddleware::class);
+            });
+        });
+
+        $kernel = $this->app->make(HttpKernel::class);
+        $kernel->setMiddlewares([TestGlobalTraceMiddleware::class]);
+        $response = $kernel->handle(Request::create('/api/v1/users'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('ok', $response->content());
+        self::assertSame([
+            'global-before',
+            'group-outer-before',
+            'group-inner-before',
+            'route-before',
+            'action',
+            'route-after',
+            'group-inner-after',
+            'group-outer-after',
+            'global-after',
+        ], TestExecutionTrace::all());
+    }
+
+    public function test_it_can_apply_group_domains_to_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->group(['domain' => 'admin.example.com'], function (Router $router): void {
+            $router->get('/group-domain', fn() => 'admin');
+        });
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/group-domain', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'admin.example.com',
+        ]));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('admin', $response->content());
+    }
+
+    public function test_it_resolves_global_middleware_aliases_before_runtime(): void
+    {
+        $kernel = $this->app->make(HttpKernel::class);
+        $kernel->aliasMiddleware('header', TestHeaderMiddleware::class);
+
+        $router = $this->app->make(Router::class);
+        $router->get('/global-alias', fn() => new Response('ok'));
+
+        $kernel->setMiddlewares(['header']);
+        $response = $kernel->handle(Request::create('/global-alias'));
+
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_resolves_group_middleware_aliases_before_runtime(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->aliasMiddleware('header', TestHeaderMiddleware::class);
+        $router->group(['middleware' => 'header'], function (Router $router): void {
+            $router->get('/group-alias', fn() => new Response('ok'));
+        });
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/group-alias'));
+
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_resolves_route_middleware_aliases_before_runtime(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->aliasMiddleware('header', TestHeaderMiddleware::class);
+        $router->get('/route-alias', fn() => new Response('ok'))->middleware('header');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/route-alias'));
+
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void
+    {
+        $router = $this->app->make(Router::class);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Middleware [missing] is not a registered alias or valid class.');
+
+        $router->get('/missing-alias', fn() => 'ok')->middleware('missing');
+    }
+
     public function test_it_returns_a_not_found_response_when_no_route_matches(): void
     {
         $kernel = $this->app->make(HttpKernel::class);
@@ -415,6 +576,80 @@ final class TestHeaderMiddleware implements MiddlewareInterface
         if ($response instanceof Response) {
             $response->header('X-Middleware', 'passed');
         }
+
+        return $response;
+    }
+}
+
+final class TestExecutionTrace
+{
+    /**
+     * @var array<int, string>
+     */
+    private static array $entries = [];
+
+    public static function reset(): void
+    {
+        self::$entries = [];
+    }
+
+    public static function push(string $entry): void
+    {
+        self::$entries[] = $entry;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function all(): array
+    {
+        return self::$entries;
+    }
+}
+
+final class TestGlobalTraceMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        TestExecutionTrace::push('global-before');
+        $response = $next($request);
+        TestExecutionTrace::push('global-after');
+
+        return $response;
+    }
+}
+
+final class TestRouteTraceMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        TestExecutionTrace::push('route-before');
+        $response = $next($request);
+        TestExecutionTrace::push('route-after');
+
+        return $response;
+    }
+}
+
+final class TestOuterGroupTraceMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        TestExecutionTrace::push('group-outer-before');
+        $response = $next($request);
+        TestExecutionTrace::push('group-outer-after');
+
+        return $response;
+    }
+}
+
+final class TestInnerGroupTraceMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        TestExecutionTrace::push('group-inner-before');
+        $response = $next($request);
+        TestExecutionTrace::push('group-inner-after');
 
         return $response;
     }

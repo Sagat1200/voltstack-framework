@@ -13,6 +13,7 @@ use Quantum\Container\Contracts\ContainerInterface;
 use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
 use Quantum\Http\ResponseFactory;
+use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\Dispatching\ResponseNormalizer;
 use Quantum\Middlewares\CsrfMiddleware;
@@ -196,6 +197,15 @@ class Application extends Container
 
         if (! isset($this->bindings[CsrfMiddleware::class])) {
             $this->singleton(CsrfMiddleware::class);
+        }
+
+        if (! isset($this->bindings[MiddlewareAliasRegistry::class])) {
+            $this->singleton(MiddlewareAliasRegistry::class, function (): MiddlewareAliasRegistry {
+                $registry = new MiddlewareAliasRegistry();
+                $registry->alias('csrf', CsrfMiddleware::class);
+
+                return $registry;
+            });
         }
 
         if (! isset($this->bindings[Checksum::class])) {

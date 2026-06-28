@@ -62,6 +62,14 @@ class CompiledRoute
         return $this->definition->domain();
     }
 
+    /**
+     * @return array<int, mixed>
+     */
+    public function routeMiddlewares(): array
+    {
+        return $this->definition->middlewares();
+    }
+
     public function pattern(): string
     {
         return $this->pattern;

@@ -9,6 +9,7 @@ final class RouteDefinition
     /**
      * @param array<int, string> $methods
      * @param array<string, string> $constraints
+     * @param array<int, mixed> $middlewares
      */
     public function __construct(
         private readonly array $methods,
@@ -17,6 +18,7 @@ final class RouteDefinition
         private readonly mixed $action,
         private readonly ?string $name = null,
         private readonly array $constraints = [],
+        private readonly array $middlewares = [],
     ) {}
 
     /**
@@ -32,6 +34,7 @@ final class RouteDefinition
             null,
             $action,
             null,
+            [],
             [],
         );
     }
@@ -72,6 +75,14 @@ final class RouteDefinition
         return $this->constraints;
     }
 
+    /**
+     * @return array<int, mixed>
+     */
+    public function middlewares(): array
+    {
+        return $this->middlewares;
+    }
+
     public function withName(string $name): self
     {
         $normalizedName = trim($name);
@@ -87,6 +98,7 @@ final class RouteDefinition
             $this->action,
             $normalizedName,
             $this->constraints,
+            $this->middlewares,
         );
     }
 
@@ -105,6 +117,7 @@ final class RouteDefinition
             $this->action,
             $this->name,
             $this->constraints,
+            $this->middlewares,
         );
     }
 
@@ -142,6 +155,7 @@ final class RouteDefinition
                 ...$this->constraints,
                 $normalizedParameter => $normalizedPattern,
             ],
+            $this->middlewares,
         );
     }
 
@@ -154,6 +168,36 @@ final class RouteDefinition
 
         foreach ($constraints as $parameter => $pattern) {
             $definition = $definition->withConstraint((string) $parameter, (string) $pattern);
+        }
+
+        return $definition;
+    }
+
+    public function withMiddleware(mixed $middleware): self
+    {
+        return new self(
+            $this->methods,
+            $this->uri,
+            $this->domain,
+            $this->action,
+            $this->name,
+            $this->constraints,
+            [
+                ...$this->middlewares,
+                $middleware,
+            ],
+        );
+    }
+
+    /**
+     * @param array<int, mixed> $middlewares
+     */
+    public function withMiddlewares(array $middlewares): self
+    {
+        $definition = $this;
+
+        foreach ($middlewares as $middleware) {
+            $definition = $definition->withMiddleware($middleware);
         }
 
         return $definition;

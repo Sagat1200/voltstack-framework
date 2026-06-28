@@ -8,6 +8,7 @@ use Quantum\Http\JsonResponse;
 use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
+use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\Router;
 use Quantum\Routing\Dispatching\ResponseNormalizer;
@@ -31,7 +32,7 @@ class HttpKernel implements KernelContract
         ?array $middlewares = null,
     ) {
         if ($middlewares !== null) {
-            $this->middlewares = $middlewares;
+            $this->setMiddlewares($middlewares);
         }
     }
 
@@ -40,12 +41,17 @@ class HttpKernel implements KernelContract
      */
     public function setMiddlewares(array $middlewares): void
     {
-        $this->middlewares = $middlewares;
+        $this->middlewares = $this->middlewareAliases()->resolveMany($middlewares);
     }
 
     public function pushMiddleware(callable|string|MiddlewareInterface $middleware): void
     {
-        $this->middlewares[] = $middleware;
+        $this->middlewares[] = $this->middlewareAliases()->resolve($middleware);
+    }
+
+    public function aliasMiddleware(string $alias, mixed $middleware): void
+    {
+        $this->middlewareAliases()->alias($alias, $middleware);
     }
 
     public function handle(Request $request): Response
@@ -88,5 +94,10 @@ class HttpKernel implements KernelContract
         }
 
         return $bootstrapper->bootstrap($response);
+    }
+
+    private function middlewareAliases(): MiddlewareAliasRegistry
+    {
+        return $this->app->make(MiddlewareAliasRegistry::class);
     }
 }
