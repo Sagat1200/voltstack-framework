@@ -247,6 +247,58 @@ final class HttpKernelTest extends TestCase
         $router->get('/missing-alias', fn() => 'ok')->middleware('missing');
     }
 
+    public function test_it_deduplicates_global_middlewares_while_preserving_first_occurrence(): void
+    {
+        TestExecutionTrace::reset();
+
+        $kernel = $this->app->make(HttpKernel::class);
+        $kernel->aliasMiddleware('global-trace', TestGlobalTraceMiddleware::class);
+
+        $router = $this->app->make(Router::class);
+        $router->get('/global-dedupe', function (): string {
+            TestExecutionTrace::push('action');
+
+            return 'ok';
+        });
+
+        $kernel->setMiddlewares([
+            'global-trace',
+            TestGlobalTraceMiddleware::class,
+        ]);
+        $kernel->handle(Request::create('/global-dedupe'));
+
+        self::assertSame([
+            'global-before',
+            'action',
+            'global-after',
+        ], TestExecutionTrace::all());
+    }
+
+    public function test_it_deduplicates_group_and_route_middlewares_after_alias_resolution(): void
+    {
+        TestExecutionTrace::reset();
+
+        $router = $this->app->make(Router::class);
+        $router->aliasMiddleware('route-trace', TestRouteTraceMiddleware::class);
+        $router->group([
+            'middleware' => ['route-trace', TestRouteTraceMiddleware::class],
+        ], function (Router $router): void {
+            $router->get('/route-dedupe', function (): string {
+                TestExecutionTrace::push('action');
+
+                return 'ok';
+            })->middleware('route-trace');
+        });
+
+        $this->app->make(HttpKernel::class)->handle(Request::create('/route-dedupe'));
+
+        self::assertSame([
+            'route-before',
+            'action',
+            'route-after',
+        ], TestExecutionTrace::all());
+    }
+
     public function test_it_returns_a_not_found_response_when_no_route_matches(): void
     {
         $kernel = $this->app->make(HttpKernel::class);

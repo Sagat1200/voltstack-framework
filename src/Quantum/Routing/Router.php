@@ -6,6 +6,7 @@ namespace Quantum\Routing;
 
 use Quantum\HttpKernel\MiddlewarePipeline;
 use Quantum\HttpKernel\MiddlewareAliasRegistry;
+use Quantum\HttpKernel\MiddlewareStack;
 use Quantum\Http\Response;
 use Quantum\Http\Request;
 use Quantum\Routing\Dispatching\DispatcherResolver;
@@ -199,10 +200,10 @@ final class Router
                 is_array($attributes['middleware']) ? array_values($attributes['middleware']) : [$attributes['middleware']]
             );
 
-            $middlewares = [
+            $middlewares = MiddlewareStack::deduplicate([
                 ...$middlewares,
                 ...$resolvedMiddlewares,
-            ];
+            ]);
         }
 
         return [

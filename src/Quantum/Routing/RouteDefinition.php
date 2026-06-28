@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Quantum\Routing;
 
+use Quantum\HttpKernel\MiddlewareStack;
+
 final class RouteDefinition
 {
     /**
@@ -182,10 +184,10 @@ final class RouteDefinition
             $this->action,
             $this->name,
             $this->constraints,
-            [
+            MiddlewareStack::deduplicate([
                 ...$this->middlewares,
                 $middleware,
-            ],
+            ]),
         );
     }
 
@@ -194,13 +196,18 @@ final class RouteDefinition
      */
     public function withMiddlewares(array $middlewares): self
     {
-        $definition = $this;
-
-        foreach ($middlewares as $middleware) {
-            $definition = $definition->withMiddleware($middleware);
-        }
-
-        return $definition;
+        return new self(
+            $this->methods,
+            $this->uri,
+            $this->domain,
+            $this->action,
+            $this->name,
+            $this->constraints,
+            MiddlewareStack::deduplicate([
+                ...$this->middlewares,
+                ...array_values($middlewares),
+            ]),
+        );
     }
 
     /**

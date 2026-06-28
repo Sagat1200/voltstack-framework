@@ -9,6 +9,7 @@ use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\MiddlewareAliasRegistry;
+use Quantum\HttpKernel\MiddlewareStack;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\Router;
 use Quantum\Routing\Dispatching\ResponseNormalizer;
@@ -41,12 +42,15 @@ class HttpKernel implements KernelContract
      */
     public function setMiddlewares(array $middlewares): void
     {
-        $this->middlewares = $this->middlewareAliases()->resolveMany($middlewares);
+        $this->middlewares = MiddlewareStack::deduplicate($this->middlewareAliases()->resolveMany($middlewares));
     }
 
     public function pushMiddleware(callable|string|MiddlewareInterface $middleware): void
     {
-        $this->middlewares[] = $this->middlewareAliases()->resolve($middleware);
+        $this->middlewares = MiddlewareStack::deduplicate([
+            ...$this->middlewares,
+            $this->middlewareAliases()->resolve($middleware),
+        ]);
     }
 
     public function aliasMiddleware(string $alias, mixed $middleware): void

@@ -131,7 +131,7 @@ Criterio de cierre:
 - `[x]` implementar pipeline por ruta
 - `[x]` soportar aliases minimos de middleware
 - `[x]` ordenar middleware de forma deterministica
-- `[ ]` eliminar duplicados simples durante compilacion
+- `[x]` eliminar duplicados simples durante compilacion
 - `[x]` soportar contexto `HTTP`
 - `[ ]` reservar extension futura para `SPA` y `API` sin bloquear `V1`
 
@@ -380,7 +380,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
 - `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta, grupos minimos (`prefix`, `domain`, `middleware`) y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
-- `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta y aliases minimos resueltos en registro; faltan deduplicacion y compilacion formal del pipeline
+- `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro y deduplicacion estable; falta compilacion formal del pipeline
 - `[ ]` metadata minima consumible
 - `[ ]` artifacts de routing operativos
 - `[ ]` URL generator basico operativo
