@@ -44,10 +44,10 @@ Resultado esperado del primer ciclo:
 
 ### 3.1 Definicion De Rutas
 
-- `[ ]` definir `RouteDefinition` como estructura inmutable y normalizada
-- `[ ]` definir `CompiledRoute` como estructura lista para runtime
+- `[x]` definir `RouteDefinition` como estructura inmutable y normalizada
+- `[x]` definir `CompiledRoute` como estructura lista para runtime
 - `[ ]` definir `CompiledRouteCollection` como coleccion principal del sistema
-- `[ ]` definir `RouteBuilder` o API fluida minima para registrar rutas
+- `[x]` definir `RouteBuilder` o API fluida minima para registrar rutas
 - `[x]` soportar al menos `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`
 - `[ ]` soportar nombre de ruta
 - `[ ]` soportar path
@@ -61,14 +61,14 @@ Criterio de cierre:
 
 ### 3.2 Registro Y Coleccion
 
-- `[ ]` implementar `RouteCollection`
-- `[ ]` soportar registro de rutas individuales
+- `[x]` implementar `RouteCollection`
+- `[x]` soportar registro de rutas individuales
 - `[ ]` soportar grupos con prefijo minimo
 - `[ ]` soportar middleware por grupo
 - `[ ]` soportar dominio por grupo
-- `[ ]` detectar rutas duplicadas por `metodo + dominio + path`
+- `[x]` detectar rutas duplicadas por `metodo + dominio + path`
 - `[ ]` detectar nombres de ruta duplicados
-- `[ ]` definir orden deterministico de compilacion
+- `[x]` definir orden deterministico de compilacion
 
 Criterio de cierre:
 
@@ -76,9 +76,9 @@ Criterio de cierre:
 
 ### 3.3 Compiler Minimo
 
-- `[ ]` implementar compilacion de route files o Fluent API a `RouteDefinition`
+- `[x]` implementar compilacion de route files o Fluent API a `RouteDefinition`
 - `[ ]` implementar validacion de rutas antes de compilar
-- `[ ]` implementar normalizacion de paths
+- `[x]` implementar normalizacion de paths
 - `[ ]` implementar merge minimo de metadata
 - `[ ]` compilar middleware resueltos por ruta
 - `[ ]` compilar constraints basicos
@@ -231,7 +231,7 @@ Criterio de cierre:
 
 ### 4.3 Pruebas De Errores
 
-- `[ ]` ruta duplicada detectada en compilacion
+- `[x]` ruta duplicada detectada en compilacion
 - `[ ]` nombre duplicado detectado en compilacion
 - `[ ]` constraint invalido detectado correctamente
 - `[ ]` middleware inexistente detectado antes de runtime
@@ -244,12 +244,12 @@ Criterio de cierre:
 
 Marcar `V1 Core Routing` como cerrado solo si todas estas condiciones se cumplen:
 
-- `[ ]` existe `RouteDefinition`
-- `[ ]` existe `CompiledRoute`
+- `[x]` existe `RouteDefinition`
+- `[x]` existe `CompiledRoute`
 - `[ ]` existe `CompiledRouteCollection`
-- `[ ]` el matcher soporta multi-metodo
-- `[ ]` el sistema diferencia formalmente `404` y `405`
-- `[ ]` el sistema emite `Allow` cuando aplica
+- `[x]` el matcher soporta multi-metodo
+- `[x]` el sistema diferencia formalmente `404` y `405`
+- `[x]` el sistema emite `Allow` cuando aplica
 - `[ ]` el dispatcher ejecuta endpoints basicos
 - `[ ]` el pipeline funciona con orden estable
 - `[ ]` la metadata minima ya puede ser consumida por seguridad y runtime
@@ -337,7 +337,7 @@ No iniciar estos bloques antes de cerrar `V1` y `V2`:
 
 Seguir este orden de trabajo:
 
-1. `[ ]` `RouteDefinition + RouteCollection + Fluent API`
+1. `[-]` `RouteDefinition + RouteCollection + Fluent API`
 2. `[ ]` `Compiler` minimo
 3. `[ ]` `Matcher` multi-metodo
 4. `[ ]` `404 / 405 / Allow / HEAD / OPTIONS`
@@ -375,9 +375,10 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 ### 2026-06
 
 - `[ ]` checklist inicial de `Quantum Routing` definido
-- `[ ]` inicio de implementacion de `V1 Core Routing`
+- `[-]` inicio de implementacion de `V1 Core Routing`
 - `[-]` matcher multi-metodo operativo con semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`)
 - `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; faltan `method override`, dominio y constraints para cerrar el bloque completo
+- `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; falta `CompiledRouteCollection`, nombres de ruta y compilacion formal de colecciones
 - `[ ]` dispatcher basico operativo
 - `[ ]` pipeline compilado operativo
 - `[ ]` metadata minima consumible

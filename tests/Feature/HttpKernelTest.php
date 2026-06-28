@@ -9,6 +9,7 @@ use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\HttpKernel\HttpKernel;
+use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Router;
 use VoltStack\Framework\Application;
 
@@ -129,6 +130,17 @@ final class HttpKernelTest extends TestCase
         self::assertSame(204, $response->statusCode());
         self::assertSame('', $response->content());
         self::assertSame('GET, HEAD, POST, OPTIONS', $response->headers()['Allow']);
+    }
+
+    public function test_it_rejects_duplicate_routes_during_registration(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/users', fn() => 'first');
+
+        $this->expectException(DuplicateRouteException::class);
+        $this->expectExceptionMessage('A route is already registered for [GET] /users.');
+
+        $router->get('/users', fn() => 'second');
     }
 
     public function test_it_renders_server_errors_as_reload_only_documents(): void

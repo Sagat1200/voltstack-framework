@@ -12,13 +12,11 @@ use VoltStack\Framework\Application;
 
 final class Router
 {
-    /**
-     * @var array<int, Route>
-     */
-    private array $routes = [];
+    private RouteCollection $routes;
 
     public function __construct(private readonly Application $app)
     {
+        $this->routes = new RouteCollection();
     }
 
     public function get(string $uri, mixed $action): Route
@@ -74,16 +72,20 @@ final class Router
      */
     public function addRoute(array $methods, string $uri, mixed $action): Route
     {
-        $route = new Route($methods, $uri, $action);
-        $this->routes[] = $route;
+        $route = new Route(RouteDefinition::make($methods, $uri, $action));
 
-        return $route;
+        return $this->routes->add($route);
     }
 
     /**
      * @return array<int, Route>
      */
     public function routes(): array
+    {
+        return $this->routes->all();
+    }
+
+    public function collection(): RouteCollection
     {
         return $this->routes;
     }
