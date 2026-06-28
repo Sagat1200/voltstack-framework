@@ -48,8 +48,14 @@ php tools/build-runtime.php
 - `45-action-dispatch.js`
   - pipeline de `dispatchAction()` para acciones reactivas
 - `50-events-and-boot.js`
-  - listeners globales, exposicion `window.Volt.*` y boot final del documento
+  - listeners globales, exposicion `window.Volt.*`, contrato publico `window.Volt.contract` y boot final del documento
 
 ## Nota
 
 La fragmentacion actual conserva el runtime como un solo asset servido por `/_volt/runtime.js`, pero ya no obliga a mantener toda la logica en un unico archivo gigante.
+
+## Contrato Publico
+
+- el runtime publica `window.Volt.contract` como descriptor estable del asset servido por `/_volt/runtime.js`
+- el contrato actual expone `version` y la lista formal de APIs publicas: `visit`, `prefetch`, `state`, `components` y `telemetry`
+- cuando se cambie este contrato, debe actualizarse primero la fuente en `frontend/runtime/src` y luego regenerar `frontend/runtime/volt.js`

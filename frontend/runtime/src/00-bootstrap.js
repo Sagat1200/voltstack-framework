@@ -53,6 +53,7 @@
     telemetryMaxEntries: 60,
     telemetrySequence: 0,
   };
+  const VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION = 1;
 
   const NAVIGATION_CACHE_TTL = 5000;
   const NAVIGATION_CACHE_MAX_ENTRIES = 10;
@@ -1721,6 +1722,32 @@
       subscribe: subscribeRuntimeState,
       currentScope: currentClientStateScope,
     };
+  }
+
+  function createPublicRuntimeContract() {
+    return Object.freeze({
+      version: VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION,
+      apis: Object.freeze({
+        visit: Object.freeze({
+          type: "function",
+        }),
+        prefetch: Object.freeze({
+          type: "function",
+        }),
+        state: Object.freeze({
+          type: "api",
+          factory: "createPublicStateApi",
+        }),
+        components: Object.freeze({
+          type: "api",
+          factory: "createPublicComponentsApi",
+        }),
+        telemetry: Object.freeze({
+          type: "api",
+          factory: "createPublicTelemetryApi",
+        }),
+      }),
+    });
   }
 
   function createPublicTelemetryApi() {

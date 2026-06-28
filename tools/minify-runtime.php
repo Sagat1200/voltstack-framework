@@ -78,7 +78,7 @@ if (! @rename($tempOutputBase, $tempOutput)) {
 }
 
 $command = sprintf(
-    '%s %s --minify --charset=utf8 --legal-comments=none --outfile=%s 2>&1',
+    '%s %s --minify --keep-names --charset=utf8 --legal-comments=none --outfile=%s 2>&1',
     escapeshellarg($esbuild),
     escapeshellarg($bundleFile),
     escapeshellarg($tempOutput),

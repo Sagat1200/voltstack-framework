@@ -1,4 +1,4 @@
-﻿
+
   document.addEventListener("input", function (event) {
     handleOnDirectiveEvent("input", event);
 
@@ -309,6 +309,7 @@
   runtime.clientStateScope = normalizeNavigationUrl(window.location.href);
   window.Volt =
     window.Volt && typeof window.Volt === "object" ? window.Volt : {};
+  window.Volt.contract = createPublicRuntimeContract();
   window.Volt.visit = function (url, options) {
     return visit(url, options || {});
   };

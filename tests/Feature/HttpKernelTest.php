@@ -586,10 +586,11 @@ final class HttpKernelTest extends TestCase
         self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
         self::assertArrayHasKey('ETag', $response->headers());
         self::assertArrayHasKey('Last-Modified', $response->headers());
-        self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $response->content());
+        self::assertStringContainsString('window.Volt.contract=', $response->content());
+        self::assertStringContainsString('factory:"createPublicComponentsApi"', $response->content());
         self::assertStringContainsString('volt:component-destroyed', $response->content());
-        self::assertStringContainsString('function cleanupRuntimeOrphans()', $response->content());
-        self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $response->content());
+        self::assertStringContainsString('window.Volt.visit=function', $response->content());
+        self::assertStringContainsString('factory:"createPublicTelemetryApi"', $response->content());
     }
 
     public function test_it_preserves_declared_document_navigation_mode_when_bootstrapping_html(): void
