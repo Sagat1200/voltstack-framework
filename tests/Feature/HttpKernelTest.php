@@ -133,6 +133,42 @@ final class HttpKernelTest extends TestCase
         self::assertSame('GET, HEAD, POST, OPTIONS', $response->headers()['Allow']);
     }
 
+    public function test_it_dispatches_method_override_from_form_input(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->patch('/users/42', fn() => 'patched');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/users/42',
+            'POST',
+            [],
+            ['_method' => 'patch'],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('patched', $response->content());
+    }
+
+    public function test_it_dispatches_method_override_from_header(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->delete('/users/42', fn() => 'deleted');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/users/42',
+            'POST',
+            [],
+            [],
+            [],
+            [],
+            [],
+            ['HTTP_X_HTTP_METHOD_OVERRIDE' => 'delete'],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('deleted', $response->content());
+    }
+
     public function test_it_rejects_duplicate_routes_during_registration(): void
     {
         $router = $this->app->make(Router::class);

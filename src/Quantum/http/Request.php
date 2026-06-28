@@ -6,6 +6,8 @@ namespace Quantum\Http;
 
 final class Request
 {
+    private const METHOD_OVERRIDE_WHITELIST = ['PUT', 'PATCH', 'DELETE'];
+
     /**
      * @param array<string, mixed> $query
      * @param array<string, mixed> $request
@@ -66,6 +68,23 @@ final class Request
     }
 
     public function method(): string
+    {
+        $method = $this->originalMethod();
+
+        if (! $this->canOverrideMethod()) {
+            return $method;
+        }
+
+        $overriddenMethod = $this->methodOverride();
+
+        if ($overriddenMethod === null) {
+            return $method;
+        }
+
+        return $overriddenMethod;
+    }
+
+    public function originalMethod(): string
     {
         return strtoupper((string) ($this->server['REQUEST_METHOD'] ?? 'GET'));
     }
@@ -256,5 +275,36 @@ final class Request
         $decoded = json_decode($content, true);
 
         return is_array($decoded) ? $decoded : $input;
+    }
+
+    private function canOverrideMethod(): bool
+    {
+        return $this->originalMethod() === 'POST' && $this->path() !== '/_volt/action';
+    }
+
+    private function methodOverride(): ?string
+    {
+        $headerOverride = $this->normalizeMethodOverride($this->header('X-HTTP-Method-Override'));
+
+        if ($headerOverride !== null) {
+            return $headerOverride;
+        }
+
+        return $this->normalizeMethodOverride($this->request['_method'] ?? null);
+    }
+
+    private function normalizeMethodOverride(mixed $method): ?string
+    {
+        if (! is_string($method)) {
+            return null;
+        }
+
+        $normalizedMethod = strtoupper(trim($method));
+
+        if ($normalizedMethod === '' || ! in_array($normalizedMethod, self::METHOD_OVERRIDE_WHITELIST, true)) {
+            return null;
+        }
+
+        return $normalizedMethod;
     }
 }

@@ -164,7 +164,7 @@ Criterio de cierre:
 - `[x]` emitir cabecera `Allow` cuando exista `405`
 - `[x]` definir comportamiento oficial de `HEAD`
 - `[x]` definir comportamiento oficial de `OPTIONS`
-- `[ ]` decidir si existira `method override`
+- `[x]` decidir si existira `method override`
 - `[ ]` definir cuando aplica CSRF segun verbo o contexto
 - `[ ]` separar claramente endpoints HTTP convencionales de acciones internas del protocolo reactivo
 
@@ -376,8 +376,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 
 - `[ ]` checklist inicial de `Quantum Routing` definido
 - `[-]` inicio de implementacion de `V1 Core Routing`
-- `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta `method override`
-- `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; falta `method override` para cerrar el bloque completo
+- `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
+- `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
 - `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[ ]` dispatcher basico operativo
 - `[ ]` pipeline compilado operativo
