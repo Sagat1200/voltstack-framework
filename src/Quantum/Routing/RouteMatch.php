@@ -38,4 +38,9 @@ final class RouteMatch
     {
         return $this->usedHeadFallback;
     }
+
+    public function metadata(): RouteMetadata
+    {
+        return $this->route->routeMetadata();
+    }
 }

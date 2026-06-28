@@ -9,6 +9,7 @@ use Quantum\Http\Request;
 class CompiledRoute
 {
     private RouteDefinition $definition;
+    private RouteMetadata $metadata;
 
     private string $pattern;
     private ?string $domainPattern = null;
@@ -68,6 +69,11 @@ class CompiledRoute
     public function routeMiddlewares(): array
     {
         return $this->definition->middlewares();
+    }
+
+    public function routeMetadata(): RouteMetadata
+    {
+        return $this->metadata;
     }
 
     public function pattern(): string
@@ -223,6 +229,7 @@ class CompiledRoute
         [$domainPattern, $domainParameterNames] = $this->compileDomainPattern();
         $this->domainPattern = $domainPattern;
         $this->domainParameterNames = $domainParameterNames;
+        $this->metadata = RouteMetadata::fromDefinition($this->definition);
     }
 
     /**

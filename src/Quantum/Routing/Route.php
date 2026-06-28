@@ -132,6 +132,44 @@ final class Route extends CompiledRoute
         return $this;
     }
 
+    public function meta(string|array $key, mixed $value = null): static
+    {
+        if (is_array($key)) {
+            $this->replaceDefinition($this->definition()->withMetadataBag($key));
+
+            return $this;
+        }
+
+        $this->replaceDefinition($this->definition()->withMetadata($key, $value));
+
+        return $this;
+    }
+
+    public function auth(mixed $value = true): static
+    {
+        return $this->meta('auth', $value);
+    }
+
+    public function guest(mixed $value = true): static
+    {
+        return $this->meta('guest', $value);
+    }
+
+    public function csrf(mixed $value = true): static
+    {
+        return $this->meta('csrf', $value);
+    }
+
+    public function throttle(mixed $value): static
+    {
+        return $this->meta('throttle', $value);
+    }
+
+    public function runtime(mixed $value): static
+    {
+        return $this->meta('runtime', $value);
+    }
+
     private function resolveMiddlewareInput(mixed $middleware): mixed
     {
         if ($this->middlewareResolver === null) {

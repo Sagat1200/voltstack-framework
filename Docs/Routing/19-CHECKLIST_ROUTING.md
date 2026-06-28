@@ -53,7 +53,7 @@ Resultado esperado del primer ciclo:
 - `[ ]` soportar path
 - `[x]` soportar dominio opcional
 - `[x]` soportar middleware declarativo por ruta
-- `[ ]` soportar metadata minima asociada a la ruta
+- `[x]` soportar metadata minima asociada a la ruta
 
 Criterio de cierre:
 
@@ -79,7 +79,7 @@ Criterio de cierre:
 - `[x]` implementar compilacion de route files o Fluent API a `RouteDefinition`
 - `[ ]` implementar validacion de rutas antes de compilar
 - `[x]` implementar normalizacion de paths
-- `[ ]` implementar merge minimo de metadata
+- `[x]` implementar merge minimo de metadata
 - `[ ]` compilar middleware resueltos por ruta
 - `[ ]` compilar constraints basicos
 - `[ ]` generar artefacto de coleccion
@@ -141,17 +141,22 @@ Criterio de cierre:
 
 ### 3.7 Metadata Minima
 
-- `[ ]` definir `RouteMetadata` minimo
-- `[ ]` incluir `name`
-- `[ ]` incluir `methods`
-- `[ ]` incluir `domain`
-- `[ ]` incluir `middleware`
-- `[ ]` incluir `auth` si aplica
-- `[ ]` incluir `guest` si aplica
-- `[ ]` incluir `csrf` si aplica
-- `[ ]` incluir `throttle` si aplica
-- `[ ]` incluir `runtime` basico solo como metadata, no como logica
-- `[ ]` documentar que metadata queda publica y cual permanece interna
+- `[x]` definir `RouteMetadata` minimo
+- `[x]` incluir `name`
+- `[x]` incluir `methods`
+- `[x]` incluir `domain`
+- `[x]` incluir `middleware`
+- `[x]` incluir `auth` si aplica
+- `[x]` incluir `guest` si aplica
+- `[x]` incluir `csrf` si aplica
+- `[x]` incluir `throttle` si aplica
+- `[x]` incluir `runtime` basico solo como metadata, no como logica
+- `[x]` documentar que metadata queda publica y cual permanece interna
+
+Nota del corte actual:
+
+- la metadata consumible en runtime incluye `name`, `methods`, `domain`, `runtime`, `auth`, `guest`, `csrf` y `throttle`
+- `middleware` forma parte de la metadata compilada para consumo interno de pipeline y no debe considerarse todavia metadata publica de manifiesto
 
 Criterio de cierre:
 
@@ -225,7 +230,7 @@ Criterio de cierre:
 - `[ ]` no usar reflection en runtime de matching
 - `[ ]` no leer atributos en runtime
 - `[ ]` no interpretar route files en runtime
-- `[ ]` no hacer merge dinamico de metadata en request
+- `[x]` no hacer merge dinamico de metadata en request
 - `[ ]` no construir el pipeline en cada request
 - `[ ]` no recompilar artefactos en produccion
 
@@ -252,7 +257,7 @@ Marcar `V1 Core Routing` como cerrado solo si todas estas condiciones se cumplen
 - `[x]` el sistema emite `Allow` cuando aplica
 - `[x]` el dispatcher ejecuta endpoints basicos
 - `[x]` el pipeline funciona con orden estable
-- `[ ]` la metadata minima ya puede ser consumida por seguridad y runtime
+- `[x]` la metadata minima ya puede ser consumida por seguridad y runtime
 - `[ ]` los artifacts pueden cargarse en runtime
 - `[ ]` el URL generator basico funciona
 
@@ -381,6 +386,6 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta, grupos minimos (`prefix`, `domain`, `middleware`) y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro y deduplicacion estable; falta compilacion formal del pipeline
-- `[ ]` metadata minima consumible
+- `[x]` metadata minima consumible
 - `[ ]` artifacts de routing operativos
 - `[ ]` URL generator basico operativo

@@ -186,6 +186,14 @@ final class Request
     }
 
     /**
+     * @param array<string, mixed> $metadata
+     */
+    public function setRouteMetadata(array $metadata): void
+    {
+        $this->attributes['_route_metadata'] = $metadata;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function routeParameters(): array
@@ -198,6 +206,21 @@ final class Request
     public function routeParameter(string $key, mixed $default = null): mixed
     {
         return $this->routeParameters()[$key] ?? $default;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function routeMetadata(): array
+    {
+        $metadata = $this->attributes['_route_metadata'] ?? [];
+
+        return is_array($metadata) ? $metadata : [];
+    }
+
+    public function routeMeta(string $key, mixed $default = null): mixed
+    {
+        return $this->routeMetadata()[$key] ?? $default;
     }
 
     public function header(string $key, mixed $default = null): mixed

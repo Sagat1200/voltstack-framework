@@ -12,6 +12,7 @@ final class RouteDefinition
      * @param array<int, string> $methods
      * @param array<string, string> $constraints
      * @param array<int, mixed> $middlewares
+     * @param array<string, mixed> $metadata
      */
     public function __construct(
         private readonly array $methods,
@@ -21,6 +22,7 @@ final class RouteDefinition
         private readonly ?string $name = null,
         private readonly array $constraints = [],
         private readonly array $middlewares = [],
+        private readonly array $metadata = [],
     ) {}
 
     /**
@@ -36,6 +38,7 @@ final class RouteDefinition
             null,
             $action,
             null,
+            [],
             [],
             [],
         );
@@ -85,6 +88,14 @@ final class RouteDefinition
         return $this->middlewares;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function metadata(): array
+    {
+        return $this->metadata;
+    }
+
     public function withName(string $name): self
     {
         $normalizedName = trim($name);
@@ -101,6 +112,7 @@ final class RouteDefinition
             $normalizedName,
             $this->constraints,
             $this->middlewares,
+            $this->metadata,
         );
     }
 
@@ -120,6 +132,7 @@ final class RouteDefinition
             $this->name,
             $this->constraints,
             $this->middlewares,
+            $this->metadata,
         );
     }
 
@@ -158,6 +171,7 @@ final class RouteDefinition
                 $normalizedParameter => $normalizedPattern,
             ],
             $this->middlewares,
+            $this->metadata,
         );
     }
 
@@ -188,6 +202,7 @@ final class RouteDefinition
                 ...$this->middlewares,
                 $middleware,
             ]),
+            $this->metadata,
         );
     }
 
@@ -207,6 +222,47 @@ final class RouteDefinition
                 ...$this->middlewares,
                 ...array_values($middlewares),
             ]),
+            $this->metadata,
+        );
+    }
+
+    public function withMetadata(string $key, mixed $value): self
+    {
+        $normalizedKey = trim($key);
+
+        if ($normalizedKey === '') {
+            throw new \InvalidArgumentException('Route metadata key cannot be empty.');
+        }
+
+        return new self(
+            $this->methods,
+            $this->uri,
+            $this->domain,
+            $this->action,
+            $this->name,
+            $this->constraints,
+            $this->middlewares,
+            [
+                ...$this->metadata,
+                $normalizedKey => $value,
+            ],
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     */
+    public function withMetadataBag(array $metadata): self
+    {
+        return new self(
+            $this->methods,
+            $this->uri,
+            $this->domain,
+            $this->action,
+            $this->name,
+            $this->constraints,
+            $this->middlewares,
+            array_replace($this->metadata, $metadata),
         );
     }
 

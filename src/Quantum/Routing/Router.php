@@ -18,7 +18,7 @@ final class Router
     private RouteCollection $routes;
     private RouteMatcher $matcher;
     /**
-     * @var array<int, array{prefix: string, domain: ?string, middleware: array<int, mixed>}>
+     * @var array<int, array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}>
      */
     private array $groupStack = [];
 
@@ -122,6 +122,10 @@ final class Router
             $route->middleware($groupAttributes['middleware']);
         }
 
+        if ($groupAttributes['metadata'] !== []) {
+            $route->meta($groupAttributes['metadata']);
+        }
+
         return $this->routes->add($route);
     }
 
@@ -153,6 +157,7 @@ final class Router
         }
 
         $request->setRouteParameters($match->parameters());
+        $request->setRouteMetadata($match->metadata()->all());
 
         $pipeline = new MiddlewarePipeline($this->app, $match->route()->routeMiddlewares());
 
@@ -163,19 +168,19 @@ final class Router
     }
 
     /**
-     * @return array{prefix: string, domain: ?string, middleware: array<int, mixed>}
+     * @return array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}
      */
     private function currentGroupAttributes(): array
     {
         return $this->groupStack === []
-            ? ['prefix' => '', 'domain' => null, 'middleware' => []]
+            ? ['prefix' => '', 'domain' => null, 'middleware' => [], 'metadata' => []]
             : $this->groupStack[array_key_last($this->groupStack)];
     }
 
     /**
-     * @param array{prefix: string, domain: ?string, middleware: array<int, mixed>} $parent
+     * @param array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>} $parent
      * @param array<string, mixed> $attributes
-     * @return array{prefix: string, domain: ?string, middleware: array<int, mixed>}
+     * @return array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}
      */
     private function mergeGroupAttributes(array $parent, array $attributes): array
     {
@@ -206,10 +211,17 @@ final class Router
             ]);
         }
 
+        $metadata = $parent['metadata'];
+
+        if (array_key_exists('metadata', $attributes) && is_array($attributes['metadata'])) {
+            $metadata = array_replace($metadata, $attributes['metadata']);
+        }
+
         return [
             'prefix' => $prefix,
             'domain' => $domain,
             'middleware' => $middlewares,
+            'metadata' => $metadata,
         ];
     }
 

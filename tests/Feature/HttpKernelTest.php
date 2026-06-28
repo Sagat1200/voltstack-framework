@@ -299,6 +299,39 @@ final class HttpKernelTest extends TestCase
         ], TestExecutionTrace::all());
     }
 
+    public function test_it_merges_group_and_route_metadata_and_exposes_it_on_the_request(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->group([
+            'metadata' => [
+                'auth' => 'session',
+                'runtime' => 'spa',
+                'csrf' => true,
+            ],
+        ], function (Router $router): void {
+            $router->get('/metadata', function (Request $request): array {
+                return [
+                    'all' => $request->routeMetadata(),
+                    'auth' => $request->routeMeta('auth'),
+                    'runtime' => $request->routeMeta('runtime'),
+                    'csrf' => $request->routeMeta('csrf'),
+                    'pipelineAuth' => $request->attribute('_pipeline_auth'),
+                ];
+            })
+                ->name('meta.route')
+                ->meta('runtime', 'ssr')
+                ->guest()
+                ->throttle('api')
+                ->middleware(TestMetadataHeaderMiddleware::class);
+        });
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/metadata'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('application/json; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertSame('{"all":{"name":"meta.route","methods":["GET"],"domain":null,"middleware":["VoltStack\\\\Test\\\\Feature\\\\TestMetadataHeaderMiddleware"],"auth":"session","runtime":"ssr","csrf":true,"guest":true,"throttle":"api"},"auth":"session","runtime":"ssr","csrf":true,"pipelineAuth":"session"}', $response->content());
+    }
+
     public function test_it_returns_a_not_found_response_when_no_route_matches(): void
     {
         $kernel = $this->app->make(HttpKernel::class);
@@ -702,6 +735,21 @@ final class TestInnerGroupTraceMiddleware implements MiddlewareInterface
         TestExecutionTrace::push('group-inner-before');
         $response = $next($request);
         TestExecutionTrace::push('group-inner-after');
+
+        return $response;
+    }
+}
+
+final class TestMetadataHeaderMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        $request->setAttribute('_pipeline_auth', $request->routeMeta('auth', 'none'));
+        $response = $next($request);
+
+        if ($response instanceof Response) {
+            $response->header('X-Route-Auth', (string) $request->routeMeta('auth', 'none'));
+        }
 
         return $response;
     }

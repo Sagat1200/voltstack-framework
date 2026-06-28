@@ -51,6 +51,21 @@ final class RouteCompilationTest extends TestCase
         self::assertSame(['id' => '[0-9]+'], $definition->constraints());
     }
 
+    public function test_route_definition_can_store_and_merge_metadata(): void
+    {
+        $definition = RouteDefinition::make(['GET'], '/users', 'handler')
+            ->withMetadata('auth', true)
+            ->withMetadataBag([
+                'runtime' => 'spa',
+                'auth' => 'session',
+            ]);
+
+        self::assertSame([
+            'auth' => 'session',
+            'runtime' => 'spa',
+        ], $definition->metadata());
+    }
+
     public function test_compiled_route_exposes_precompiled_pattern_and_parameter_names(): void
     {
         $route = new CompiledRoute(RouteDefinition::make(['GET'], '/users/{id}/posts/{post}', 'handler'));
@@ -168,12 +183,29 @@ final class RouteCompilationTest extends TestCase
     public function test_route_match_exposes_route_parameters_and_resolution_metadata(): void
     {
         $route = new Route(RouteDefinition::make(['GET'], '/users/{id}', 'handler'));
+        $route->name('users.show');
+        $route->domain('api.example.com');
+        $route->middleware('auth');
+        $route->meta([
+            'auth' => true,
+            'runtime' => 'spa',
+        ]);
+
         $match = new RouteMatch($route, ['id' => '42'], 'GET');
 
         self::assertSame($route, $match->route());
         self::assertSame(['id' => '42'], $match->parameters());
         self::assertSame('GET', $match->resolvedMethod());
         self::assertFalse($match->usedHeadFallback());
+        self::assertSame([
+            'name' => 'users.show',
+            'methods' => ['GET'],
+            'domain' => 'api.example.com',
+            'middleware' => ['auth'],
+            'auth' => true,
+            'runtime' => 'spa',
+        ], $match->metadata()->all());
+        self::assertSame('spa', $match->metadata()->get('runtime'));
     }
 
     public function test_route_matcher_returns_a_route_match_for_dynamic_routes(): void
