@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace VoltStack\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Quantum\Routing\CompiledRouteCollection;
 use Quantum\Routing\CompiledRoute;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
@@ -136,6 +137,21 @@ final class RouteCompilationTest extends TestCase
         self::assertSame([$first, $second], $collection->all());
     }
 
+    public function test_route_collection_can_materialize_a_compiled_route_collection(): void
+    {
+        $collection = new RouteCollection();
+        $first = $collection->add(new Route(RouteDefinition::make(['GET'], '/first', 'first')));
+        $second = $collection->add(new Route(RouteDefinition::make(['POST'], '/second', 'second')));
+        $second->name('second.route');
+
+        $compiled = $collection->compiled();
+
+        self::assertInstanceOf(CompiledRouteCollection::class, $compiled);
+        self::assertCount(2, $compiled);
+        self::assertSame([$first, $second], $compiled->all());
+        self::assertSame($second, $compiled->named('second.route'));
+    }
+
     public function test_route_collection_rejects_duplicate_method_and_uri_pairs(): void
     {
         $collection = new RouteCollection();
@@ -223,7 +239,7 @@ final class RouteCompilationTest extends TestCase
         $collection = new RouteCollection();
         $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/users/{id}', 'handler')));
 
-        $match = (new RouteMatcher())->match(Request::create('/users/42'), $collection);
+        $match = (new RouteMatcher())->match(Request::create('/users/42'), $collection->compiled());
 
         self::assertSame($route, $match->route());
         self::assertSame(['id' => '42'], $match->parameters());
@@ -235,7 +251,7 @@ final class RouteCompilationTest extends TestCase
         $collection = new RouteCollection();
         $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/users', 'handler')));
 
-        $match = (new RouteMatcher())->match(Request::create('/users', 'HEAD'), $collection);
+        $match = (new RouteMatcher())->match(Request::create('/users', 'HEAD'), $collection->compiled());
 
         self::assertSame($route, $match->route());
         self::assertSame('GET', $match->resolvedMethod());
@@ -248,7 +264,7 @@ final class RouteCompilationTest extends TestCase
         $collection->add(new Route(RouteDefinition::make(['POST'], '/users', 'handler')));
 
         try {
-            (new RouteMatcher())->match(Request::create('/users', 'GET'), $collection);
+            (new RouteMatcher())->match(Request::create('/users', 'GET'), $collection->compiled());
             self::fail('Expected MethodNotAllowedException was not thrown.');
         } catch (MethodNotAllowedException $exception) {
             self::assertSame(['POST', 'OPTIONS'], $exception->allowedMethods());
@@ -263,7 +279,7 @@ final class RouteCompilationTest extends TestCase
 
         $this->expectException(RouteNotFoundException::class);
 
-        (new RouteMatcher())->match(Request::create('/teams'), $collection);
+        (new RouteMatcher())->match(Request::create('/teams'), $collection->compiled());
     }
 
     public function test_route_matcher_rejects_dynamic_routes_that_fail_constraints(): void
@@ -274,7 +290,7 @@ final class RouteCompilationTest extends TestCase
 
         $this->expectException(RouteNotFoundException::class);
 
-        (new RouteMatcher())->match(Request::create('/users/abc'), $collection);
+        (new RouteMatcher())->match(Request::create('/users/abc'), $collection->compiled());
     }
 
     public function test_route_matcher_supports_uuid_and_slug_constraints(): void
@@ -285,7 +301,7 @@ final class RouteCompilationTest extends TestCase
 
         $match = (new RouteMatcher())->match(Request::create(
             '/posts/hello-world/123e4567-e89b-12d3-a456-426614174000'
-        ), $collection);
+        ), $collection->compiled());
 
         self::assertSame([
             'slug' => 'hello-world',
@@ -301,7 +317,7 @@ final class RouteCompilationTest extends TestCase
 
         $match = (new RouteMatcher())->match(Request::create('/dashboard', 'GET', [], [], [], [], [], [
             'HTTP_HOST' => 'admin.example.com',
-        ]), $collection);
+        ]), $collection->compiled());
 
         self::assertSame($route, $match->route());
     }
@@ -314,7 +330,7 @@ final class RouteCompilationTest extends TestCase
 
         $match = (new RouteMatcher())->match(Request::create('/dashboard/home', 'GET', [], [], [], [], [], [
             'HTTP_HOST' => 'acme42.example.com',
-        ]), $collection);
+        ]), $collection->compiled());
 
         self::assertSame($route, $match->route());
         self::assertSame([

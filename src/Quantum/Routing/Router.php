@@ -147,6 +147,11 @@ final class Router
         return $this->routes;
     }
 
+    public function compiledCollection(): CompiledRouteCollection
+    {
+        return $this->routes->compiled();
+    }
+
     public function reloadPipelineArtifacts(): void
     {
         $this->artifactPipelinesLoaded = false;
@@ -164,7 +169,7 @@ final class Router
     public function dispatch(Request $request): mixed
     {
         try {
-            $match = $this->matcher->match($request, $this->routes);
+            $match = $this->matcher->match($request, $this->compiledCollection());
         } catch (MethodNotAllowedException $exception) {
             if ($request->method() === 'OPTIONS') {
                 return new Response('', 204, [

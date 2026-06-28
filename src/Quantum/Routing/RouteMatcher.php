@@ -10,7 +10,7 @@ use Quantum\Routing\Exceptions\RouteNotFoundException;
 
 final class RouteMatcher
 {
-    public function match(Request $request, RouteCollection $routes): RouteMatch
+    public function match(Request $request, CompiledRouteCollection $routes): RouteMatch
     {
         $host = $request->host();
         $path = $request->path();

@@ -46,7 +46,7 @@ Resultado esperado del primer ciclo:
 
 - `[x]` definir `RouteDefinition` como estructura inmutable y normalizada
 - `[x]` definir `CompiledRoute` como estructura lista para runtime
-- `[ ]` definir `CompiledRouteCollection` como coleccion principal del sistema
+- `[x]` definir `CompiledRouteCollection` como coleccion principal del sistema
 - `[x]` definir `RouteBuilder` o API fluida minima para registrar rutas
 - `[x]` soportar al menos `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`
 - `[x]` soportar nombre de ruta
@@ -262,7 +262,7 @@ Marcar `V1 Core Routing` como cerrado solo si todas estas condiciones se cumplen
 
 - `[x]` existe `RouteDefinition`
 - `[x]` existe `CompiledRoute`
-- `[ ]` existe `CompiledRouteCollection`
+- `[x]` existe `CompiledRouteCollection`
 - `[x]` el matcher soporta multi-metodo
 - `[x]` el sistema diferencia formalmente `404` y `405`
 - `[x]` el sistema emite `Allow` cuando aplica
@@ -394,7 +394,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` inicio de implementacion de `V1 Core Routing`
 - `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
-- `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta, grupos minimos (`prefix`, `domain`, `middleware`) y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
+- `[-]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta, grupos minimos (`prefix`, `domain`, `middleware`) y deteccion de duplicados, pero faltan `tree` y artefactos completos de coleccion
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader parcial en runtime; falta promover artifacts como fuente principal del runtime
 - `[x]` metadata minima consumible

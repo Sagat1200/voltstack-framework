@@ -83,6 +83,11 @@ final class RouteCollection implements Countable, IteratorAggregate
         return $this->routes[$routeIndex] ?? null;
     }
 
+    public function compiled(): CompiledRouteCollection
+    {
+        return new CompiledRouteCollection($this->routes);
+    }
+
     public function validateRouteName(Route $route, string $name, ?string $previousName): void
     {
         $normalizedName = trim($name);
