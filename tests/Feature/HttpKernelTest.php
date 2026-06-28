@@ -12,6 +12,7 @@ use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
+use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
 use VoltStack\Framework\Application;
 
@@ -244,6 +245,22 @@ final class HttpKernelTest extends TestCase
 
         $response = $this->app->make(HttpKernel::class)->handle(Request::create('/route-alias'));
 
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_can_dispatch_routes_using_loaded_pipeline_artifacts(): void
+    {
+        $router = $this->app->make(Router::class);
+        $route = $router->get('/artifact-pipeline', fn() => new Response('ok'))->middleware(TestHeaderMiddleware::class);
+
+        $this->app->make(PipelineArtifactStore::class)->compileAndWrite($router);
+        $router->reloadPipelineArtifacts();
+
+        self::assertNotSame($route->routePipeline(), $router->resolvedRoutePipeline($route));
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-pipeline'));
+
+        self::assertSame(200, $response->statusCode());
         self::assertSame('passed', $response->headers()['X-Middleware']);
     }
 

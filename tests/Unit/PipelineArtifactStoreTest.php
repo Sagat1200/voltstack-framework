@@ -58,6 +58,12 @@ final class PipelineArtifactStoreTest extends TestCase
 
         self::assertArrayHasKey($first->routePipeline()->id(), $compiled);
         self::assertSame($first->routePipeline()->id(), $compiled[$first->routePipeline()->id()]->id());
+
+        $router->reloadPipelineArtifacts();
+        $resolvedPipeline = $router->resolvedRoutePipeline($first);
+
+        self::assertNotSame($first->routePipeline(), $resolvedPipeline);
+        self::assertSame($first->routePipeline()->id(), $resolvedPipeline->id());
     }
 
     public function test_it_rejects_non_serializable_route_middlewares_when_generating_the_artifact(): void

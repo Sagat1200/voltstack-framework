@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Quantum\Routing;
 
+use Quantum\HttpKernel\CompiledMiddlewarePipeline;
 use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\MiddlewareStack;
 use Quantum\Http\Response;
@@ -16,6 +17,11 @@ final class Router
 {
     private RouteCollection $routes;
     private RouteMatcher $matcher;
+    /**
+     * @var array<string, CompiledMiddlewarePipeline>
+     */
+    private array $artifactPipelines = [];
+    private bool $artifactPipelinesLoaded = false;
     /**
      * @var array<int, array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}>
      */
@@ -141,6 +147,20 @@ final class Router
         return $this->routes;
     }
 
+    public function reloadPipelineArtifacts(): void
+    {
+        $this->artifactPipelinesLoaded = false;
+        $this->artifactPipelines = [];
+        $this->loadPipelineArtifacts();
+    }
+
+    public function resolvedRoutePipeline(Route $route): CompiledMiddlewarePipeline
+    {
+        $this->loadPipelineArtifacts();
+
+        return $this->artifactPipelines[$route->routePipeline()->id()] ?? $route->routePipeline();
+    }
+
     public function dispatch(Request $request): mixed
     {
         try {
@@ -158,7 +178,7 @@ final class Router
         $request->setRouteParameters($match->parameters());
         $request->setRouteMetadata($match->metadata()->all());
 
-        return $match->route()->routePipeline()->handle(
+        return $this->resolvedRoutePipeline($match->route())->handle(
             $this->app,
             $request,
             fn(Request $request): mixed => $this->app->make(DispatcherResolver::class)->dispatch($match, $request),
@@ -242,5 +262,16 @@ final class Router
     private function middlewareAliases(): MiddlewareAliasRegistry
     {
         return $this->app->make(MiddlewareAliasRegistry::class);
+    }
+
+    private function loadPipelineArtifacts(): void
+    {
+        if ($this->artifactPipelinesLoaded) {
+            return;
+        }
+
+        $artifact = $this->app->make(PipelineArtifactStore::class)->load();
+        $this->artifactPipelines = $artifact?->compilePipelines() ?? [];
+        $this->artifactPipelinesLoaded = true;
     }
 }
