@@ -14,6 +14,7 @@ use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
 use Quantum\Http\ResponseFactory;
 use Quantum\HttpKernel\HttpKernel;
+use Quantum\Routing\Dispatching\ResponseNormalizer;
 use Quantum\Middlewares\CsrfMiddleware;
 use Quantum\Routing\Router;
 use Quantum\Security\CsrfTokenManager;
@@ -252,10 +253,15 @@ class Application extends Container
             });
         }
 
+        if (! isset($this->bindings[ResponseNormalizer::class])) {
+            $this->singleton(ResponseNormalizer::class);
+        }
+
         if (! isset($this->bindings[HttpKernel::class])) {
             $this->singleton(HttpKernel::class, fn(Application $app) => new HttpKernel(
                 $app,
                 $app->make(Router::class),
+                $app->make(ResponseNormalizer::class),
             ));
         }
 

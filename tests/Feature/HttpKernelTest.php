@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace VoltStack\Test\Feature;
 
 use PHPUnit\Framework\TestCase;
+use Quantum\Actions\Action;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
@@ -48,6 +49,28 @@ final class HttpKernelTest extends TestCase
         self::assertSame(200, $response->statusCode());
         self::assertSame('application/json; charset=UTF-8', $response->headers()['Content-Type']);
         self::assertSame('{"id":"42","message":"resolved","path":"\\/users\\/42"}', $response->content());
+    }
+
+    public function test_it_dispatches_string_controller_actions(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/controller-string', TestStringController::class . '@show');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/controller-string'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('controller-string', $response->content());
+    }
+
+    public function test_it_dispatches_action_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/actions/{id}', TestShowUserAction::class);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/actions/42'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('action:42:/actions/42', $response->content());
     }
 
     public function test_it_runs_middlewares_around_the_route_dispatcher(): void
@@ -358,9 +381,29 @@ final class TestInvokableController
     }
 }
 
+final class TestStringController
+{
+    public function show(): string
+    {
+        return 'controller-string';
+    }
+}
+
 final class TestResolvedDependency
 {
     public string $message = 'resolved';
+}
+
+final class TestShowUserAction extends Action
+{
+    public function handle(mixed ...$arguments): mixed
+    {
+        /** @var Request $request */
+        $request = $arguments[0];
+        $id = (string) ($arguments[1] ?? '');
+
+        return 'action:' . $id . ':' . $request->path();
+    }
 }
 
 final class TestHeaderMiddleware implements MiddlewareInterface

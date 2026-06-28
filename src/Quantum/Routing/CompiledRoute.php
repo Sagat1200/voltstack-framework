@@ -4,16 +4,7 @@ declare(strict_types=1);
 
 namespace Quantum\Routing;
 
-use Closure;
 use Quantum\Http\Request;
-use ReflectionFunction;
-use ReflectionMethod;
-use ReflectionNamedType;
-use ReflectionParameter;
-use RuntimeException;
-use VoltStack\Framework\Application;
-use VoltStack\Runtime\Component\Component;
-use VoltStack\Runtime\Component\ComponentManager;
 
 class CompiledRoute
 {
@@ -173,125 +164,10 @@ class CompiledRoute
         ];
     }
 
-    public function run(Application $app, Request $request): mixed
-    {
-        $parameters = $request->routeParameters();
-        $action = $this->action();
-
-        if ($action instanceof Closure) {
-            return $this->invokeCallable($app, $request, $action, $parameters);
-        }
-
-        if (is_array($action) && count($action) === 2) {
-            [$class, $method] = $action;
-            $instance = is_object($class) ? $class : $app->make((string) $class);
-
-            return $this->invokeMethod($app, $request, $instance, (string) $method, $parameters);
-        }
-
-        if (is_string($action) && str_contains($action, '@')) {
-            [$class, $method] = explode('@', $action, 2);
-            $instance = $app->make($class);
-
-            return $this->invokeMethod($app, $request, $instance, $method, $parameters);
-        }
-
-        if (is_string($action) && class_exists($action)) {
-            if (is_subclass_of($action, Component::class)) {
-                return $app->make(ComponentManager::class)->mount($action, $parameters, $request);
-            }
-
-            $instance = $app->make($action);
-
-            if (! method_exists($instance, '__invoke')) {
-                throw new RuntimeException(sprintf('Route action [%s] is not invokable.', $action));
-            }
-
-            return $this->invokeMethod($app, $request, $instance, '__invoke', $parameters);
-        }
-
-        if (is_callable($action)) {
-            return $this->invokeCallable($app, $request, $action, $parameters);
-        }
-
-        throw new RuntimeException('Unsupported route action.');
-    }
-
     protected function replaceDefinition(RouteDefinition $definition): void
     {
         $this->definition = $definition;
         $this->recompile();
-    }
-
-    /**
-     * @param array<string, mixed> $parameters
-     */
-    private function invokeCallable(Application $app, Request $request, callable $callable, array $parameters): mixed
-    {
-        $reflection = new ReflectionFunction(Closure::fromCallable($callable));
-        $arguments = [];
-
-        foreach ($reflection->getParameters() as $parameter) {
-            $arguments[] = $this->resolveArgument($app, $request, $parameter, $parameters);
-        }
-
-        return $callable(...$arguments);
-    }
-
-    /**
-     * @param array<string, mixed> $parameters
-     */
-    private function invokeMethod(
-        Application $app,
-        Request $request,
-        object $instance,
-        string $method,
-        array $parameters,
-    ): mixed {
-        $reflection = new ReflectionMethod($instance, $method);
-        $arguments = [];
-
-        foreach ($reflection->getParameters() as $parameter) {
-            $arguments[] = $this->resolveArgument($app, $request, $parameter, $parameters);
-        }
-
-        return $reflection->invokeArgs($instance, $arguments);
-    }
-
-    /**
-     * @param array<string, mixed> $parameters
-     */
-    private function resolveArgument(
-        Application $app,
-        Request $request,
-        ReflectionParameter $parameter,
-        array $parameters,
-    ): mixed {
-        if (array_key_exists($parameter->getName(), $parameters)) {
-            return $parameters[$parameter->getName()];
-        }
-
-        $type = $parameter->getType();
-
-        if ($type instanceof ReflectionNamedType && ! $type->isBuiltin()) {
-            $typeName = $type->getName();
-
-            if ($typeName === Request::class) {
-                return $request;
-            }
-
-            return $app->make($typeName);
-        }
-
-        if ($parameter->isDefaultValueAvailable()) {
-            return $parameter->getDefaultValue();
-        }
-
-        throw new RuntimeException(sprintf(
-            'Unable to resolve route argument [%s] for route [%s].',
-            $parameter->getName(),
-            $this->uri(),
-        ));
     }
 
     /**

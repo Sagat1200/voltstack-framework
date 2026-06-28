@@ -111,14 +111,14 @@ Criterio de cierre:
 
 ### 3.5 Dispatcher Basico
 
-- `[ ]` implementar `DispatcherResolver`
-- `[ ]` implementar `ControllerDispatcher`
-- `[ ]` implementar `ClosureDispatcher`
-- `[ ]` implementar `ActionDispatcher` si ya existe contrato de acciones en el framework
-- `[ ]` inyectar parametros ya resueltos desde binding o matcher
-- `[ ]` delegar la construccion de respuesta a un normalizador
-- `[ ]` implementar `ResponseNormalizer` minimo para `string`, `array`, `Response`, `JsonResponse` y `View` si aplica
-- `[ ]` propagar errores del endpoint al handler del kernel
+- `[x]` implementar `DispatcherResolver`
+- `[x]` implementar `ControllerDispatcher`
+- `[x]` implementar `ClosureDispatcher`
+- `[x]` implementar `ActionDispatcher` si ya existe contrato de acciones en el framework
+- `[x]` inyectar parametros ya resueltos desde binding o matcher
+- `[x]` delegar la construccion de respuesta a un normalizador
+- `[x]` implementar `ResponseNormalizer` minimo para `string`, `array`, `Response`, `JsonResponse` y `View` si aplica
+- `[x]` propagar errores del endpoint al handler del kernel
 
 Criterio de cierre:
 
@@ -216,7 +216,7 @@ Criterio de cierre:
 - `[x]` confirmar que `405` incluye cabecera `Allow`
 - `[x]` confirmar comportamiento de `HEAD`
 - `[x]` confirmar comportamiento de `OPTIONS`
-- `[ ]` confirmar que el dispatcher ejecuta controller y closure
+- `[x]` confirmar que el dispatcher ejecuta controller y closure
 - `[ ]` confirmar que el pipeline corre en el orden esperado
 - `[ ]` confirmar que `URL Generator` construye una ruta nombrada con parametros
 
@@ -235,7 +235,7 @@ Criterio de cierre:
 - `[x]` nombre duplicado detectado en compilacion
 - `[ ]` constraint invalido detectado correctamente
 - `[ ]` middleware inexistente detectado antes de runtime
-- `[ ]` dispatcher invalido produce error controlado
+- `[x]` dispatcher invalido produce error controlado
 - `[ ]` parametro requerido faltante en `URL Generator` produce error claro
 
 ---
@@ -250,7 +250,7 @@ Marcar `V1 Core Routing` como cerrado solo si todas estas condiciones se cumplen
 - `[x]` el matcher soporta multi-metodo
 - `[x]` el sistema diferencia formalmente `404` y `405`
 - `[x]` el sistema emite `Allow` cuando aplica
-- `[ ]` el dispatcher ejecuta endpoints basicos
+- `[x]` el dispatcher ejecuta endpoints basicos
 - `[ ]` el pipeline funciona con orden estable
 - `[ ]` la metadata minima ya puede ser consumida por seguridad y runtime
 - `[ ]` los artifacts pueden cargarse en runtime
@@ -379,7 +379,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
 - `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
-- `[ ]` dispatcher basico operativo
+- `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[ ]` pipeline compilado operativo
 - `[ ]` metadata minima consumible
 - `[ ]` artifacts de routing operativos

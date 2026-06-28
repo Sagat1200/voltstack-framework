@@ -10,13 +10,11 @@ use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\Router;
-use Quantum\View\View;
+use Quantum\Routing\Dispatching\ResponseNormalizer;
 use Throwable;
 use VoltStack\Framework\Application;
 use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
 use VoltStack\Framework\Contracts\Kernel as KernelContract;
-use VoltStack\Runtime\Component\Component;
-use VoltStack\Runtime\Component\ComponentManager;
 use VoltStack\Runtime\Context\ScopeManager;
 
 class HttpKernel implements KernelContract
@@ -29,6 +27,7 @@ class HttpKernel implements KernelContract
     public function __construct(
         protected Application $app,
         protected Router $router,
+        protected ResponseNormalizer $normalizer,
         ?array $middlewares = null,
     ) {
         if ($middlewares !== null) {
@@ -64,7 +63,7 @@ class HttpKernel implements KernelContract
                 fn(Request $request): mixed => $this->router->dispatch($request),
             );
 
-            $response = $this->toResponse($response);
+            $response = $this->normalizer->normalize($response);
         } catch (Throwable $exception) {
             $response = $this->app->make(ExceptionHandlerContract::class)->render($request, $exception);
         } finally {
@@ -78,35 +77,6 @@ class HttpKernel implements KernelContract
         }
 
         return $response;
-    }
-
-    protected function toResponse(mixed $response): Response
-    {
-        if ($response instanceof Response) {
-            return $response;
-        }
-
-        if (is_array($response)) {
-            return new JsonResponse($response);
-        }
-
-        if ($response instanceof View) {
-            return new Response($response->render());
-        }
-
-        if ($response instanceof Component) {
-            return new Response($this->app->make(ComponentManager::class)->renderRoot($response));
-        }
-
-        if (is_string($response) || is_numeric($response)) {
-            return new Response((string) $response);
-        }
-
-        if ($response === null) {
-            return new Response('');
-        }
-
-        return new JsonResponse($response);
     }
 
     private function bootstrapHtmlResponse(Request $request, Response $response): Response

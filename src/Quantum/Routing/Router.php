@@ -6,6 +6,7 @@ namespace Quantum\Routing;
 
 use Quantum\Http\Response;
 use Quantum\Http\Request;
+use Quantum\Routing\Dispatching\DispatcherResolver;
 use Quantum\Routing\Exceptions\MethodNotAllowedException;
 use VoltStack\Framework\Application;
 
@@ -107,6 +108,6 @@ final class Router
 
         $request->setRouteParameters($match->parameters());
 
-        return $match->route()->run($this->app, $request);
+        return $this->app->make(DispatcherResolver::class)->dispatch($match, $request);
     }
 }
