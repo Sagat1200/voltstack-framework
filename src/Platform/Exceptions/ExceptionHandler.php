@@ -7,6 +7,7 @@ namespace VoltStack\Framework\Exceptions;
 use Quantum\Http\JsonResponse;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
+use Quantum\Routing\Exceptions\MethodNotAllowedException;
 use Quantum\Routing\Exceptions\RouteNotFoundException;
 use Quantum\Security\Exceptions\CsrfTokenMismatchException;
 use Quantum\Validation\Exceptions\ValidationException;
@@ -19,17 +20,19 @@ final class ExceptionHandler implements ExceptionHandlerContract
     public function render(Request $request, Throwable $exception): Response
     {
         $status = $this->statusCode($exception);
+        $headers = $this->responseHeaders($exception);
 
         if ($request->isVoltActionRequest()) {
-            return $this->voltErrorResponse($exception, $status);
+            return $this->voltErrorResponse($exception, $status, $headers);
         }
 
         if ($request->expectsJson()) {
-            return $this->jsonResponse($exception, $status);
+            return $this->jsonResponse($exception, $status, $headers);
         }
 
         return new Response($this->htmlResponse($exception, $status), $status, [
             'Content-Type' => 'text/html; charset=UTF-8',
+            ...$headers,
         ]);
     }
 
@@ -37,6 +40,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
     {
         return match (true) {
             $exception instanceof RouteNotFoundException => 404,
+            $exception instanceof MethodNotAllowedException => 405,
             $exception instanceof CsrfTokenMismatchException => 419,
             $exception instanceof InvalidSnapshotException => 422,
             $exception instanceof ValidationException => 422,
@@ -44,7 +48,10 @@ final class ExceptionHandler implements ExceptionHandlerContract
         };
     }
 
-    private function jsonResponse(Throwable $exception, int $status): JsonResponse
+    /**
+     * @param array<string, string> $headers
+     */
+    private function jsonResponse(Throwable $exception, int $status, array $headers): JsonResponse
     {
         $payload = [
             'message' => $this->jsonMessage($exception, $status),
@@ -54,10 +61,13 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $payload['errors'] = $exception->errors();
         }
 
-        return new JsonResponse($payload, $status);
+        return new JsonResponse($payload, $status, $headers);
     }
 
-    private function voltErrorResponse(Throwable $exception, int $status): JsonResponse
+    /**
+     * @param array<string, string> $headers
+     */
+    private function voltErrorResponse(Throwable $exception, int $status, array $headers): JsonResponse
     {
         $payload = [
             'error' => [
@@ -70,13 +80,14 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $payload['error']['errors'] = $exception->errors();
         }
 
-        return new JsonResponse($payload, $status);
+        return new JsonResponse($payload, $status, $headers);
     }
 
     private function htmlResponse(Throwable $exception, int $status): string
     {
         $title = match ($status) {
             404 => 'Page Not Found',
+            405 => 'Method Not Allowed',
             419 => 'Page Expired',
             422 => 'Validation Failed',
             default => 'Server Error',
@@ -86,6 +97,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
             ? $this->renderValidationErrors($exception)
             : '<p>' . match ($status) {
                 404 => 'The requested page could not be found.',
+                405 => 'The requested HTTP method is not allowed for this route.',
                 419 => 'CSRF token mismatch.',
                 default => 'An unexpected error occurred while processing the request.',
             } . '</p>';
@@ -119,7 +131,22 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $exception instanceof CsrfTokenMismatchException => $exception->getMessage(),
             $exception instanceof InvalidSnapshotException => $exception->getMessage(),
             $status === 404 => 'Not Found',
+            $status === 405 => 'Method Not Allowed',
             default => 'Server Error',
         };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function responseHeaders(Throwable $exception): array
+    {
+        if ($exception instanceof MethodNotAllowedException) {
+            return [
+                'Allow' => $exception->allowHeader(),
+            ];
+        }
+
+        return [];
     }
 }

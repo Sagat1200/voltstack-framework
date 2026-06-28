@@ -47,18 +47,31 @@ final class Route
         return $this->action;
     }
 
+    public function allowsMethod(string $method): bool
+    {
+        return in_array(strtoupper($method), $this->methods, true);
+    }
+
     /**
      * @return array<string, string>|null
      */
     public function matches(Request $request): ?array
     {
-        if (! in_array($request->method(), $this->methods, true)) {
+        if (! $this->allowsMethod($request->method())) {
             return null;
         }
 
+        return $this->matchPath($request->path());
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    public function matchPath(string $path): ?array
+    {
         [$pattern, $parameterNames] = $this->compilePattern();
 
-        if (! preg_match($pattern, $request->path(), $matches)) {
+        if (! preg_match($pattern, $path, $matches)) {
             return null;
         }
 

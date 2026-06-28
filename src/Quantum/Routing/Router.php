@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Quantum\Routing;
 
+use Quantum\Http\Response;
 use Quantum\Http\Request;
+use Quantum\Routing\Exceptions\MethodNotAllowedException;
 use Quantum\Routing\Exceptions\RouteNotFoundException;
 use VoltStack\Framework\Application;
 
@@ -44,6 +46,16 @@ final class Router
         return $this->addRoute(['DELETE'], $uri, $action);
     }
 
+    public function head(string $uri, mixed $action): Route
+    {
+        return $this->addRoute(['HEAD'], $uri, $action);
+    }
+
+    public function options(string $uri, mixed $action): Route
+    {
+        return $this->addRoute(['OPTIONS'], $uri, $action);
+    }
+
     /**
      * @param array<int, string> $methods
      */
@@ -54,7 +66,7 @@ final class Router
 
     public function any(string $uri, mixed $action): Route
     {
-        return $this->addRoute(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], $uri, $action);
+        return $this->addRoute(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], $uri, $action);
     }
 
     /**
@@ -78,10 +90,21 @@ final class Router
 
     public function dispatch(Request $request): mixed
     {
+        $path = $request->path();
+        $method = $request->method();
+        $allowedMethods = [];
+
         foreach ($this->routes as $route) {
             $parameters = $route->matches($request);
 
             if ($parameters === null) {
+                $pathParameters = $route->matchPath($path);
+
+                if ($pathParameters === null) {
+                    continue;
+                }
+
+                $allowedMethods = [...$allowedMethods, ...$route->methods()];
                 continue;
             }
 
@@ -90,10 +113,63 @@ final class Router
             return $route->run($this->app, $request);
         }
 
+        if ($method === 'HEAD') {
+            foreach ($this->routes as $route) {
+                if (! $route->allowsMethod('GET')) {
+                    continue;
+                }
+
+                $parameters = $route->matchPath($path);
+
+                if ($parameters === null) {
+                    continue;
+                }
+
+                $request->setRouteParameters($parameters);
+
+                return $route->run($this->app, $request);
+            }
+        }
+
+        if ($allowedMethods !== []) {
+            $allowedMethods = $this->normalizeAllowedMethods($allowedMethods);
+
+            if ($method === 'OPTIONS') {
+                return new Response('', 204, [
+                    'Allow' => implode(', ', $allowedMethods),
+                ]);
+            }
+
+            throw new MethodNotAllowedException($method, $allowedMethods, $path);
+        }
+
         throw new RouteNotFoundException(sprintf(
             'No route matched [%s] %s.',
-            $request->method(),
-            $request->path(),
+            $method,
+            $path,
         ));
+    }
+
+    /**
+     * @param array<int, string> $methods
+     * @return array<int, string>
+     */
+    private function normalizeAllowedMethods(array $methods): array
+    {
+        $methods = array_map('strtoupper', $methods);
+
+        if (in_array('GET', $methods, true)) {
+            $methods[] = 'HEAD';
+        }
+
+        $methods[] = 'OPTIONS';
+        $methods = array_values(array_unique($methods));
+        $priority = array_flip(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
+
+        usort($methods, static function (string $left, string $right) use ($priority): int {
+            return ($priority[$left] ?? PHP_INT_MAX) <=> ($priority[$right] ?? PHP_INT_MAX);
+        });
+
+        return $methods;
     }
 }

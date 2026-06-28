@@ -62,6 +62,35 @@ final class ExceptionHandlingTest extends TestCase
         self::assertArrayHasKey('title', $payload['errors']);
     }
 
+    public function test_it_renders_a_json_405_response_with_allow_header_when_the_request_expects_json(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $router = $app->make(Router::class);
+        $router->post('/submit', fn(): array => ['ok' => true]);
+
+        $response = $app->make(KernelContract::class)->handle(Request::create(
+            '/submit',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_ACCEPT' => 'application/json',
+            ],
+        ));
+
+        self::assertSame(405, $response->statusCode());
+        self::assertSame('application/json; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertSame('POST, OPTIONS', $response->headers()['Allow']);
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('Method Not Allowed', $payload['message']);
+    }
+
     public function test_it_keeps_volt_navigation_errors_as_html_responses(): void
     {
         $app = new Application(sys_get_temp_dir());

@@ -75,6 +75,62 @@ final class HttpKernelTest extends TestCase
         self::assertStringNotContainsString('data-volt-navigation-mode="auto"', $response->content());
     }
 
+    public function test_it_returns_method_not_allowed_with_allow_header_when_path_exists_for_other_methods(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->post('/submit', fn() => 'stored');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/submit', 'GET'));
+
+        self::assertSame(405, $response->statusCode());
+        self::assertSame('POST, OPTIONS', $response->headers()['Allow']);
+        self::assertStringContainsString('Method Not Allowed', $response->content());
+    }
+
+    public function test_it_falls_back_to_get_routes_for_head_requests(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/headable', fn() => new Response('body', 200, [
+            'X-Route' => 'get',
+        ]));
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/headable', 'HEAD'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('', $response->content());
+        self::assertSame('get', $response->headers()['X-Route']);
+    }
+
+    public function test_it_prefers_explicit_head_routes_over_get_fallback(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/head-explicit', fn() => new Response('get-body', 200, [
+            'X-Route' => 'get',
+        ]));
+        $router->head('/head-explicit', fn() => new Response('head-body', 200, [
+            'X-Route' => 'head',
+        ]));
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/head-explicit', 'HEAD'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('', $response->content());
+        self::assertSame('head', $response->headers()['X-Route']);
+    }
+
+    public function test_it_returns_automatic_options_responses_with_allow_header(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/options-target', fn() => 'ok');
+        $router->post('/options-target', fn() => 'stored');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/options-target', 'OPTIONS'));
+
+        self::assertSame(204, $response->statusCode());
+        self::assertSame('', $response->content());
+        self::assertSame('GET, HEAD, POST, OPTIONS', $response->headers()['Allow']);
+    }
+
     public function test_it_renders_server_errors_as_reload_only_documents(): void
     {
         $router = $this->app->make(Router::class);

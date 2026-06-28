@@ -71,7 +71,13 @@ class HttpKernel implements KernelContract
             $scope->end();
         }
 
-        return $this->bootstrapHtmlResponse($request, $response);
+        $response = $this->bootstrapHtmlResponse($request, $response);
+
+        if ($request->method() === 'HEAD') {
+            $response->setContent('');
+        }
+
+        return $response;
     }
 
     protected function toResponse(mixed $response): Response

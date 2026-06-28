@@ -48,7 +48,7 @@ Resultado esperado del primer ciclo:
 - `[ ]` definir `CompiledRoute` como estructura lista para runtime
 - `[ ]` definir `CompiledRouteCollection` como coleccion principal del sistema
 - `[ ]` definir `RouteBuilder` o API fluida minima para registrar rutas
-- `[ ]` soportar al menos `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`
+- `[x]` soportar al menos `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`
 - `[ ]` soportar nombre de ruta
 - `[ ]` soportar path
 - `[ ]` soportar dominio opcional
@@ -93,17 +93,17 @@ Criterio de cierre:
 
 ### 3.4 Matcher HTTP
 
-- `[ ]` seleccionar candidatas por metodo HTTP
-- `[ ]` soportar rutas estaticas
-- `[ ]` soportar rutas dinamicas con parametros
+- `[x]` seleccionar candidatas por metodo HTTP
+- `[x]` soportar rutas estaticas
+- `[x]` soportar rutas dinamicas con parametros
 - `[ ]` soportar dominio opcional
-- `[ ]` extraer parametros simples
+- `[x]` extraer parametros simples
 - `[ ]` validar constraints basicos
 - `[ ]` retornar `RouteMatch` con ruta, parametros y referencias minimas
-- `[ ]` diferenciar `RouteNotFound` de `MethodNotAllowed`
-- `[ ]` construir lista `Allow` cuando exista mismatch por metodo
-- `[ ]` definir y probar estrategia `HEAD -> GET`
-- `[ ]` definir si `OPTIONS` es explicito o automatico
+- `[x]` diferenciar `RouteNotFound` de `MethodNotAllowed`
+- `[x]` construir lista `Allow` cuando exista mismatch por metodo
+- `[x]` definir y probar estrategia `HEAD -> GET`
+- `[x]` definir si `OPTIONS` es explicito o automatico
 
 Criterio de cierre:
 
@@ -159,11 +159,11 @@ Criterio de cierre:
 
 ### 3.8 Semantica HTTP Base
 
-- `[ ]` definir politica oficial para `404 Not Found`
-- `[ ]` definir politica oficial para `405 Method Not Allowed`
-- `[ ]` emitir cabecera `Allow` cuando exista `405`
-- `[ ]` definir comportamiento oficial de `HEAD`
-- `[ ]` definir comportamiento oficial de `OPTIONS`
+- `[x]` definir politica oficial para `404 Not Found`
+- `[x]` definir politica oficial para `405 Method Not Allowed`
+- `[x]` emitir cabecera `Allow` cuando exista `405`
+- `[x]` definir comportamiento oficial de `HEAD`
+- `[x]` definir comportamiento oficial de `OPTIONS`
 - `[ ]` decidir si existira `method override`
 - `[ ]` definir cuando aplica CSRF segun verbo o contexto
 - `[ ]` separar claramente endpoints HTTP convencionales de acciones internas del protocolo reactivo
@@ -211,11 +211,11 @@ Criterio de cierre:
 - `[ ]` registrar y resolver ruta estatica `GET`
 - `[ ]` registrar y resolver ruta dinamica `GET /users/{id}`
 - `[ ]` registrar ruta con dominio especifico
-- `[ ]` confirmar que una ruta inexistente devuelve `404`
-- `[ ]` confirmar que ruta existente con verbo incorrecto devuelve `405`
-- `[ ]` confirmar que `405` incluye cabecera `Allow`
-- `[ ]` confirmar comportamiento de `HEAD`
-- `[ ]` confirmar comportamiento de `OPTIONS`
+- `[x]` confirmar que una ruta inexistente devuelve `404`
+- `[x]` confirmar que ruta existente con verbo incorrecto devuelve `405`
+- `[x]` confirmar que `405` incluye cabecera `Allow`
+- `[x]` confirmar comportamiento de `HEAD`
+- `[x]` confirmar comportamiento de `OPTIONS`
 - `[ ]` confirmar que el dispatcher ejecuta controller y closure
 - `[ ]` confirmar que el pipeline corre en el orden esperado
 - `[ ]` confirmar que `URL Generator` construye una ruta nombrada con parametros
@@ -376,8 +376,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 
 - `[ ]` checklist inicial de `Quantum Routing` definido
 - `[ ]` inicio de implementacion de `V1 Core Routing`
-- `[ ]` matcher multi-metodo operativo
-- `[ ]` contrato `404/405/Allow` cerrado
+- `[-]` matcher multi-metodo operativo con semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`)
+- `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; faltan `method override`, dominio y constraints para cerrar el bloque completo
 - `[ ]` dispatcher basico operativo
 - `[ ]` pipeline compilado operativo
 - `[ ]` metadata minima consumible
