@@ -49,7 +49,7 @@ Resultado esperado del primer ciclo:
 - `[ ]` definir `CompiledRouteCollection` como coleccion principal del sistema
 - `[x]` definir `RouteBuilder` o API fluida minima para registrar rutas
 - `[x]` soportar al menos `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`
-- `[ ]` soportar nombre de ruta
+- `[x]` soportar nombre de ruta
 - `[ ]` soportar path
 - `[ ]` soportar dominio opcional
 - `[ ]` soportar middleware declarativo por ruta
@@ -67,7 +67,7 @@ Criterio de cierre:
 - `[ ]` soportar middleware por grupo
 - `[ ]` soportar dominio por grupo
 - `[x]` detectar rutas duplicadas por `metodo + dominio + path`
-- `[ ]` detectar nombres de ruta duplicados
+- `[x]` detectar nombres de ruta duplicados
 - `[x]` definir orden deterministico de compilacion
 
 Criterio de cierre:
@@ -232,7 +232,7 @@ Criterio de cierre:
 ### 4.3 Pruebas De Errores
 
 - `[x]` ruta duplicada detectada en compilacion
-- `[ ]` nombre duplicado detectado en compilacion
+- `[x]` nombre duplicado detectado en compilacion
 - `[ ]` constraint invalido detectado correctamente
 - `[ ]` middleware inexistente detectado antes de runtime
 - `[ ]` dispatcher invalido produce error controlado
@@ -378,7 +378,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` inicio de implementacion de `V1 Core Routing`
 - `[-]` matcher multi-metodo operativo con semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`)
 - `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; faltan `method override`, dominio y constraints para cerrar el bloque completo
-- `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; falta `CompiledRouteCollection`, nombres de ruta y compilacion formal de colecciones
+- `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[ ]` dispatcher basico operativo
 - `[ ]` pipeline compilado operativo
 - `[ ]` metadata minima consumible

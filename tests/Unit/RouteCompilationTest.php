@@ -7,6 +7,7 @@ namespace VoltStack\Test\Unit;
 use PHPUnit\Framework\TestCase;
 use Quantum\Routing\CompiledRoute;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
+use Quantum\Routing\Exceptions\DuplicateRouteNameException;
 use Quantum\Routing\Route;
 use Quantum\Routing\RouteCollection;
 use Quantum\Routing\RouteDefinition;
@@ -20,6 +21,14 @@ final class RouteCompilationTest extends TestCase
         self::assertSame(['GET', 'POST'], $definition->methods());
         self::assertSame('/users/{id}', $definition->uri());
         self::assertSame('handler', $definition->action());
+        self::assertNull($definition->name());
+    }
+
+    public function test_route_definition_can_return_a_named_copy(): void
+    {
+        $definition = RouteDefinition::make(['GET'], '/users', 'handler')->withName('users.index');
+
+        self::assertSame('users.index', $definition->name());
     }
 
     public function test_compiled_route_exposes_precompiled_pattern_and_parameter_names(): void
@@ -74,5 +83,27 @@ final class RouteCompilationTest extends TestCase
         $this->expectExceptionMessage('A route is already registered for [POST] /users.');
 
         $collection->add(new Route(RouteDefinition::make(['POST', 'PUT'], '/users', 'second')));
+    }
+
+    public function test_route_collection_can_index_routes_by_name(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/users', 'handler')));
+        $route->name('users.index');
+
+        self::assertSame('users.index', $route->name());
+        self::assertSame($route, $collection->named('users.index'));
+    }
+
+    public function test_route_collection_rejects_duplicate_route_names(): void
+    {
+        $collection = new RouteCollection();
+        $collection->add(new Route(RouteDefinition::make(['GET'], '/users', 'first')))->name('users.index');
+        $route = $collection->add(new Route(RouteDefinition::make(['POST'], '/users', 'second')));
+
+        $this->expectException(DuplicateRouteNameException::class);
+        $this->expectExceptionMessage('A route is already registered with the name [users.index].');
+
+        $route->name('users.index');
     }
 }

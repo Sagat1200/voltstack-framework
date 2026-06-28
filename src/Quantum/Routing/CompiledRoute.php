@@ -17,6 +17,8 @@ use VoltStack\Runtime\Component\ComponentManager;
 
 class CompiledRoute
 {
+    private RouteDefinition $definition;
+
     private string $pattern;
 
     /**
@@ -24,8 +26,9 @@ class CompiledRoute
      */
     private array $parameterNames;
 
-    public function __construct(private readonly RouteDefinition $definition)
+    public function __construct(RouteDefinition $definition)
     {
+        $this->definition = $definition;
         [$pattern, $parameterNames] = self::compilePattern($definition->uri());
         $this->pattern = $pattern;
         $this->parameterNames = $parameterNames;
@@ -52,6 +55,11 @@ class CompiledRoute
     public function action(): mixed
     {
         return $this->definition->action();
+    }
+
+    public function routeName(): ?string
+    {
+        return $this->definition->name();
     }
 
     public function pattern(): string
@@ -146,6 +154,11 @@ class CompiledRoute
         }
 
         throw new RuntimeException('Unsupported route action.');
+    }
+
+    protected function replaceDefinition(RouteDefinition $definition): void
+    {
+        $this->definition = $definition;
     }
 
     /**
