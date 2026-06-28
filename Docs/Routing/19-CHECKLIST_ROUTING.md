@@ -82,7 +82,7 @@ Criterio de cierre:
 - `[x]` implementar merge minimo de metadata
 - `[x]` compilar middleware resueltos por ruta
 - `[ ]` compilar constraints basicos
-- `[ ]` generar artefacto de coleccion
+- `[x]` generar artefacto de coleccion
 - `[ ]` generar artefacto de tree o indice de matching
 - `[ ]` generar artefacto de metadata
 - `[x]` generar artefacto de pipeline
@@ -142,7 +142,7 @@ Criterio de cierre:
 Nota del corte actual:
 
 - el kernel y cada `CompiledRoute` mantienen un `CompiledMiddlewarePipeline` inmutable en memoria
-- el runtime ya no reconstruye la cadena del pipeline en cada request, pero todavia no persiste `routes.pipeline.php`
+- el runtime ya no reconstruye la cadena del pipeline en cada request y ya puede resolver `pipeline.php` cuando el artifact existe
 
 ### 3.7 Metadata Minima
 
@@ -185,7 +185,7 @@ Criterio de cierre:
 ### 3.9 Artifacts Y Cache
 
 - `[x]` definir directorio de artefactos compilados
-- `[ ]` guardar `collection`
+- `[x]` guardar `collection`
 - `[ ]` guardar `tree`
 - `[ ]` guardar `metadata`
 - `[x]` guardar `pipeline`
@@ -197,8 +197,9 @@ Criterio de cierre:
 Nota del corte actual:
 
 - el artefacto de pipeline ya se guarda en `storage/framework/cache/routes/pipeline.php`
-- `Router` ya carga `pipeline.php` de forma perezosa y resuelve pipelines desde artifact cuando existe
-- el loader general de `collection`, `tree` y `metadata` todavia no existe, por eso el runtime aun no arranca completamente desde artifacts como fuente principal
+- el artefacto de coleccion ya se guarda en `storage/framework/cache/routes/collection.php`
+- `Router` ya puede cargar `pipeline.php` de forma perezosa y usar `collection.php` de forma explicita mediante `reloadCollectionArtifacts()`
+- el loader general de `tree` y `metadata` todavia no existe, y la serializacion de `collection.php` aun excluye closures y otras acciones no serializables
 
 Criterio de cierre:
 
@@ -243,6 +244,7 @@ Criterio de cierre:
 - `[ ]` no interpretar route files en runtime
 - `[x]` no hacer merge dinamico de metadata en request
 - `[x]` no construir el pipeline en cada request
+- `[x]` no recompilar `CompiledRouteCollection` cuando se usa `collection.php`
 - `[ ]` no recompilar artefactos en produccion
 
 ### 4.3 Pruebas De Errores
@@ -394,9 +396,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` inicio de implementacion de `V1 Core Routing`
 - `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
-- `[-]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta, grupos minimos (`prefix`, `domain`, `middleware`) y deteccion de duplicados, pero faltan `tree` y artefactos completos de coleccion
+- `[-]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; `collection.php` ya recompone rutas compiladas serializables y el router puede usarla como fuente explicita, pero faltan `tree`, `metadata` y consolidar un arranque full artifact-first
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader parcial en runtime; falta promover artifacts como fuente principal del runtime
 - `[x]` metadata minima consumible
-- `[ ]` artifacts de routing operativos
+- `[-]` artifacts de routing operativos
 - `[ ]` URL generator basico operativo

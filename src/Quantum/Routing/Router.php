@@ -17,6 +17,9 @@ final class Router
 {
     private RouteCollection $routes;
     private RouteMatcher $matcher;
+    private ?CompiledRouteCollection $artifactCollection = null;
+    private bool $artifactCollectionLoaded = false;
+    private bool $preferArtifactCollection = false;
     /**
      * @var array<string, CompiledMiddlewarePipeline>
      */
@@ -131,7 +134,12 @@ final class Router
             $route->meta($groupAttributes['metadata']);
         }
 
-        return $this->routes->add($route);
+        $registered = $this->routes->add($route);
+        $this->artifactCollectionLoaded = false;
+        $this->artifactCollection = null;
+        $this->preferArtifactCollection = false;
+
+        return $registered;
     }
 
     /**
@@ -149,7 +157,21 @@ final class Router
 
     public function compiledCollection(): CompiledRouteCollection
     {
-        return $this->routes->compiled();
+        if (! $this->preferArtifactCollection) {
+            return $this->routes->compiled();
+        }
+
+        $this->loadCollectionArtifacts();
+
+        return $this->artifactCollection ?? $this->routes->compiled();
+    }
+
+    public function reloadCollectionArtifacts(): void
+    {
+        $this->preferArtifactCollection = true;
+        $this->artifactCollectionLoaded = false;
+        $this->artifactCollection = null;
+        $this->loadCollectionArtifacts();
     }
 
     public function reloadPipelineArtifacts(): void
@@ -159,7 +181,7 @@ final class Router
         $this->loadPipelineArtifacts();
     }
 
-    public function resolvedRoutePipeline(Route $route): CompiledMiddlewarePipeline
+    public function resolvedRoutePipeline(CompiledRoute $route): CompiledMiddlewarePipeline
     {
         $this->loadPipelineArtifacts();
 
@@ -267,6 +289,17 @@ final class Router
     private function middlewareAliases(): MiddlewareAliasRegistry
     {
         return $this->app->make(MiddlewareAliasRegistry::class);
+    }
+
+    private function loadCollectionArtifacts(): void
+    {
+        if ($this->artifactCollectionLoaded) {
+            return;
+        }
+
+        $artifact = $this->app->make(CollectionArtifactStore::class)->load();
+        $this->artifactCollection = $artifact?->compileCollection();
+        $this->artifactCollectionLoaded = true;
     }
 
     private function loadPipelineArtifacts(): void

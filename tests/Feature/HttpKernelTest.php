@@ -10,6 +10,7 @@ use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\HttpKernel\HttpKernel;
+use Quantum\Routing\CollectionArtifactStore;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
 use Quantum\Routing\PipelineArtifactStore;
@@ -262,6 +263,26 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(200, $response->statusCode());
         self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_can_dispatch_routes_using_a_loaded_collection_artifact(): void
+    {
+        $router = $this->app->make(Router::class);
+        $route = $router->get('/artifact-collection', TestStringController::class . '@show')->name('artifact.collection');
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $router->reloadCollectionArtifacts();
+
+        $compiledRoute = $router->compiledCollection()->named('artifact.collection');
+
+        self::assertNotNull($compiledRoute);
+        self::assertNotSame($route, $compiledRoute);
+        self::assertSame(TestStringController::class . '@show', $compiledRoute->action());
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-collection'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('controller-string', $response->content());
     }
 
     public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void

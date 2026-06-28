@@ -10,13 +10,13 @@ final class RouteMatch
      * @param array<string, string> $parameters
      */
     public function __construct(
-        private readonly Route $route,
+        private readonly CompiledRoute $route,
         private readonly array $parameters,
         private readonly string $resolvedMethod,
         private readonly bool $usedHeadFallback = false,
     ) {}
 
-    public function route(): Route
+    public function route(): CompiledRoute
     {
         return $this->route;
     }
