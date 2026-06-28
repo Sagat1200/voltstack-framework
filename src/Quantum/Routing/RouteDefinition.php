@@ -8,12 +8,14 @@ final class RouteDefinition
 {
     /**
      * @param array<int, string> $methods
+     * @param array<string, string> $constraints
      */
     public function __construct(
         private readonly array $methods,
         private readonly string $uri,
         private readonly mixed $action,
         private readonly ?string $name = null,
+        private readonly array $constraints = [],
     ) {}
 
     /**
@@ -28,6 +30,7 @@ final class RouteDefinition
             self::normalizeUri($uri),
             $action,
             null,
+            [],
         );
     }
 
@@ -54,6 +57,14 @@ final class RouteDefinition
         return $this->name;
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function constraints(): array
+    {
+        return $this->constraints;
+    }
+
     public function withName(string $name): self
     {
         $normalizedName = trim($name);
@@ -67,7 +78,68 @@ final class RouteDefinition
             $this->uri,
             $this->action,
             $normalizedName,
+            $this->constraints,
         );
+    }
+
+    public function withConstraint(string $parameter, string $pattern): self
+    {
+        $normalizedParameter = trim($parameter);
+        $normalizedPattern = trim($pattern);
+
+        if ($normalizedParameter === '') {
+            throw new \InvalidArgumentException('Route constraint parameter cannot be empty.');
+        }
+
+        if ($normalizedPattern === '') {
+            throw new \InvalidArgumentException(sprintf(
+                'Route constraint pattern for [%s] cannot be empty.',
+                $normalizedParameter,
+            ));
+        }
+
+        if (! in_array($normalizedParameter, $this->parameterNames(), true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route parameter [%s] is not defined for route [%s].',
+                $normalizedParameter,
+                $this->uri,
+            ));
+        }
+
+        return new self(
+            $this->methods,
+            $this->uri,
+            $this->action,
+            $this->name,
+            [
+                ...$this->constraints,
+                $normalizedParameter => $normalizedPattern,
+            ],
+        );
+    }
+
+    /**
+     * @param array<string, string> $constraints
+     */
+    public function withConstraints(array $constraints): self
+    {
+        $definition = $this;
+
+        foreach ($constraints as $parameter => $pattern) {
+            $definition = $definition->withConstraint((string) $parameter, (string) $pattern);
+        }
+
+        return $definition;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function parameterNames(): array
+    {
+        preg_match_all('/\{([^}]+)\}/', $this->uri, $parameterMatches);
+
+        return $parameterMatches[1];
     }
 
     private static function normalizeUri(string $uri): string

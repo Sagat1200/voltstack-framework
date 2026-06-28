@@ -29,9 +29,7 @@ class CompiledRoute
     public function __construct(RouteDefinition $definition)
     {
         $this->definition = $definition;
-        [$pattern, $parameterNames] = self::compilePattern($definition->uri());
-        $this->pattern = $pattern;
-        $this->parameterNames = $parameterNames;
+        $this->recompile();
     }
 
     public function definition(): RouteDefinition
@@ -159,6 +157,7 @@ class CompiledRoute
     protected function replaceDefinition(RouteDefinition $definition): void
     {
         $this->definition = $definition;
+        $this->recompile();
     }
 
     /**
@@ -235,8 +234,11 @@ class CompiledRoute
     /**
      * @return array{0: string, 1: array<int, string>}
      */
-    private static function compilePattern(string $uri): array
+    private function compilePattern(): array
     {
+        $uri = $this->definition->uri();
+        $constraints = $this->definition->constraints();
+
         preg_match_all('/\{([^}]+)\}/', $uri, $parameterMatches);
         $parameterNames = $parameterMatches[1];
 
@@ -249,7 +251,10 @@ class CompiledRoute
             }
 
             if (preg_match('/^\{([^}]+)\}$/', $segment) === 1) {
-                $compiledSegments[] = '([^\/]+)';
+                preg_match('/^\{([^}]+)\}$/', $segment, $parameterMatch);
+                $parameterName = $parameterMatch[1];
+                $constraint = $constraints[$parameterName] ?? '[^\/]+';
+                $compiledSegments[] = '(' . $constraint . ')';
                 continue;
             }
 
@@ -261,5 +266,12 @@ class CompiledRoute
         $pattern .= '$/';
 
         return [$pattern, $parameterNames];
+    }
+
+    private function recompile(): void
+    {
+        [$pattern, $parameterNames] = $this->compilePattern();
+        $this->pattern = $pattern;
+        $this->parameterNames = $parameterNames;
     }
 }

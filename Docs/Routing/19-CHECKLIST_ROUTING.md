@@ -98,8 +98,8 @@ Criterio de cierre:
 - `[x]` soportar rutas dinamicas con parametros
 - `[ ]` soportar dominio opcional
 - `[x]` extraer parametros simples
-- `[ ]` validar constraints basicos
-- `[ ]` retornar `RouteMatch` con ruta, parametros y referencias minimas
+- `[x]` validar constraints basicos
+- `[x]` retornar `RouteMatch` con ruta, parametros y referencias minimas
 - `[x]` diferenciar `RouteNotFound` de `MethodNotAllowed`
 - `[x]` construir lista `Allow` cuando exista mismatch por metodo
 - `[x]` definir y probar estrategia `HEAD -> GET`
@@ -376,8 +376,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 
 - `[ ]` checklist inicial de `Quantum Routing` definido
 - `[-]` inicio de implementacion de `V1 Core Routing`
-- `[-]` matcher multi-metodo operativo con semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`)
-- `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; faltan `method override`, dominio y constraints para cerrar el bloque completo
+- `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, constraints basicos y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta dominio
+- `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; faltan `method override` y dominio para cerrar el bloque completo
 - `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[ ]` dispatcher basico operativo
 - `[ ]` pipeline compilado operativo

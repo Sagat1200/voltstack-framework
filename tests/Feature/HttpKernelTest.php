@@ -155,6 +155,17 @@ final class HttpKernelTest extends TestCase
         $router->post('/users', fn() => 'second')->name('users.index');
     }
 
+    public function test_it_returns_not_found_when_a_route_constraint_does_not_match(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/users/{id}', fn(string $id) => $id)->whereNumber('id');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/users/abc'));
+
+        self::assertSame(404, $response->statusCode());
+        self::assertStringContainsString('Page Not Found', $response->content());
+    }
+
     public function test_it_renders_server_errors_as_reload_only_documents(): void
     {
         $router = $this->app->make(Router::class);
