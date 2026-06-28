@@ -21,7 +21,7 @@ final class RouteCollection implements Countable, IteratorAggregate
     private array $routes = [];
 
     /**
-     * @var array<string, true>
+     * @var array<string, int>
      */
     private array $signatures = [];
 
@@ -32,21 +32,24 @@ final class RouteCollection implements Countable, IteratorAggregate
 
     public function add(Route $route): Route
     {
-        foreach ($route->methods() as $method) {
-            $signature = $this->signature($method, $route->uri());
+        $routeIndex = count($this->routes);
 
-            if (isset($this->signatures[$signature])) {
+        foreach ($route->methods() as $method) {
+            $signature = $this->signature($method, $route->routeDomain(), $route->uri());
+
+            if (isset($this->signatures[$signature]) && $this->signatures[$signature] !== $routeIndex) {
                 throw new DuplicateRouteException($method, $route->uri());
             }
         }
 
         foreach ($route->methods() as $method) {
-            $this->signatures[$this->signature($method, $route->uri())] = true;
+            $this->signatures[$this->signature($method, $route->routeDomain(), $route->uri())] = $routeIndex;
         }
 
         $this->routes[] = $route;
         $route->attachCollection($this);
         $this->syncRouteName($route, null);
+        $this->syncRouteDomain($route, null);
 
         return $route;
     }
@@ -118,8 +121,57 @@ final class RouteCollection implements Countable, IteratorAggregate
         }
     }
 
-    private function signature(string $method, string $uri): string
+    public function validateRouteDomain(Route $route, string $domain, ?string $previousDomain): void
     {
-        return strtoupper($method) . ' ' . $uri;
+        $currentIndex = array_search($route, $this->routes, true);
+
+        foreach ($route->methods() as $method) {
+            $signature = $this->signature($method, strtolower($domain), $route->uri());
+            $owner = $this->signatures[$signature] ?? null;
+
+            if ($owner !== null && $owner !== $currentIndex) {
+                throw new DuplicateRouteException($method, $route->uri());
+            }
+        }
+
+        if ($previousDomain === null || $currentIndex === false) {
+            return;
+        }
+
+        foreach ($route->methods() as $method) {
+            $previousSignature = $this->signature($method, $previousDomain, $route->uri());
+
+            if (($this->signatures[$previousSignature] ?? null) === $currentIndex) {
+                unset($this->signatures[$previousSignature]);
+            }
+        }
+    }
+
+    public function syncRouteDomain(Route $route, ?string $previousDomain): void
+    {
+        $currentIndex = array_search($route, $this->routes, true);
+
+        if ($currentIndex === false) {
+            return;
+        }
+
+        if ($previousDomain !== null) {
+            foreach ($route->methods() as $method) {
+                $previousSignature = $this->signature($method, $previousDomain, $route->uri());
+
+                if (($this->signatures[$previousSignature] ?? null) === $currentIndex) {
+                    unset($this->signatures[$previousSignature]);
+                }
+            }
+        }
+
+        foreach ($route->methods() as $method) {
+            $this->signatures[$this->signature($method, $route->routeDomain(), $route->uri())] = $currentIndex;
+        }
+    }
+
+    private function signature(string $method, ?string $domain, string $uri): string
+    {
+        return strtoupper($method) . ' ' . ($domain ?? '*') . ' ' . $uri;
     }
 }

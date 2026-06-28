@@ -13,6 +13,7 @@ final class RouteDefinition
     public function __construct(
         private readonly array $methods,
         private readonly string $uri,
+        private readonly ?string $domain,
         private readonly mixed $action,
         private readonly ?string $name = null,
         private readonly array $constraints = [],
@@ -28,6 +29,7 @@ final class RouteDefinition
         return new self(
             $normalizedMethods,
             self::normalizeUri($uri),
+            null,
             $action,
             null,
             [],
@@ -50,6 +52,11 @@ final class RouteDefinition
     public function action(): mixed
     {
         return $this->action;
+    }
+
+    public function domain(): ?string
+    {
+        return $this->domain;
     }
 
     public function name(): ?string
@@ -76,8 +83,27 @@ final class RouteDefinition
         return new self(
             $this->methods,
             $this->uri,
+            $this->domain,
             $this->action,
             $normalizedName,
+            $this->constraints,
+        );
+    }
+
+    public function withDomain(string $domain): self
+    {
+        $normalizedDomain = self::normalizeDomain($domain);
+
+        if ($normalizedDomain === '') {
+            throw new \InvalidArgumentException('Route domain cannot be empty.');
+        }
+
+        return new self(
+            $this->methods,
+            $this->uri,
+            $normalizedDomain,
+            $this->action,
+            $this->name,
             $this->constraints,
         );
     }
@@ -109,6 +135,7 @@ final class RouteDefinition
         return new self(
             $this->methods,
             $this->uri,
+            $this->domain,
             $this->action,
             $this->name,
             [
@@ -138,8 +165,12 @@ final class RouteDefinition
     private function parameterNames(): array
     {
         preg_match_all('/\{([^}]+)\}/', $this->uri, $parameterMatches);
+        $pathParameters = $parameterMatches[1];
 
-        return $parameterMatches[1];
+        preg_match_all('/\{([^}]+)\}/', $this->domain ?? '', $domainParameterMatches);
+        $domainParameters = $domainParameterMatches[1];
+
+        return array_values(array_unique([...$pathParameters, ...$domainParameters]));
     }
 
     private static function normalizeUri(string $uri): string
@@ -151,5 +182,14 @@ final class RouteDefinition
         $normalized = '/' . trim($uri, '/');
 
         return $normalized === '//' ? '/' : $normalized;
+    }
+
+    private static function normalizeDomain(string $domain): string
+    {
+        $normalized = strtolower(trim($domain));
+        $normalized = preg_replace('#^https?://#', '', $normalized) ?? $normalized;
+        $normalized = rtrim($normalized, '/');
+
+        return explode(':', $normalized, 2)[0];
     }
 }

@@ -45,6 +45,27 @@ final class Route extends CompiledRoute
         return $this;
     }
 
+    public function domain(?string $domain = null): string|static|null
+    {
+        if ($domain === null) {
+            return $this->definition()->domain();
+        }
+
+        $previousDomain = $this->definition()->domain();
+
+        if ($this->collection !== null) {
+            $this->collection->validateRouteDomain($this, $domain, $previousDomain);
+        }
+
+        $this->replaceDefinition($this->definition()->withDomain($domain));
+
+        if ($this->collection !== null) {
+            $this->collection->syncRouteDomain($this, $previousDomain);
+        }
+
+        return $this;
+    }
+
     public function where(string|array $parameter, ?string $pattern = null): static
     {
         if (is_array($parameter)) {

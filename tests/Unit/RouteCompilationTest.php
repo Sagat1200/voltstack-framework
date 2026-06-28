@@ -36,6 +36,13 @@ final class RouteCompilationTest extends TestCase
         self::assertSame('users.index', $definition->name());
     }
 
+    public function test_route_definition_can_return_a_domain_copy(): void
+    {
+        $definition = RouteDefinition::make(['GET'], '/users', 'handler')->withDomain('Admin.Example.com');
+
+        self::assertSame('admin.example.com', $definition->domain());
+    }
+
     public function test_route_definition_can_store_constraints(): void
     {
         $definition = RouteDefinition::make(['GET'], '/users/{id}', 'handler')
@@ -73,6 +80,24 @@ final class RouteCompilationTest extends TestCase
         self::assertNull($route->matchPath('/users/abc'));
     }
 
+    public function test_compiled_route_can_match_static_domains(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/dashboard', 'handler'));
+        $route->domain('admin.example.com');
+
+        self::assertSame([], $route->matchHost('admin.example.com'));
+        self::assertNull($route->matchHost('app.example.com'));
+    }
+
+    public function test_compiled_route_can_extract_domain_parameters(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/dashboard', 'handler'));
+        $route->domain('{tenant}.example.com')->whereAlphaNumeric('tenant');
+
+        self::assertSame(['tenant' => 'acme42'], $route->matchHost('acme42.example.com'));
+        self::assertNull($route->matchHost('acme-42.example.com'));
+    }
+
     public function test_route_collection_registers_routes_in_deterministic_order(): void
     {
         $collection = new RouteCollection();
@@ -106,6 +131,16 @@ final class RouteCompilationTest extends TestCase
         $this->expectExceptionMessage('A route is already registered for [POST] /users.');
 
         $collection->add(new Route(RouteDefinition::make(['POST', 'PUT'], '/users', 'second')));
+    }
+
+    public function test_route_collection_allows_same_method_and_path_on_different_domains(): void
+    {
+        $collection = new RouteCollection();
+
+        $collection->add((new Route(RouteDefinition::make(['GET'], '/users', 'first')))->domain('admin.example.com'));
+        $collection->add((new Route(RouteDefinition::make(['GET'], '/users', 'second')))->domain('app.example.com'));
+
+        self::assertCount(2, $collection);
     }
 
     public function test_route_collection_can_index_routes_by_name(): void
@@ -215,4 +250,35 @@ final class RouteCompilationTest extends TestCase
             'uuid' => '123e4567-e89b-12d3-a456-426614174000',
         ], $match->parameters());
     }
+
+    public function test_route_matcher_supports_static_domains(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/dashboard', 'handler')));
+        $route->domain('admin.example.com');
+
+        $match = (new RouteMatcher())->match(Request::create('/dashboard', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'admin.example.com',
+        ]), $collection);
+
+        self::assertSame($route, $match->route());
+    }
+
+    public function test_route_matcher_extracts_domain_parameters(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/dashboard/{page}', 'handler')));
+        $route->domain('{tenant}.example.com')->whereAlphaNumeric('tenant');
+
+        $match = (new RouteMatcher())->match(Request::create('/dashboard/home', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'acme42.example.com',
+        ]), $collection);
+
+        self::assertSame($route, $match->route());
+        self::assertSame([
+            'tenant' => 'acme42',
+            'page' => 'home',
+        ], $match->parameters());
+    }
+
 }

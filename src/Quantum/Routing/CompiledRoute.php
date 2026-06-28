@@ -20,11 +20,17 @@ class CompiledRoute
     private RouteDefinition $definition;
 
     private string $pattern;
+    private ?string $domainPattern = null;
 
     /**
      * @var array<int, string>
      */
     private array $parameterNames;
+
+    /**
+     * @var array<int, string>
+     */
+    private array $domainParameterNames = [];
 
     public function __construct(RouteDefinition $definition)
     {
@@ -60,9 +66,19 @@ class CompiledRoute
         return $this->definition->name();
     }
 
+    public function routeDomain(): ?string
+    {
+        return $this->definition->domain();
+    }
+
     public function pattern(): string
     {
         return $this->pattern;
+    }
+
+    public function domainPattern(): ?string
+    {
+        return $this->domainPattern;
     }
 
     /**
@@ -87,7 +103,7 @@ class CompiledRoute
             return null;
         }
 
-        return $this->matchPath($request->path());
+        return $this->matchTarget($request->host(), $request->path());
     }
 
     /**
@@ -108,6 +124,53 @@ class CompiledRoute
         }
 
         return $parameters;
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    public function matchHost(string $host): ?array
+    {
+        if ($this->domainPattern === null) {
+            return [];
+        }
+
+        if (! preg_match($this->domainPattern, strtolower($host), $matches)) {
+            return null;
+        }
+
+        array_shift($matches);
+
+        $parameters = [];
+
+        foreach ($this->domainParameterNames as $index => $name) {
+            $parameters[$name] = $matches[$index] ?? null;
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    public function matchTarget(string $host, string $path): ?array
+    {
+        $domainParameters = $this->matchHost($host);
+
+        if ($domainParameters === null) {
+            return null;
+        }
+
+        $pathParameters = $this->matchPath($path);
+
+        if ($pathParameters === null) {
+            return null;
+        }
+
+        return [
+            ...$domainParameters,
+            ...$pathParameters,
+        ];
     }
 
     public function run(Application $app, Request $request): mixed
@@ -273,5 +336,39 @@ class CompiledRoute
         [$pattern, $parameterNames] = $this->compilePattern();
         $this->pattern = $pattern;
         $this->parameterNames = $parameterNames;
+        [$domainPattern, $domainParameterNames] = $this->compileDomainPattern();
+        $this->domainPattern = $domainPattern;
+        $this->domainParameterNames = $domainParameterNames;
+    }
+
+    /**
+     * @return array{0: string|null, 1: array<int, string>}
+     */
+    private function compileDomainPattern(): array
+    {
+        $domain = $this->definition->domain();
+
+        if ($domain === null) {
+            return [null, []];
+        }
+
+        $constraints = $this->definition->constraints();
+        preg_match_all('/\{([^}]+)\}/', $domain, $parameterMatches);
+        $parameterNames = $parameterMatches[1];
+        $segments = explode('.', $domain);
+        $compiledSegments = [];
+
+        foreach ($segments as $segment) {
+            if (preg_match('/^\{([^}]+)\}$/', $segment, $parameterMatch) === 1) {
+                $parameterName = $parameterMatch[1];
+                $constraint = $constraints[$parameterName] ?? '[^\.]+';
+                $compiledSegments[] = '(' . $constraint . ')';
+                continue;
+            }
+
+            $compiledSegments[] = preg_quote($segment, '/');
+        }
+
+        return ['/^' . implode('\.', $compiledSegments) . '$/i', $parameterNames];
     }
 }

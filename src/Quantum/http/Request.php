@@ -82,6 +82,25 @@ final class Request
         return $path === '' ? '/' : $path;
     }
 
+    public function host(): string
+    {
+        $uriHost = parse_url($this->uri(), PHP_URL_HOST);
+
+        if (is_string($uriHost) && $uriHost !== '') {
+            return strtolower($uriHost);
+        }
+
+        $host = (string) ($this->server['HTTP_HOST'] ?? $this->server['SERVER_NAME'] ?? '');
+
+        if ($host === '') {
+            return '';
+        }
+
+        $host = explode(':', $host, 2)[0];
+
+        return strtolower($host);
+    }
+
     /**
      * @return array<string, mixed>
      */

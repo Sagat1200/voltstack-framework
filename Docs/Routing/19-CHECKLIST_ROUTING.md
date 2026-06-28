@@ -51,7 +51,7 @@ Resultado esperado del primer ciclo:
 - `[x]` soportar al menos `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`
 - `[x]` soportar nombre de ruta
 - `[ ]` soportar path
-- `[ ]` soportar dominio opcional
+- `[x]` soportar dominio opcional
 - `[ ]` soportar middleware declarativo por ruta
 - `[ ]` soportar metadata minima asociada a la ruta
 
@@ -96,7 +96,7 @@ Criterio de cierre:
 - `[x]` seleccionar candidatas por metodo HTTP
 - `[x]` soportar rutas estaticas
 - `[x]` soportar rutas dinamicas con parametros
-- `[ ]` soportar dominio opcional
+- `[x]` soportar dominio opcional
 - `[x]` extraer parametros simples
 - `[x]` validar constraints basicos
 - `[x]` retornar `RouteMatch` con ruta, parametros y referencias minimas
@@ -376,8 +376,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 
 - `[ ]` checklist inicial de `Quantum Routing` definido
 - `[-]` inicio de implementacion de `V1 Core Routing`
-- `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, constraints basicos y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta dominio
-- `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; faltan `method override` y dominio para cerrar el bloque completo
+- `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta `method override`
+- `[-]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas; falta `method override` para cerrar el bloque completo
 - `[-]` `RouteDefinition`, `CompiledRoute` y `RouteCollection` minimos integrados al router actual; ya hay nombres de ruta y deteccion de duplicados, pero falta `CompiledRouteCollection` y compilacion formal de colecciones
 - `[ ]` dispatcher basico operativo
 - `[ ]` pipeline compilado operativo

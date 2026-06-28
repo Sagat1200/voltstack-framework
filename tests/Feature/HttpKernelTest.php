@@ -166,6 +166,34 @@ final class HttpKernelTest extends TestCase
         self::assertStringContainsString('Page Not Found', $response->content());
     }
 
+    public function test_it_can_match_routes_bound_to_a_static_domain(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/dashboard', fn() => 'admin')->domain('admin.example.com');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/dashboard', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'admin.example.com',
+        ]));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('admin', $response->content());
+    }
+
+    public function test_it_can_resolve_domain_parameters_into_route_arguments(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/dashboard', fn(string $tenant) => 'tenant:' . $tenant)
+            ->domain('{tenant}.example.com')
+            ->whereAlphaNumeric('tenant');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/dashboard', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'acme42.example.com',
+        ]));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('tenant:acme42', $response->content());
+    }
+
     public function test_it_renders_server_errors_as_reload_only_documents(): void
     {
         $router = $this->app->make(Router::class);

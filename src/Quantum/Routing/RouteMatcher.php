@@ -12,41 +12,62 @@ final class RouteMatcher
 {
     public function match(Request $request, RouteCollection $routes): RouteMatch
     {
+        $host = $request->host();
         $path = $request->path();
         $method = $request->method();
         $allowedMethods = [];
+        $preferredMatch = null;
+        $fallbackMatch = null;
+        $preferredHeadFallback = null;
+        $fallbackHeadFallback = null;
 
         foreach ($routes as $route) {
-            $parameters = $route->matches($request);
+            $parameters = $route->matchTarget($host, $path);
 
             if ($parameters === null) {
-                $pathParameters = $route->matchPath($path);
-
-                if ($pathParameters === null) {
-                    continue;
-                }
-
-                $allowedMethods = [...$allowedMethods, ...$route->methods()];
                 continue;
             }
 
-            return new RouteMatch($route, $parameters, $method);
+            if ($route->allowsMethod($method)) {
+                $match = new RouteMatch($route, $parameters, $method);
+
+                if ($route->routeDomain() !== null) {
+                    $preferredMatch ??= $match;
+                } else {
+                    $fallbackMatch ??= $match;
+                }
+
+                continue;
+            }
+
+            if ($method === 'HEAD' && $route->allowsMethod('GET')) {
+                $match = new RouteMatch($route, $parameters, 'GET', true);
+
+                if ($route->routeDomain() !== null) {
+                    $preferredHeadFallback ??= $match;
+                } else {
+                    $fallbackHeadFallback ??= $match;
+                }
+                continue;
+            }
+
+            $allowedMethods = [...$allowedMethods, ...$route->methods()];
         }
 
-        if ($method === 'HEAD') {
-            foreach ($routes as $route) {
-                if (! $route->allowsMethod('GET')) {
-                    continue;
-                }
+        if ($preferredMatch !== null) {
+            return $preferredMatch;
+        }
 
-                $parameters = $route->matchPath($path);
+        if ($fallbackMatch !== null) {
+            return $fallbackMatch;
+        }
 
-                if ($parameters === null) {
-                    continue;
-                }
+        if ($preferredHeadFallback !== null) {
+            return $preferredHeadFallback;
+        }
 
-                return new RouteMatch($route, $parameters, 'GET', true);
-            }
+        if ($fallbackHeadFallback !== null) {
+            return $fallbackHeadFallback;
         }
 
         if ($allowedMethods !== []) {
