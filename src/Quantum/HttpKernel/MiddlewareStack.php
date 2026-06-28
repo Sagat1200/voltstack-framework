@@ -29,6 +29,17 @@ final class MiddlewareStack
         return $resolved;
     }
 
+    /**
+     * @param array<int, mixed> $middlewares
+     */
+    public static function signature(array $middlewares): string
+    {
+        return sha1(implode('|', array_map(
+            static fn(mixed $middleware): string => self::fingerprint($middleware),
+            array_values($middlewares),
+        )));
+    }
+
     private static function fingerprint(mixed $middleware): string
     {
         if (is_string($middleware)) {

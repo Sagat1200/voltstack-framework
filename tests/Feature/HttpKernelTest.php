@@ -213,6 +213,16 @@ final class HttpKernelTest extends TestCase
         self::assertSame('passed', $response->headers()['X-Middleware']);
     }
 
+    public function test_it_compiles_the_global_pipeline_when_middlewares_are_registered(): void
+    {
+        $kernel = $this->app->make(HttpKernel::class);
+        $kernel->aliasMiddleware('header', TestHeaderMiddleware::class);
+        $kernel->setMiddlewares(['header', TestHeaderMiddleware::class]);
+
+        self::assertSame([TestHeaderMiddleware::class], $kernel->compiledMiddlewarePipeline()->middlewares());
+        self::assertNotSame('', $kernel->compiledMiddlewarePipeline()->id());
+    }
+
     public function test_it_resolves_group_middleware_aliases_before_runtime(): void
     {
         $router = $this->app->make(Router::class);

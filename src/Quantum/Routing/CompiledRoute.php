@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Quantum\Routing;
 
 use Quantum\Http\Request;
+use Quantum\HttpKernel\CompiledMiddlewarePipeline;
 
 class CompiledRoute
 {
     private RouteDefinition $definition;
     private RouteMetadata $metadata;
+    private CompiledMiddlewarePipeline $pipeline;
 
     private string $pattern;
     private ?string $domainPattern = null;
@@ -68,12 +70,17 @@ class CompiledRoute
      */
     public function routeMiddlewares(): array
     {
-        return $this->definition->middlewares();
+        return $this->pipeline->middlewares();
     }
 
     public function routeMetadata(): RouteMetadata
     {
         return $this->metadata;
+    }
+
+    public function routePipeline(): CompiledMiddlewarePipeline
+    {
+        return $this->pipeline;
     }
 
     public function pattern(): string
@@ -230,6 +237,7 @@ class CompiledRoute
         $this->domainPattern = $domainPattern;
         $this->domainParameterNames = $domainParameterNames;
         $this->metadata = RouteMetadata::fromDefinition($this->definition);
+        $this->pipeline = CompiledMiddlewarePipeline::compile($this->definition->middlewares());
     }
 
     /**

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Quantum\Routing;
 
-use Quantum\HttpKernel\MiddlewarePipeline;
 use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\MiddlewareStack;
 use Quantum\Http\Response;
@@ -159,9 +158,8 @@ final class Router
         $request->setRouteParameters($match->parameters());
         $request->setRouteMetadata($match->metadata()->all());
 
-        $pipeline = new MiddlewarePipeline($this->app, $match->route()->routeMiddlewares());
-
-        return $pipeline->handle(
+        return $match->route()->routePipeline()->handle(
+            $this->app,
             $request,
             fn(Request $request): mixed => $this->app->make(DispatcherResolver::class)->dispatch($match, $request),
         );

@@ -95,6 +95,16 @@ final class RouteCompilationTest extends TestCase
         self::assertNull($route->matchPath('/users/abc'));
     }
 
+    public function test_compiled_route_exposes_a_formally_compiled_pipeline(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/users', 'handler'));
+        $route->middleware(['auth', 'throttle']);
+
+        self::assertSame(['auth', 'throttle'], $route->routeMiddlewares());
+        self::assertSame(['auth', 'throttle'], $route->routePipeline()->middlewares());
+        self::assertNotSame('', $route->routePipeline()->id());
+    }
+
     public function test_compiled_route_can_match_static_domains(): void
     {
         $route = new Route(RouteDefinition::make(['GET'], '/dashboard', 'handler'));

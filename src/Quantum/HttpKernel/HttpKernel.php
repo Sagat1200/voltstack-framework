@@ -8,6 +8,7 @@ use Quantum\Http\JsonResponse;
 use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
+use Quantum\HttpKernel\CompiledMiddlewarePipeline;
 use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\MiddlewareStack;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
@@ -25,6 +26,7 @@ class HttpKernel implements KernelContract
      * @var array<int, class-string<MiddlewareInterface>|callable|MiddlewareInterface>
      */
     protected array $middlewares = [];
+    protected CompiledMiddlewarePipeline $compiledMiddlewarePipeline;
 
     public function __construct(
         protected Application $app,
@@ -32,6 +34,8 @@ class HttpKernel implements KernelContract
         protected ResponseNormalizer $normalizer,
         ?array $middlewares = null,
     ) {
+        $this->compiledMiddlewarePipeline = CompiledMiddlewarePipeline::compile([]);
+
         if ($middlewares !== null) {
             $this->setMiddlewares($middlewares);
         }
@@ -43,6 +47,7 @@ class HttpKernel implements KernelContract
     public function setMiddlewares(array $middlewares): void
     {
         $this->middlewares = MiddlewareStack::deduplicate($this->middlewareAliases()->resolveMany($middlewares));
+        $this->compiledMiddlewarePipeline = CompiledMiddlewarePipeline::compile($this->middlewares);
     }
 
     public function pushMiddleware(callable|string|MiddlewareInterface $middleware): void
@@ -51,6 +56,7 @@ class HttpKernel implements KernelContract
             ...$this->middlewares,
             $this->middlewareAliases()->resolve($middleware),
         ]);
+        $this->compiledMiddlewarePipeline = CompiledMiddlewarePipeline::compile($this->middlewares);
     }
 
     public function aliasMiddleware(string $alias, mixed $middleware): void
@@ -66,9 +72,8 @@ class HttpKernel implements KernelContract
         $response = null;
 
         try {
-            $pipeline = new MiddlewarePipeline($this->app, $this->middlewares);
-
-            $response = $pipeline->handle(
+            $response = $this->compiledMiddlewarePipeline->handle(
+                $this->app,
                 $request,
                 fn(Request $request): mixed => $this->router->dispatch($request),
             );
@@ -98,6 +103,11 @@ class HttpKernel implements KernelContract
         }
 
         return $bootstrapper->bootstrap($response);
+    }
+
+    public function compiledMiddlewarePipeline(): CompiledMiddlewarePipeline
+    {
+        return $this->compiledMiddlewarePipeline;
     }
 
     private function middlewareAliases(): MiddlewareAliasRegistry
