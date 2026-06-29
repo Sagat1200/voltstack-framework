@@ -175,7 +175,7 @@ Criterio de cierre:
 - `[x]` definir comportamiento oficial de `HEAD`
 - `[x]` definir comportamiento oficial de `OPTIONS`
 - `[x]` decidir si existira `method override`
-- `[ ]` definir cuando aplica CSRF segun verbo o contexto
+- `[x]` definir cuando aplica CSRF segun verbo o contexto
 - `[ ]` separar claramente endpoints HTTP convencionales de acciones internas del protocolo reactivo
 
 Criterio de cierre:
@@ -408,6 +408,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` validacion estructural previa a compilacion activa para `compiled()`, `tree.php`, `metadata.php`, `pipeline.php` y `collection.php`; detecta placeholders mal formados, nombres de parametro invalidos y parametros duplicados antes de compilar
 - `[x]` los constraints invalidos ya se detectan durante la validacion previa a compilacion mediante verificacion real de regex, antes de llegar al matcher o a la generacion de artifacts
 - `[x]` los constraints basicos ya se compilan a fragments regex normalizados para runtime y `collection.php`, incluyendo normalizacion de capturas simples internas a grupos no capturantes
+- `[x]` politica base de CSRF definida: en HTTP convencional aplica automaticamente solo a verbos mutantes (`POST`, `PUT`, `PATCH`, `DELETE` y overrides), permite opt-out declarativo por metadata de ruta cuando el middleware corre a nivel de ruta, y excluye el endpoint interno `/_volt/action` porque ese protocolo valida CSRF dentro de su propio controller
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible

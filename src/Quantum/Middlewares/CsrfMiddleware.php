@@ -18,7 +18,7 @@ final class CsrfMiddleware implements MiddlewareInterface
 
     public function handle(Request $request, Closure $next): mixed
     {
-        if (! in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+        if (! $this->shouldVerifyToken($request)) {
             return $next($request);
         }
 
@@ -29,5 +29,37 @@ final class CsrfMiddleware implements MiddlewareInterface
         }
 
         return $next($request);
+    }
+
+    private function shouldVerifyToken(Request $request): bool
+    {
+        if ($request->isVoltActionRequest()) {
+            return false;
+        }
+
+        return match ($this->resolvePolicy($request)) {
+            false => false,
+            true => $request->isStateChangingMethod(),
+            default => $request->isStateChangingMethod(),
+        };
+    }
+
+    private function resolvePolicy(Request $request): ?bool
+    {
+        $policy = $request->routeMeta('csrf');
+
+        if (is_bool($policy)) {
+            return $policy;
+        }
+
+        if (! is_string($policy)) {
+            return null;
+        }
+
+        return match (strtolower(trim($policy))) {
+            'true', 'on', 'enable', 'enabled', 'require', 'required' => true,
+            'false', 'off', 'disable', 'disabled', 'skip', 'ignore' => false,
+            default => null,
+        };
     }
 }

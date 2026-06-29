@@ -84,6 +84,16 @@ final class Request
         return $overriddenMethod;
     }
 
+    public function isSafeMethod(): bool
+    {
+        return in_array($this->method(), ['GET', 'HEAD', 'OPTIONS'], true);
+    }
+
+    public function isStateChangingMethod(): bool
+    {
+        return ! $this->isSafeMethod();
+    }
+
     public function originalMethod(): string
     {
         return strtoupper((string) ($this->server['REQUEST_METHOD'] ?? 'GET'));
