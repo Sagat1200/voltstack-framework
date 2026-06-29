@@ -87,7 +87,14 @@ final class RouteCollection implements Countable, IteratorAggregate
 
     public function compiled(): CompiledRouteCollection
     {
+        $this->validateForCompilation();
+
         return $this->compiledCollection ??= new CompiledRouteCollection($this->routes);
+    }
+
+    public function validateForCompilation(): void
+    {
+        (new RouteCompilerValidator())->validateRoutes($this->routes);
     }
 
     public function validateRouteName(Route $route, string $name, ?string $previousName): void

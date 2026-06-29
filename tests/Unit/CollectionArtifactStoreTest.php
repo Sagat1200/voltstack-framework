@@ -6,6 +6,7 @@ namespace VoltStack\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Quantum\Routing\CollectionArtifactStore;
+use Quantum\Routing\Exceptions\RouteCompilationException;
 use Quantum\Routing\Router;
 use RuntimeException;
 use VoltStack\Framework\Application;
@@ -82,6 +83,19 @@ final class CollectionArtifactStoreTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Route [/closures] contains a closure action that cannot be serialized into the collection artifact.');
+
+        $store->compile($router);
+    }
+
+    public function test_it_rejects_malformed_route_placeholders_before_generating_the_collection_artifact(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/users/{id', TestSerializedCollectionController::class . '@show');
+
+        $store = $this->app->make(CollectionArtifactStore::class);
+
+        $this->expectException(RouteCompilationException::class);
+        $this->expectExceptionMessage('Route [/users/{id] contains malformed uri placeholders.');
 
         $store->compile($router);
     }

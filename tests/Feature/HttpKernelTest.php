@@ -509,7 +509,7 @@ final class HttpKernelTest extends TestCase
     public function test_it_generates_named_route_urls_from_loaded_collection_artifacts(): void
     {
         $router = $this->app->make(Router::class);
-        $router->get('/artifact-url/{id}', fn() => 'ok')->name('artifact.url');
+        $router->get('/artifact-url/{id}', TestStringController::class . '@show')->name('artifact.url');
 
         $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
         $router->reloadCollectionArtifacts();

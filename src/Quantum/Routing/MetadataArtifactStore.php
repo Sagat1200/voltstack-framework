@@ -27,6 +27,13 @@ final class MetadataArtifactStore
 
     public function compile(Router $router): MetadataArtifact
     {
+        (new RouteCompilerValidator())->validateRoutes(
+            $router->routes(),
+            false,
+            false,
+            true,
+        );
+
         $metadata = [];
 
         foreach ($router->routes() as $route) {

@@ -28,6 +28,13 @@ final class CollectionArtifactStore
 
     public function compile(Router $router): CollectionArtifact
     {
+        (new RouteCompilerValidator())->validateRoutes(
+            $router->routes(),
+            true,
+            true,
+            true,
+        );
+
         $routes = [];
 
         foreach ($router->routes() as $route) {

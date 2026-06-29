@@ -7,6 +7,7 @@ namespace VoltStack\Test\Unit;
 use PHPUnit\Framework\TestCase;
 use Quantum\Routing\CompiledRouteCollection;
 use Quantum\Routing\CompiledRoute;
+use Quantum\Routing\Exceptions\RouteCompilationException;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
 use Quantum\Routing\Route;
@@ -150,6 +151,28 @@ final class RouteCompilationTest extends TestCase
         self::assertCount(2, $compiled);
         self::assertSame([$first, $second], $compiled->all());
         self::assertSame($second, $compiled->named('second.route'));
+    }
+
+    public function test_route_collection_rejects_malformed_uri_placeholders_when_compiling(): void
+    {
+        $collection = new RouteCollection();
+        $collection->add(new Route(RouteDefinition::make(['GET'], '/users/{id', 'handler')));
+
+        $this->expectException(RouteCompilationException::class);
+        $this->expectExceptionMessage('Route [/users/{id] contains malformed uri placeholders.');
+
+        $collection->compiled();
+    }
+
+    public function test_route_collection_rejects_duplicate_route_parameters_when_compiling(): void
+    {
+        $collection = new RouteCollection();
+        $collection->add(new Route(RouteDefinition::make(['GET'], '/users/{id}/{id}', 'handler')));
+
+        $this->expectException(RouteCompilationException::class);
+        $this->expectExceptionMessage('Route [/users/{id}/{id}] contains duplicate route parameter [id].');
+
+        $collection->compiled();
     }
 
     public function test_route_collection_rejects_duplicate_method_and_uri_pairs(): void

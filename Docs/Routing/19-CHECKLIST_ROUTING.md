@@ -77,7 +77,7 @@ Criterio de cierre:
 ### 3.3 Compiler Minimo
 
 - `[x]` implementar compilacion de route files o Fluent API a `RouteDefinition`
-- `[ ]` implementar validacion de rutas antes de compilar
+- `[x]` implementar validacion de rutas antes de compilar
 - `[x]` implementar normalizacion de paths
 - `[x]` implementar merge minimo de metadata
 - `[x]` compilar middleware resueltos por ruta
@@ -405,6 +405,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
 - `[x]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; `collection.php` ya recompone rutas compiladas serializables, `tree.php` ya indexa candidatas de matching, `metadata.php` ya restaura snapshots de `RouteMetadata` y el router ya puede activar automaticamente estos artifacts en produccion como fuente principal valida
+- `[x]` validacion estructural previa a compilacion activa para `compiled()`, `tree.php`, `metadata.php`, `pipeline.php` y `collection.php`; detecta placeholders mal formados, nombres de parametro invalidos y parametros duplicados antes de compilar
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible

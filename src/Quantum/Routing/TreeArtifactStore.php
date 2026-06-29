@@ -27,6 +27,8 @@ final class TreeArtifactStore
 
     public function compile(Router $router): TreeArtifact
     {
+        (new RouteCompilerValidator())->validateRoutes($router->routes());
+
         $staticRoutes = [];
         $dynamicRoutes = [];
         $routes = $router->routes();

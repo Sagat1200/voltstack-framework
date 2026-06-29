@@ -27,6 +27,13 @@ final class PipelineArtifactStore
 
     public function compile(Router $router): PipelineArtifact
     {
+        (new RouteCompilerValidator())->validateRoutes(
+            $router->routes(),
+            false,
+            true,
+            false,
+        );
+
         $pipelines = [];
 
         foreach ($router->routes() as $route) {
