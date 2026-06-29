@@ -20,6 +20,7 @@ use Quantum\Routing\CollectionArtifactStore;
 use Quantum\Middlewares\CsrfMiddleware;
 use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
+use Quantum\Routing\TreeArtifactStore;
 use Quantum\Security\CsrfTokenManager;
 use Quantum\Validation\Validator;
 use Quantum\View\Cache\CompiledViewStore;
@@ -271,6 +272,10 @@ class Application extends Container
 
         if (! isset($this->bindings[CollectionArtifactStore::class])) {
             $this->singleton(CollectionArtifactStore::class, fn(Application $app) => new CollectionArtifactStore($app));
+        }
+
+        if (! isset($this->bindings[TreeArtifactStore::class])) {
+            $this->singleton(TreeArtifactStore::class, fn(Application $app) => new TreeArtifactStore($app));
         }
 
         if (! isset($this->bindings[ResponseNormalizer::class])) {

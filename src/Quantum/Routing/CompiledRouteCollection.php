@@ -33,6 +33,11 @@ final class CompiledRouteCollection implements Countable, IteratorAggregate
         return count($this->routes);
     }
 
+    public function at(int $index): ?CompiledRoute
+    {
+        return $this->routes[$index] ?? null;
+    }
+
     public function getIterator(): Traversable
     {
         yield from $this->routes;

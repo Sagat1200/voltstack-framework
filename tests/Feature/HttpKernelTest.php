@@ -15,6 +15,7 @@ use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
 use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
+use Quantum\Routing\TreeArtifactStore;
 use VoltStack\Framework\Application;
 
 final class HttpKernelTest extends TestCase
@@ -283,6 +284,34 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(200, $response->statusCode());
         self::assertSame('controller-string', $response->content());
+    }
+
+    public function test_it_can_match_requests_using_a_loaded_tree_artifact(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/artifact-tree/head', TestStringController::class . '@show')->name('artifact.tree.head');
+        $router->post('/artifact-tree/submit/{id}', TestStringController::class . '@show')
+            ->name('artifact.tree.submit')
+            ->whereNumber('id');
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(TreeArtifactStore::class)->compileAndWrite($router);
+        $router->reloadCollectionArtifacts();
+
+        $headResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-tree/head', 'HEAD'));
+
+        self::assertSame(200, $headResponse->statusCode());
+        self::assertSame('', $headResponse->content());
+
+        $methodResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-tree/submit/42', 'GET'));
+
+        self::assertSame(405, $methodResponse->statusCode());
+        self::assertSame('POST, OPTIONS', $methodResponse->headers()['Allow']);
+
+        $optionsResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-tree/submit/42', 'OPTIONS'));
+
+        self::assertSame(204, $optionsResponse->statusCode());
+        self::assertSame('POST, OPTIONS', $optionsResponse->headers()['Allow']);
     }
 
     public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void

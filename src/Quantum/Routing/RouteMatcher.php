@@ -10,7 +10,7 @@ use Quantum\Routing\Exceptions\RouteNotFoundException;
 
 final class RouteMatcher
 {
-    public function match(Request $request, CompiledRouteCollection $routes): RouteMatch
+    public function match(Request $request, CompiledRouteCollection $routes, ?RouteMatchTree $tree = null): RouteMatch
     {
         $host = $request->host();
         $path = $request->path();
@@ -21,7 +21,7 @@ final class RouteMatcher
         $preferredHeadFallback = null;
         $fallbackHeadFallback = null;
 
-        foreach ($routes as $route) {
+        foreach ($this->candidateRoutes($routes, $path, $tree) as $route) {
             $parameters = $route->matchTarget($host, $path);
 
             if ($parameters === null) {
@@ -79,6 +79,30 @@ final class RouteMatcher
             $method,
             $path,
         ));
+    }
+
+    /**
+     * @return array<int, CompiledRoute>
+     */
+    private function candidateRoutes(CompiledRouteCollection $routes, string $path, ?RouteMatchTree $tree): array
+    {
+        if ($tree === null) {
+            return $routes->all();
+        }
+
+        $candidateRoutes = [];
+
+        foreach ($tree->candidatesFor($path) as $index) {
+            $route = $routes->at($index);
+
+            if ($route === null) {
+                continue;
+            }
+
+            $candidateRoutes[] = $route;
+        }
+
+        return $candidateRoutes;
     }
 
     /**

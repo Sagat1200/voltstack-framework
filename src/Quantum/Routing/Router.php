@@ -18,7 +18,9 @@ final class Router
     private RouteCollection $routes;
     private RouteMatcher $matcher;
     private ?CompiledRouteCollection $artifactCollection = null;
+    private ?RouteMatchTree $artifactTree = null;
     private bool $artifactCollectionLoaded = false;
+    private bool $artifactTreeLoaded = false;
     private bool $preferArtifactCollection = false;
     /**
      * @var array<string, CompiledMiddlewarePipeline>
@@ -137,6 +139,8 @@ final class Router
         $registered = $this->routes->add($route);
         $this->artifactCollectionLoaded = false;
         $this->artifactCollection = null;
+        $this->artifactTreeLoaded = false;
+        $this->artifactTree = null;
         $this->preferArtifactCollection = false;
 
         return $registered;
@@ -171,7 +175,10 @@ final class Router
         $this->preferArtifactCollection = true;
         $this->artifactCollectionLoaded = false;
         $this->artifactCollection = null;
+        $this->artifactTreeLoaded = false;
+        $this->artifactTree = null;
         $this->loadCollectionArtifacts();
+        $this->loadTreeArtifacts();
     }
 
     public function reloadPipelineArtifacts(): void
@@ -190,8 +197,10 @@ final class Router
 
     public function dispatch(Request $request): mixed
     {
+        $collection = $this->compiledCollection();
+
         try {
-            $match = $this->matcher->match($request, $this->compiledCollection());
+            $match = $this->matcher->match($request, $collection, $this->resolvedMatchTree($collection));
         } catch (MethodNotAllowedException $exception) {
             if ($request->method() === 'OPTIONS') {
                 return new Response('', 204, [
@@ -302,6 +311,17 @@ final class Router
         $this->artifactCollectionLoaded = true;
     }
 
+    private function loadTreeArtifacts(): void
+    {
+        if ($this->artifactTreeLoaded) {
+            return;
+        }
+
+        $artifact = $this->app->make(TreeArtifactStore::class)->load();
+        $this->artifactTree = $artifact?->compileTree();
+        $this->artifactTreeLoaded = true;
+    }
+
     private function loadPipelineArtifacts(): void
     {
         if ($this->artifactPipelinesLoaded) {
@@ -311,5 +331,20 @@ final class Router
         $artifact = $this->app->make(PipelineArtifactStore::class)->load();
         $this->artifactPipelines = $artifact?->compilePipelines() ?? [];
         $this->artifactPipelinesLoaded = true;
+    }
+
+    private function resolvedMatchTree(CompiledRouteCollection $collection): ?RouteMatchTree
+    {
+        if (! $this->preferArtifactCollection) {
+            return null;
+        }
+
+        $this->loadTreeArtifacts();
+
+        if ($this->artifactTree === null || $this->artifactTree->routeCount() !== $collection->count()) {
+            return null;
+        }
+
+        return $this->artifactTree;
     }
 }
