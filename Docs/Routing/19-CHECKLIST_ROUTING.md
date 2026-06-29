@@ -84,7 +84,7 @@ Criterio de cierre:
 - `[ ]` compilar constraints basicos
 - `[x]` generar artefacto de coleccion
 - `[x]` generar artefacto de tree o indice de matching
-- `[ ]` generar artefacto de metadata
+- `[x]` generar artefacto de metadata
 - `[x]` generar artefacto de pipeline
 
 Criterio de cierre:
@@ -187,7 +187,7 @@ Criterio de cierre:
 - `[x]` definir directorio de artefactos compilados
 - `[x]` guardar `collection`
 - `[x]` guardar `tree`
-- `[ ]` guardar `metadata`
+- `[x]` guardar `metadata`
 - `[x]` guardar `pipeline`
 - `[ ]` guardar `version` o checksum minimo
 - `[-]` implementar loader de artifacts para runtime
@@ -199,9 +199,11 @@ Nota del corte actual:
 - el artefacto de pipeline ya se guarda en `storage/framework/cache/routes/pipeline.php`
 - el artefacto de coleccion ya se guarda en `storage/framework/cache/routes/collection.php`
 - el artefacto de tree ya se guarda en `storage/framework/cache/routes/tree.php`
-- `Router` ya puede cargar `pipeline.php` de forma perezosa y usar `collection.php` junto con `tree.php` de forma explicita mediante `reloadCollectionArtifacts()`
+- el artefacto de metadata ya se guarda en `storage/framework/cache/routes/metadata.php`
+- `Router` ya puede cargar `pipeline.php` de forma perezosa y usar `collection.php` junto con `metadata.php` y `tree.php` de forma explicita mediante `reloadCollectionArtifacts()`
 - `tree.php` indexa candidatas por path estatico y buckets dinamicos basados en `first segment + segment count`, sin duplicar la semantica final de dominio, `HEAD`, `OPTIONS` ni `405`
-- el loader general de `metadata` todavia no existe, y la serializacion de `collection.php` aun excluye closures y otras acciones no serializables
+- `metadata.php` mantiene snapshots completos de `RouteMetadata` por indice de ruta y puede restaurarlos sobre la coleccion compilada cuando `collection.php` no los trae o queda desactualizado
+- la serializacion de `collection.php` aun excluye closures y otras acciones no serializables
 
 Criterio de cierre:
 
@@ -398,9 +400,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` inicio de implementacion de `V1 Core Routing`
 - `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
-- `[-]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; `collection.php` ya recompone rutas compiladas serializables, `tree.php` ya indexa candidatas de matching y el router puede usar ambos como fuente explicita, pero falta `metadata` y consolidar un arranque full artifact-first
+- `[-]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; `collection.php` ya recompone rutas compiladas serializables, `tree.php` ya indexa candidatas de matching, `metadata.php` ya restaura snapshots de `RouteMetadata` y el router puede usar los tres como fuente explicita, pero falta consolidar un arranque full artifact-first
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader parcial en runtime; falta promover artifacts como fuente principal del runtime
 - `[x]` metadata minima consumible
-- `[-]` artifacts de routing operativos con `collection.php`, `tree.php` y `pipeline.php`; faltan `metadata`, versionado/checksum e invalidacion base
+- `[-]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php` y `pipeline.php`; faltan versionado/checksum e invalidacion base
 - `[ ]` URL generator basico operativo

@@ -78,6 +78,11 @@ class CompiledRoute
         return $this->metadata;
     }
 
+    public function replaceRouteMetadata(RouteMetadata $metadata): void
+    {
+        $this->metadata = $metadata;
+    }
+
     public function routePipeline(): CompiledMiddlewarePipeline
     {
         return $this->pipeline;

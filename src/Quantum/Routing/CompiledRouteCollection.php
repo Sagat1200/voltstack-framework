@@ -38,6 +38,26 @@ final class CompiledRouteCollection implements Countable, IteratorAggregate
         return $this->routes[$index] ?? null;
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $snapshots
+     */
+    public function applyMetadataSnapshots(array $snapshots): void
+    {
+        foreach ($snapshots as $index => $snapshot) {
+            if (! is_array($snapshot)) {
+                continue;
+            }
+
+            $route = $this->at($index);
+
+            if ($route === null) {
+                continue;
+            }
+
+            $route->replaceRouteMetadata(new RouteMetadata($snapshot));
+        }
+    }
+
     public function getIterator(): Traversable
     {
         yield from $this->routes;

@@ -13,6 +13,7 @@ use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\CollectionArtifactStore;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
+use Quantum\Routing\MetadataArtifactStore;
 use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
 use Quantum\Routing\TreeArtifactStore;
@@ -312,6 +313,36 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(204, $optionsResponse->statusCode());
         self::assertSame('POST, OPTIONS', $optionsResponse->headers()['Allow']);
+    }
+
+    public function test_it_can_apply_loaded_metadata_artifacts_over_collection_metadata(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/artifact-metadata', TestMetadataEchoController::class . '@show')
+            ->name('artifact.metadata')
+            ->meta([
+                'auth' => 'session',
+                'runtime' => ['mode' => 'spa'],
+                'csrf' => true,
+                'guest' => true,
+            ]);
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(MetadataArtifactStore::class)->compileAndWrite($router);
+        $this->clearCollectionArtifactMetadata('artifact.metadata');
+
+        $router->reloadCollectionArtifacts();
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-metadata'));
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('session', $payload['auth']);
+        self::assertSame(['mode' => 'spa'], $payload['runtime']);
+        self::assertTrue($payload['csrf']);
+        self::assertTrue($payload['guest']);
+        self::assertSame('artifact.metadata', $payload['all']['name']);
+        self::assertSame(['GET'], $payload['all']['methods']);
     }
 
     public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void
@@ -691,6 +722,29 @@ final class HttpKernelTest extends TestCase
         self::assertStringNotContainsString('data-volt-runtime="true"', $response->content());
         self::assertSame('application/json; charset=UTF-8', $response->headers()['Content-Type']);
     }
+
+    private function clearCollectionArtifactMetadata(string $routeName): void
+    {
+        $path = $this->app->cachePath('routes/collection.php');
+        /** @var mixed $payload */
+        $payload = require $path;
+
+        if (! is_array($payload) || ! isset($payload['routes']) || ! is_array($payload['routes'])) {
+            self::fail('Collection artifact payload is invalid during metadata override test.');
+        }
+
+        foreach ($payload['routes'] as &$route) {
+            if (($route['name'] ?? null) !== $routeName) {
+                continue;
+            }
+
+            $route['metadata'] = [];
+            break;
+        }
+        unset($route);
+
+        file_put_contents($path, "<?php\n\nreturn " . var_export($payload, true) . ";\n");
+    }
 }
 
 final class TestInvokableController
@@ -710,6 +764,20 @@ final class TestStringController
     public function show(): string
     {
         return 'controller-string';
+    }
+}
+
+final class TestMetadataEchoController
+{
+    public function show(Request $request): array
+    {
+        return [
+            'all' => $request->routeMetadata(),
+            'auth' => $request->routeMeta('auth'),
+            'runtime' => $request->routeMeta('runtime'),
+            'csrf' => $request->routeMeta('csrf'),
+            'guest' => $request->routeMeta('guest'),
+        ];
     }
 }
 

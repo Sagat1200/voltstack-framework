@@ -18,8 +18,10 @@ final class Router
     private RouteCollection $routes;
     private RouteMatcher $matcher;
     private ?CompiledRouteCollection $artifactCollection = null;
+    private ?MetadataArtifact $artifactMetadata = null;
     private ?RouteMatchTree $artifactTree = null;
     private bool $artifactCollectionLoaded = false;
+    private bool $artifactMetadataLoaded = false;
     private bool $artifactTreeLoaded = false;
     private bool $preferArtifactCollection = false;
     /**
@@ -139,6 +141,8 @@ final class Router
         $registered = $this->routes->add($route);
         $this->artifactCollectionLoaded = false;
         $this->artifactCollection = null;
+        $this->artifactMetadataLoaded = false;
+        $this->artifactMetadata = null;
         $this->artifactTreeLoaded = false;
         $this->artifactTree = null;
         $this->preferArtifactCollection = false;
@@ -175,9 +179,12 @@ final class Router
         $this->preferArtifactCollection = true;
         $this->artifactCollectionLoaded = false;
         $this->artifactCollection = null;
+        $this->artifactMetadataLoaded = false;
+        $this->artifactMetadata = null;
         $this->artifactTreeLoaded = false;
         $this->artifactTree = null;
         $this->loadCollectionArtifacts();
+        $this->loadMetadataArtifacts();
         $this->loadTreeArtifacts();
     }
 
@@ -308,7 +315,19 @@ final class Router
 
         $artifact = $this->app->make(CollectionArtifactStore::class)->load();
         $this->artifactCollection = $artifact?->compileCollection();
+        $this->applyLoadedMetadataArtifacts();
         $this->artifactCollectionLoaded = true;
+    }
+
+    private function loadMetadataArtifacts(): void
+    {
+        if ($this->artifactMetadataLoaded) {
+            return;
+        }
+
+        $this->artifactMetadata = $this->app->make(MetadataArtifactStore::class)->load();
+        $this->artifactMetadataLoaded = true;
+        $this->applyLoadedMetadataArtifacts();
     }
 
     private function loadTreeArtifacts(): void
@@ -346,5 +365,22 @@ final class Router
         }
 
         return $this->artifactTree;
+    }
+
+    private function applyLoadedMetadataArtifacts(): void
+    {
+        if (! $this->preferArtifactCollection || $this->artifactCollection === null) {
+            return;
+        }
+
+        if (! $this->artifactMetadataLoaded) {
+            $this->loadMetadataArtifacts();
+        }
+
+        if ($this->artifactMetadata === null || $this->artifactMetadata->routeCount() !== $this->artifactCollection->count()) {
+            return;
+        }
+
+        $this->artifactMetadata->applyTo($this->artifactCollection);
     }
 }
