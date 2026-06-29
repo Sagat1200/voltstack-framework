@@ -4,10 +4,20 @@ declare(strict_types=1);
 
 namespace VoltStack\Test\Unit;
 
+use Closure;
 use PHPUnit\Framework\TestCase;
 use Quantum\Bootstrap\Bootstrapper;
+use Quantum\Config\ConfigRepository;
+use Quantum\Http\Request;
+use Quantum\Http\Response;
+use Quantum\HttpKernel\HttpKernel;
+use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\CollectionArtifactStore;
+use Quantum\Routing\MetadataArtifactStore;
+use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
+use Quantum\Routing\TreeArtifactStore;
+use Quantum\Routing\VersionArtifactStore;
 use VoltStack\Framework\Application;
 
 final class BootstrapperTest extends TestCase
@@ -63,6 +73,61 @@ final class BootstrapperTest extends TestCase
         self::assertSame('/from-artifact', $runtimeRouter->compiledCollection()->named('artifact.route')?->uri());
     }
 
+    public function test_it_can_boot_a_fresh_runtime_instance_using_route_artifacts_without_manual_reload(): void
+    {
+        $builderApp = new Application($this->basePath);
+        /** @var ConfigRepository $builderConfig */
+        $builderConfig = $builderApp->make(ConfigRepository::class);
+        $builderConfig->set('app.env', 'production');
+
+        $builderRouter = $builderApp->make(Router::class);
+        $builderRouter->post('/from-runtime-artifact/{id}', TestBootstrapPayloadController::class . '@show')
+            ->name('artifact.runtime')
+            ->middleware(TestBootstrapHeaderMiddleware::class)
+            ->meta([
+                'auth' => 'session',
+                'runtime' => ['mode' => 'spa'],
+            ]);
+
+        $builderApp->make(CollectionArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(TreeArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(MetadataArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(PipelineArtifactStore::class)->compileAndWrite($builderRouter);
+        $this->clearCollectionArtifactMetadata('artifact.runtime');
+        $builderApp->make(VersionArtifactStore::class)->compileAndWrite($builderRouter);
+
+        $runtimeApp = new Application($this->basePath);
+        /** @var ConfigRepository $runtimeConfig */
+        $runtimeConfig = $runtimeApp->make(ConfigRepository::class);
+        $runtimeConfig->set('app.env', 'production');
+
+        $bootstrapper = new Bootstrapper($runtimeApp);
+        $bootstrapper->loadRoutes($this->writeRouteFile('route.file', '/from-route-file'));
+
+        $runtimeRouter = $runtimeApp->make(Router::class);
+        $compiledRoute = $runtimeRouter->compiledCollection()->named('artifact.runtime');
+
+        self::assertNull($runtimeRouter->collection()->named('route.file'));
+        self::assertNull($runtimeRouter->compiledCollection()->named('route.file'));
+        self::assertNotNull($compiledRoute);
+        self::assertSame('session', $compiledRoute->routeMetadata()->get('auth'));
+        self::assertSame(['mode' => 'spa'], $compiledRoute->routeMetadata()->get('runtime'));
+
+        $resolvedPipeline = $runtimeRouter->resolvedRoutePipeline($compiledRoute);
+
+        self::assertNotSame($compiledRoute->routePipeline(), $resolvedPipeline);
+        self::assertSame($compiledRoute->routePipeline()->id(), $resolvedPipeline->id());
+
+        $response = $runtimeApp->make(HttpKernel::class)->handle(Request::create('/from-runtime-artifact/42', 'POST'));
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('passed', $response->headers()['X-Bootstrap-Middleware'] ?? null);
+        self::assertSame('42', $payload['id']);
+        self::assertSame('session', $payload['auth']);
+        self::assertSame(['mode' => 'spa'], $payload['runtime']);
+    }
+
     private function writeRouteFile(string $name, string $uri): string
     {
         $path = $this->basePath . DIRECTORY_SEPARATOR . 'routes.php';
@@ -84,6 +149,23 @@ PHP;
         file_put_contents($path, $contents);
 
         return $path;
+    }
+
+    private function clearCollectionArtifactMetadata(string $routeName): void
+    {
+        $path = $this->basePath . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'routes' . DIRECTORY_SEPARATOR . 'collection.php';
+        /** @var array{version: int, routes: array<int, array<string, mixed>>} $payload */
+        $payload = require $path;
+
+        foreach ($payload['routes'] as $index => $route) {
+            if (($route['name'] ?? null) !== $routeName) {
+                continue;
+            }
+
+            $payload['routes'][$index]['metadata'] = [];
+        }
+
+        file_put_contents($path, "<?php\n\nreturn " . var_export($payload, true) . ";\n");
     }
 
     private function removeDirectory(string $directory): void
@@ -122,5 +204,33 @@ final class TestBootstrapController
     public function show(): string
     {
         return 'ok';
+    }
+}
+
+final class TestBootstrapPayloadController
+{
+    public function show(Request $request, string $id): Response
+    {
+        return new Response(json_encode([
+            'id' => $id,
+            'auth' => $request->routeMeta('auth'),
+            'runtime' => $request->routeMeta('runtime'),
+        ], JSON_THROW_ON_ERROR), 200, [
+            'Content-Type' => 'application/json',
+        ]);
+    }
+}
+
+final class TestBootstrapHeaderMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, Closure $next): mixed
+    {
+        $response = $next($request);
+
+        if ($response instanceof Response) {
+            $response->header('X-Bootstrap-Middleware', 'passed');
+        }
+
+        return $response;
     }
 }

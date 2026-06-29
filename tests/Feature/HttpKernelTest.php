@@ -569,6 +569,31 @@ final class HttpKernelTest extends TestCase
         self::assertSame('volt', $protocolActionRoute->routeMetadata()->get('protocol'));
     }
 
+    public function test_it_exposes_the_current_runtime_http_verb_contract_through_internal_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $compiledRoutes = $router->compiledCollection()->all();
+        $runtimeAssetRoute = null;
+        $protocolActionRoute = null;
+
+        foreach ($compiledRoutes as $route) {
+            if ($route->uri() === '/_volt/runtime.js') {
+                $runtimeAssetRoute = $route;
+            }
+
+            if ($route->uri() === '/_volt/action') {
+                $protocolActionRoute = $route;
+            }
+        }
+
+        self::assertNotNull($runtimeAssetRoute);
+        self::assertNotNull($protocolActionRoute);
+        self::assertSame(['GET'], $runtimeAssetRoute->methods());
+        self::assertSame(['GET'], $runtimeAssetRoute->routeMetadata()->get('methods'));
+        self::assertSame(['POST'], $protocolActionRoute->methods());
+        self::assertSame(['POST'], $protocolActionRoute->routeMetadata()->get('methods'));
+    }
+
     public function test_it_throws_a_clear_error_when_a_required_route_parameter_is_missing_during_url_generation(): void
     {
         $router = $this->app->make(Router::class);
@@ -871,6 +896,56 @@ final class HttpKernelTest extends TestCase
         self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
     }
 
+    public function test_it_reuses_runtime_route_metadata_when_bootstrapping_an_html_document(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-runtime-metadata', fn() => '<!DOCTYPE html><html><body data-volt-layout="app"><main>Document</main></body></html>')
+            ->meta([
+                'runtime' => [
+                    'document' => 'reload',
+                    'navigation' => 'reload',
+                    'transition' => 'fade',
+                ],
+            ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-runtime-metadata'));
+
+        self::assertStringContainsString(
+            '<body data-volt-layout="app" data-volt-document="reload" data-volt-navigation-mode="reload" data-volt-page-transition="fade">',
+            $response->content(),
+        );
+        self::assertStringContainsString('data-volt-runtime="true"', $response->content());
+    }
+
+    public function test_it_reuses_rehydrated_metadata_artifacts_when_bootstrapping_an_html_document(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/artifact-document-runtime-metadata', TestHtmlDocumentController::class . '@show')
+            ->name('artifact.document.runtime')
+            ->meta([
+                'runtime' => [
+                    'document' => 'reload',
+                    'navigation' => 'reload',
+                    'transition' => 'fade',
+                ],
+            ]);
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(MetadataArtifactStore::class)->compileAndWrite($router);
+        $this->clearCollectionArtifactMetadata('artifact.document.runtime');
+
+        $router->reloadCollectionArtifacts();
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-document-runtime-metadata'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertStringContainsString(
+            '<body data-volt-document="reload" data-volt-navigation-mode="reload" data-volt-page-transition="fade">',
+            $response->content(),
+        );
+        self::assertStringContainsString('data-volt-runtime="true"', $response->content());
+    }
+
     public function test_it_serves_the_runtime_as_a_cacheable_javascript_asset(): void
     {
         $response = $this->app->make(HttpKernel::class)->handle(Request::create('/_volt/runtime.js'));
@@ -1084,6 +1159,14 @@ final class TestResponseController
     public function show(): Response
     {
         return new Response('ok');
+    }
+}
+
+final class TestHtmlDocumentController
+{
+    public function show(): string
+    {
+        return '<!DOCTYPE html><html><body><main>Artifact document</main></body></html>';
     }
 }
 

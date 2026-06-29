@@ -237,6 +237,35 @@ final class Request
         return $this->routeMetadata()[$key] ?? $default;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function routeRuntimeMetadata(): array
+    {
+        $runtime = $this->routeMeta('runtime', []);
+
+        if (is_array($runtime)) {
+            return $runtime;
+        }
+
+        if (is_string($runtime) && trim($runtime) !== '') {
+            return ['mode' => trim($runtime)];
+        }
+
+        return [];
+    }
+
+    public function routeRuntimeMeta(string $key, mixed $default = null): mixed
+    {
+        $runtime = $this->routeRuntimeMetadata();
+
+        if (array_key_exists($key, $runtime)) {
+            return $runtime[$key];
+        }
+
+        return $this->routeMeta($key, $default);
+    }
+
     public function header(string $key, mixed $default = null): mixed
     {
         $upperKey = strtoupper(str_replace('-', '_', $key));

@@ -84,6 +84,9 @@ final class ReactiveProtocolTest extends TestCase
         /** @var array<string, mixed> $payload */
         $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
 
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('runtime.invalid_snapshot', $payload['error']['code']);
+        self::assertSame(422, $payload['error']['status']);
         self::assertSame('Snapshot checksum is invalid.', $payload['error']['message']);
     }
 
@@ -113,7 +116,91 @@ final class ReactiveProtocolTest extends TestCase
         /** @var array<string, mixed> $payload */
         $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
 
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('security.csrf_token_mismatch', $payload['error']['code']);
+        self::assertSame(419, $payload['error']['status']);
         self::assertSame('CSRF token mismatch.', $payload['error']['message']);
+    }
+
+    public function test_it_returns_protocol_error_metadata_when_a_runtime_request_hits_a_missing_route(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/missing-runtime-endpoint',
+            'POST',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'CONTENT_TYPE' => 'application/json',
+            ],
+            '{}',
+        ));
+
+        self::assertSame(404, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('route.not_found', $payload['error']['code']);
+        self::assertSame(404, $payload['error']['status']);
+        self::assertSame('Not Found', $payload['error']['message']);
+    }
+
+    public function test_it_returns_protocol_error_metadata_for_method_not_allowed_on_the_runtime_endpoint(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create('/_volt/action', 'GET'));
+
+        self::assertSame(405, $response->statusCode());
+        self::assertSame('POST, OPTIONS', $response->headers()['Allow']);
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('route.method_not_allowed', $payload['error']['code']);
+        self::assertSame(405, $payload['error']['status']);
+        self::assertSame(['POST', 'OPTIONS'], $payload['error']['allow']);
+        self::assertSame('POST, OPTIONS', $payload['error']['allowHeader']);
+        self::assertSame('Method Not Allowed', $payload['error']['message']);
+    }
+
+    public function test_it_returns_protocol_error_metadata_when_a_component_action_crashes(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveExplosiveComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveExplosiveComponent::class,
+                'action' => 'explode',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(500, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('server.error', $payload['error']['code']);
+        self::assertSame(500, $payload['error']['status']);
+        self::assertSame('Server Error', $payload['error']['message']);
     }
 
     public function test_it_applies_model_updates_and_form_params_before_running_the_action(): void
@@ -864,6 +951,19 @@ final class TestReactiveCounter extends Component
             '<button type="button" volt-click="increment">Count: %d</button>',
             $this->count,
         );
+    }
+}
+
+final class TestReactiveExplosiveComponent extends Component
+{
+    public function explode(): void
+    {
+        throw new \RuntimeException('Boom from reactive action.');
+    }
+
+    public function render(): string
+    {
+        return '<button type="button" volt-click="explode">Explode</button>';
     }
 }
 

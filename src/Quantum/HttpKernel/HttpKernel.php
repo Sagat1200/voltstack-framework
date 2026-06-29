@@ -102,7 +102,7 @@ class HttpKernel implements KernelContract
             return $response;
         }
 
-        return $bootstrapper->bootstrap($response);
+        return $bootstrapper->bootstrap($request, $response);
     }
 
     public function compiledMiddlewarePipeline(): CompiledMiddlewarePipeline

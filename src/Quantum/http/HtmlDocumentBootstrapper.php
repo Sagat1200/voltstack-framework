@@ -28,6 +28,15 @@ final class HtmlDocumentBootstrapper
         'volt-document',
         'volt:document',
     ];
+    private const PAGE_TRANSITION_ATTRIBUTE_NAMES = [
+        'data-volt-page-transition',
+        'volt-page-transition',
+        'volt:page-transition',
+    ];
+    private const PAGE_TRANSITION_META_NAMES = [
+        'volt-page-transition',
+        'volt:page-transition',
+    ];
 
     public function shouldBootstrap(Request $request, Response $response): bool
     {
@@ -56,9 +65,9 @@ final class HtmlDocumentBootstrapper
         return $this->looksLikeHtml($content);
     }
 
-    public function bootstrap(Response $response): Response
+    public function bootstrap(Request $request, Response $response): Response
     {
-        $content = $this->decorateDocument($response->content());
+        $content = $this->decorateDocument($request, $response->content());
         $script = volt_runtime_script();
 
         $bodyOffset = stripos($content, '</body>');
@@ -81,13 +90,13 @@ final class HtmlDocumentBootstrapper
         return $response;
     }
 
-    private function decorateDocument(string $content): string
+    private function decorateDocument(Request $request, string $content): string
     {
         if (stripos($content, '<body') === false) {
             return $content;
         }
 
-        $documentContract = $this->resolvedDocumentContract($content);
+        $documentContract = $this->resolvedDocumentContract($request, $content);
 
         $content = $this->ensureBodyAttribute(
             $content,
@@ -95,8 +104,16 @@ final class HtmlDocumentBootstrapper
             $documentContract,
         );
 
-        if ($documentContract !== self::RELOAD_DOCUMENT_CONTRACT && ! $this->declaresNavigationModeMeta($content)) {
-            $content = $this->ensureBodyAttribute($content, self::NAVIGATION_MODE_ATTRIBUTE_NAMES, self::DEFAULT_NAVIGATION_MODE);
+        $navigationMode = $this->resolvedNavigationMode($request, $content, $documentContract);
+
+        if ($navigationMode !== null) {
+            $content = $this->ensureBodyAttribute($content, self::NAVIGATION_MODE_ATTRIBUTE_NAMES, $navigationMode);
+        }
+
+        $pageTransition = $this->resolvedPageTransition($request, $content);
+
+        if ($pageTransition !== null) {
+            $content = $this->ensureBodyAttribute($content, self::PAGE_TRANSITION_ATTRIBUTE_NAMES, $pageTransition);
         }
 
         return $content;
@@ -144,39 +161,29 @@ final class HtmlDocumentBootstrapper
 
     private function declaresNavigationModeMeta(string $content): bool
     {
-        foreach (self::NAVIGATION_MODE_META_NAMES as $metaName) {
-            if (preg_match('/<meta\b[^>]*name\s*=\s*["\']' . preg_quote($metaName, '/') . '["\'][^>]*>/i', $content) === 1) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->declaredMetaContent($content, self::NAVIGATION_MODE_META_NAMES) !== null;
     }
 
     private function declaredDocumentContract(string $content): ?string
     {
-        foreach (self::DOCUMENT_META_NAMES as $metaName) {
-            if (preg_match('/<meta\b[^>]*name\s*=\s*["\']' . preg_quote($metaName, '/') . '["\'][^>]*content\s*=\s*["\']([^"\']+)["\'][^>]*>/i', $content, $matches) === 1) {
-                return $this->normalizeDocumentContract($matches[1] ?? '');
-            }
+        $value = $this->declaredMetaContent($content, self::DOCUMENT_META_NAMES);
 
-            if (preg_match('/<meta\b[^>]*content\s*=\s*["\']([^"\']+)["\'][^>]*name\s*=\s*["\']' . preg_quote($metaName, '/') . '["\'][^>]*>/i', $content, $matches) === 1) {
-                return $this->normalizeDocumentContract($matches[1] ?? '');
-            }
+        if ($value === null || $value === '') {
+            return null;
         }
 
-        return null;
+        return $this->normalizeDocumentContract($value);
     }
 
     private function bodyDocumentContract(string $content): ?string
     {
-        foreach (self::DOCUMENT_ATTRIBUTE_NAMES as $attributeName) {
-            if (preg_match('/<body\b[^>]*\b' . preg_quote($attributeName, '/') . '\s*=\s*["\']([^"\']+)["\'][^>]*>/i', $content, $matches) === 1) {
-                return $this->normalizeDocumentContract($matches[1] ?? '');
-            }
+        $value = $this->bodyAttributeValue($content, self::DOCUMENT_ATTRIBUTE_NAMES);
+
+        if ($value === null || $value === '') {
+            return null;
         }
 
-        return null;
+        return $this->normalizeDocumentContract($value);
     }
 
     private function normalizeDocumentContract(string $value): string
@@ -189,11 +196,133 @@ final class HtmlDocumentBootstrapper
         };
     }
 
-    private function resolvedDocumentContract(string $content): string
+    private function resolvedDocumentContract(Request $request, string $content): string
     {
         return $this->declaredDocumentContract($content)
             ?? $this->bodyDocumentContract($content)
+            ?? $this->runtimeDocumentContract($request)
             ?? self::DEFAULT_DOCUMENT_CONTRACT;
+    }
+
+    private function resolvedNavigationMode(Request $request, string $content, string $documentContract): ?string
+    {
+        if ($this->declaresNavigationModeMeta($content) || $this->bodyAttributeValue($content, self::NAVIGATION_MODE_ATTRIBUTE_NAMES) !== null) {
+            return null;
+        }
+
+        $navigationMode = $this->runtimeNavigationMode($request);
+
+        if ($navigationMode !== null) {
+            return $navigationMode;
+        }
+
+        return $documentContract !== self::RELOAD_DOCUMENT_CONTRACT
+            ? self::DEFAULT_NAVIGATION_MODE
+            : null;
+    }
+
+    private function resolvedPageTransition(Request $request, string $content): ?string
+    {
+        if (
+            $this->declaredMetaContent($content, self::PAGE_TRANSITION_META_NAMES) !== null
+            || $this->bodyAttributeValue($content, self::PAGE_TRANSITION_ATTRIBUTE_NAMES) !== null
+        ) {
+            return null;
+        }
+
+        $transition = $request->routeRuntimeMeta('transition');
+
+        if (! is_string($transition)) {
+            $transition = $request->routeRuntimeMeta('pageTransition');
+        }
+
+        if (! is_string($transition) || trim($transition) === '') {
+            return null;
+        }
+
+        return trim($transition);
+    }
+
+    /**
+     * @param array<int, string> $metaNames
+     */
+    private function declaredMetaContent(string $content, array $metaNames): ?string
+    {
+        foreach ($metaNames as $metaName) {
+            if (preg_match('/<meta\b[^>]*name\s*=\s*["\']' . preg_quote($metaName, '/') . '["\'][^>]*content\s*=\s*["\']([^"\']+)["\'][^>]*>/i', $content, $matches) === 1) {
+                return trim((string) ($matches[1] ?? ''));
+            }
+
+            if (preg_match('/<meta\b[^>]*content\s*=\s*["\']([^"\']+)["\'][^>]*name\s*=\s*["\']' . preg_quote($metaName, '/') . '["\'][^>]*>/i', $content, $matches) === 1) {
+                return trim((string) ($matches[1] ?? ''));
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int, string> $attributeNames
+     */
+    private function bodyAttributeValue(string $content, array $attributeNames): ?string
+    {
+        foreach ($attributeNames as $attributeName) {
+            if (preg_match('/<body\b[^>]*\b' . preg_quote($attributeName, '/') . '\s*=\s*["\']([^"\']+)["\'][^>]*>/i', $content, $matches) === 1) {
+                return trim((string) ($matches[1] ?? ''));
+            }
+        }
+
+        return null;
+    }
+
+    private function runtimeDocumentContract(Request $request): ?string
+    {
+        $document = $request->routeRuntimeMeta('document');
+
+        if (! is_string($document) || trim($document) === '') {
+            $document = $request->routeRuntimeMeta('contract');
+        }
+
+        if (! is_string($document) || trim($document) === '') {
+            $mode = $request->routeRuntimeMeta('mode');
+
+            if (is_string($mode) && $this->supportsRuntimeDocumentMode($mode)) {
+                $document = $mode;
+            }
+        }
+
+        if (! is_string($document) || trim($document) === '') {
+            return null;
+        }
+
+        return $this->normalizeDocumentContract($document);
+    }
+
+    private function runtimeNavigationMode(Request $request): ?string
+    {
+        $navigationMode = $request->routeRuntimeMeta('navigation');
+
+        if (! is_string($navigationMode) || trim($navigationMode) === '') {
+            $navigationMode = $request->routeRuntimeMeta('navigationMode');
+        }
+
+        if (! is_string($navigationMode) || trim($navigationMode) === '') {
+            return null;
+        }
+
+        return strtolower(trim($navigationMode));
+    }
+
+    private function supportsRuntimeDocumentMode(string $mode): bool
+    {
+        return in_array(strtolower(trim($mode)), [
+            self::DEFAULT_DOCUMENT_CONTRACT,
+            self::RELOAD_DOCUMENT_CONTRACT,
+            'reload-only',
+            'static',
+            'non-spa',
+            'document',
+        ], true);
     }
 
     private function hasContentType(Response $response): bool

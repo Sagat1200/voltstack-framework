@@ -59,3 +59,12 @@ La fragmentacion actual conserva el runtime como un solo asset servido por `/_vo
 - el runtime publica `window.Volt.contract` como descriptor estable del asset servido por `/_volt/runtime.js`
 - el contrato actual expone `version` y la lista formal de APIs publicas: `visit`, `prefetch`, `state`, `components` y `telemetry`
 - cuando se cambie este contrato, debe actualizarse primero la fuente en `frontend/runtime/src` y luego regenerar `frontend/runtime/volt.js`
+
+## Contrato HTTP Actual
+
+- la navegacion SPA del runtime usa `GET` sobre URLs HTTP convencionales mediante `visit()`
+- el asset del runtime se sirve por `GET` en `/_volt/runtime.js`
+- las acciones reactivas internas se despachan por `POST` en `/_volt/action`
+- `HEAD` y `OPTIONS` pueden aparecer como semantica del router (`HEAD -> GET` y `OPTIONS` automatico), pero no forman parte del contrato publico del runtime reactivo
+- `PUT`, `PATCH` y `DELETE` siguen disponibles para el framework y para rutas HTTP convencionales, pero el runtime reactivo no los consume todavia como verbos propios del protocolo
+- mientras este contrato siga vigente, cualquier cambio de verbo en `visit()` o `dispatchAction()` debe tratarse como una ruptura de contrato y actualizar documentacion, tests y el checklist de routing

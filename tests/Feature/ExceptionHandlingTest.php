@@ -14,11 +14,32 @@ use VoltStack\Framework\Contracts\Kernel as KernelContract;
 
 final class ExceptionHandlingTest extends TestCase
 {
+    private string $basePath;
+    private Application $app;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->basePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'voltstack-exception-handling-' . uniqid('', true);
+
+        if (! mkdir($concurrentDirectory = $this->basePath, 0777, true) && ! is_dir($concurrentDirectory)) {
+            throw new \RuntimeException(sprintf('Unable to create test directory [%s].', $this->basePath));
+        }
+
+        $this->app = new Application($this->basePath);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->removeDirectory($this->basePath);
+
+        parent::tearDown();
+    }
+
     public function test_it_renders_a_html_404_response_for_missing_routes(): void
     {
-        $app = new Application(sys_get_temp_dir());
-
-        $response = $app->make(HttpKernel::class)->handle(Request::create('/missing'));
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/missing'));
 
         self::assertSame(404, $response->statusCode());
         self::assertStringContainsString('Page Not Found', $response->content());
@@ -27,8 +48,7 @@ final class ExceptionHandlingTest extends TestCase
 
     public function test_it_renders_json_validation_errors_when_the_request_expects_json(): void
     {
-        $app = new Application(sys_get_temp_dir());
-        $router = $app->make(Router::class);
+        $router = $this->app->make(Router::class);
         $router->post('/validate', function (Validator $validator): array {
             $validator->validate([
                 'title' => '',
@@ -39,7 +59,7 @@ final class ExceptionHandlingTest extends TestCase
             return ['ok' => true];
         });
 
-        $response = $app->make(KernelContract::class)->handle(Request::create(
+        $response = $this->app->make(KernelContract::class)->handle(Request::create(
             '/validate',
             'POST',
             [],
@@ -64,11 +84,10 @@ final class ExceptionHandlingTest extends TestCase
 
     public function test_it_renders_a_json_405_response_with_allow_header_when_the_request_expects_json(): void
     {
-        $app = new Application(sys_get_temp_dir());
-        $router = $app->make(Router::class);
+        $router = $this->app->make(Router::class);
         $router->post('/submit', fn(): array => ['ok' => true]);
 
-        $response = $app->make(KernelContract::class)->handle(Request::create(
+        $response = $this->app->make(KernelContract::class)->handle(Request::create(
             '/submit',
             'GET',
             [],
@@ -93,9 +112,7 @@ final class ExceptionHandlingTest extends TestCase
 
     public function test_it_keeps_volt_navigation_errors_as_html_responses(): void
     {
-        $app = new Application(sys_get_temp_dir());
-
-        $response = $app->make(HttpKernel::class)->handle(Request::create(
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
             '/missing',
             'GET',
             [],
@@ -112,5 +129,35 @@ final class ExceptionHandlingTest extends TestCase
         self::assertSame(404, $response->statusCode());
         self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
         self::assertStringContainsString('Page Not Found', $response->content());
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (! is_dir($directory)) {
+            return;
+        }
+
+        $items = scandir($directory);
+
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $directory . DIRECTORY_SEPARATOR . $item;
+
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+                continue;
+            }
+
+            @unlink($path);
+        }
+
+        @rmdir($directory);
     }
 }

@@ -70,17 +70,35 @@ final class ExceptionHandler implements ExceptionHandlerContract
     private function voltErrorResponse(Throwable $exception, int $status, array $headers): JsonResponse
     {
         $payload = [
-            'error' => [
-                'type' => $exception::class,
-                'message' => $this->jsonMessage($exception, $status),
-            ],
+            'error' => $this->voltErrorPayload($exception, $status),
         ];
 
-        if ($exception instanceof ValidationException) {
-            $payload['error']['errors'] = $exception->errors();
+        return new JsonResponse($payload, $status, $headers);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function voltErrorPayload(Throwable $exception, int $status): array
+    {
+        $payload = [
+            'type' => $exception::class,
+            'kind' => 'protocol-error',
+            'code' => $this->errorCode($exception, $status),
+            'status' => $status,
+            'message' => $this->jsonMessage($exception, $status),
+        ];
+
+        if ($exception instanceof MethodNotAllowedException) {
+            $payload['allow'] = $exception->allowedMethods();
+            $payload['allowHeader'] = $exception->allowHeader();
         }
 
-        return new JsonResponse($payload, $status, $headers);
+        if ($exception instanceof ValidationException) {
+            $payload['errors'] = $exception->errors();
+        }
+
+        return $payload;
     }
 
     private function htmlResponse(Throwable $exception, int $status): string
@@ -133,6 +151,19 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $status === 404 => 'Not Found',
             $status === 405 => 'Method Not Allowed',
             default => 'Server Error',
+        };
+    }
+
+    private function errorCode(Throwable $exception, int $status): string
+    {
+        return match (true) {
+            $exception instanceof RouteNotFoundException => 'route.not_found',
+            $exception instanceof MethodNotAllowedException => 'route.method_not_allowed',
+            $exception instanceof CsrfTokenMismatchException => 'security.csrf_token_mismatch',
+            $exception instanceof InvalidSnapshotException => 'runtime.invalid_snapshot',
+            $exception instanceof ValidationException => 'runtime.validation_failed',
+            $status === 500 => 'server.error',
+            default => 'runtime.error',
         };
     }
 
