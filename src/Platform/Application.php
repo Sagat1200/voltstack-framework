@@ -315,6 +315,27 @@ class Application extends Container
         return $config->get($key, $default);
     }
 
+    public function environment(): string
+    {
+        $environment = $this->config('app.env');
+
+        if (! is_string($environment) || trim($environment) === '') {
+            return 'production';
+        }
+
+        return strtolower(trim($environment));
+    }
+
+    public function isProduction(): bool
+    {
+        return $this->environment() === 'production';
+    }
+
+    public function isDevelopment(): bool
+    {
+        return in_array($this->environment(), ['local', 'development', 'dev'], true);
+    }
+
     public function register(ServiceProvider|string $provider): ServiceProvider
     {
         if (is_string($provider)) {

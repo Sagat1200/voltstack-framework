@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace VoltStack\Test\Feature;
 
 use PHPUnit\Framework\TestCase;
+use Quantum\Config\ConfigRepository;
 use Quantum\Actions\Action;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
@@ -22,13 +23,27 @@ use VoltStack\Framework\Application;
 
 final class HttpKernelTest extends TestCase
 {
+    private string $basePath;
     private Application $app;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->app = new Application(sys_get_temp_dir());
+        $this->basePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'voltstack-http-kernel-' . uniqid('', true);
+
+        if (! mkdir($concurrentDirectory = $this->basePath, 0777, true) && ! is_dir($concurrentDirectory)) {
+            throw new \RuntimeException(sprintf('Unable to create test directory [%s].', $this->basePath));
+        }
+
+        $this->app = new Application($this->basePath);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->removeDirectory($this->basePath);
+
+        parent::tearDown();
     }
 
     public function test_it_dispatches_a_closure_route_and_returns_a_response(): void
@@ -375,6 +390,43 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(200, $response->statusCode());
         self::assertSame('controller-string', $response->content());
+    }
+
+    public function test_it_invalidates_routing_artifacts_automatically_in_development(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.env', 'local');
+
+        $router = $this->app->make(Router::class);
+        $route = $router->get('/artifact-dev', TestResponseController::class . '@show')->name('artifact.dev')->middleware(TestHeaderMiddleware::class);
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(TreeArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(MetadataArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(PipelineArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(VersionArtifactStore::class)->compileAndWrite($router);
+
+        foreach ($this->routingArtifactPaths() as $path) {
+            self::assertFileExists($path);
+        }
+
+        $router->reloadCollectionArtifacts();
+        $router->reloadPipelineArtifacts();
+
+        $compiledRoute = $router->compiledCollection()->named('artifact.dev');
+
+        self::assertSame($route, $compiledRoute);
+        self::assertSame($route->routePipeline(), $router->resolvedRoutePipeline($route));
+
+        foreach ($this->routingArtifactPaths() as $path) {
+            self::assertFileDoesNotExist($path);
+        }
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-dev'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('passed', $response->headers()['X-Middleware']);
     }
 
     public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void
@@ -777,6 +829,50 @@ final class HttpKernelTest extends TestCase
 
         file_put_contents($path, "<?php\n\nreturn " . var_export($payload, true) . ";\n");
     }
+
+    /**
+     * @return array<int, string>
+     */
+    private function routingArtifactPaths(): array
+    {
+        return [
+            $this->app->cachePath('routes/collection.php'),
+            $this->app->cachePath('routes/tree.php'),
+            $this->app->cachePath('routes/metadata.php'),
+            $this->app->cachePath('routes/pipeline.php'),
+            $this->app->cachePath('routes/version.php'),
+        ];
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (! is_dir($directory)) {
+            return;
+        }
+
+        $items = scandir($directory);
+
+        if ($items === false) {
+            return;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $directory . DIRECTORY_SEPARATOR . $item;
+
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+                continue;
+            }
+
+            @unlink($path);
+        }
+
+        @rmdir($directory);
+    }
 }
 
 final class TestInvokableController
@@ -810,6 +906,14 @@ final class TestMetadataEchoController
             'csrf' => $request->routeMeta('csrf'),
             'guest' => $request->routeMeta('guest'),
         ];
+    }
+}
+
+final class TestResponseController
+{
+    public function show(): Response
+    {
+        return new Response('ok');
     }
 }
 

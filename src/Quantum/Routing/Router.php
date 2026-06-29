@@ -25,6 +25,7 @@ final class Router
     private bool $artifactMetadataLoaded = false;
     private bool $artifactTreeLoaded = false;
     private bool $artifactVersionLoaded = false;
+    private bool $developmentArtifactsInvalidated = false;
     private bool $preferArtifactCollection = false;
     /**
      * @var array<string, CompiledMiddlewarePipeline>
@@ -149,6 +150,7 @@ final class Router
         $this->artifactTree = null;
         $this->artifactVersionLoaded = false;
         $this->artifactVersion = null;
+        $this->developmentArtifactsInvalidated = false;
         $this->preferArtifactCollection = false;
 
         return $registered;
@@ -189,6 +191,7 @@ final class Router
         $this->artifactTree = null;
         $this->artifactVersionLoaded = false;
         $this->artifactVersion = null;
+        $this->developmentArtifactsInvalidated = false;
         $this->loadCollectionArtifacts();
         $this->loadMetadataArtifacts();
         $this->loadTreeArtifacts();
@@ -198,6 +201,7 @@ final class Router
     {
         $this->artifactPipelinesLoaded = false;
         $this->artifactPipelines = [];
+        $this->developmentArtifactsInvalidated = false;
         $this->loadPipelineArtifacts();
     }
 
@@ -319,7 +323,7 @@ final class Router
             return;
         }
 
-        if (! $this->artifactsManifestAllows(['collection', 'metadata', 'tree'])) {
+        if (! $this->artifactsEnabledForRuntime() || ! $this->artifactsManifestAllows(['collection', 'metadata', 'tree'])) {
             $this->artifactCollectionLoaded = true;
 
             return;
@@ -337,7 +341,7 @@ final class Router
             return;
         }
 
-        if (! $this->artifactsManifestAllows(['metadata'])) {
+        if (! $this->artifactsEnabledForRuntime() || ! $this->artifactsManifestAllows(['metadata'])) {
             $this->artifactMetadataLoaded = true;
 
             return;
@@ -354,7 +358,7 @@ final class Router
             return;
         }
 
-        if (! $this->artifactsManifestAllows(['tree'])) {
+        if (! $this->artifactsEnabledForRuntime() || ! $this->artifactsManifestAllows(['tree'])) {
             $this->artifactTreeLoaded = true;
 
             return;
@@ -371,7 +375,7 @@ final class Router
             return;
         }
 
-        if (! $this->artifactsManifestAllows(['pipeline'])) {
+        if (! $this->artifactsEnabledForRuntime() || ! $this->artifactsManifestAllows(['pipeline'])) {
             $this->artifactPipelinesLoaded = true;
 
             return;
@@ -471,5 +475,63 @@ final class Router
             ),
             default => false,
         };
+    }
+
+    private function artifactsEnabledForRuntime(): bool
+    {
+        if ((bool) $this->app->config('routing.artifacts.enabled', true) === false) {
+            return false;
+        }
+
+        if (! $this->shouldInvalidateArtifactsInDevelopment()) {
+            return true;
+        }
+
+        $this->invalidateDevelopmentArtifacts();
+
+        return false;
+    }
+
+    private function shouldInvalidateArtifactsInDevelopment(): bool
+    {
+        if (! $this->app->isDevelopment()) {
+            return false;
+        }
+
+        return (bool) $this->app->config('routing.artifacts.invalidate_in_development', true);
+    }
+
+    private function invalidateDevelopmentArtifacts(): void
+    {
+        if ($this->developmentArtifactsInvalidated) {
+            return;
+        }
+
+        foreach ($this->routeArtifactPaths() as $path) {
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+
+        $this->artifactCollection = null;
+        $this->artifactMetadata = null;
+        $this->artifactTree = null;
+        $this->artifactVersion = null;
+        $this->artifactPipelines = [];
+        $this->developmentArtifactsInvalidated = true;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function routeArtifactPaths(): array
+    {
+        return [
+            $this->app->make(CollectionArtifactStore::class)->path(),
+            $this->app->make(TreeArtifactStore::class)->path(),
+            $this->app->make(MetadataArtifactStore::class)->path(),
+            $this->app->make(PipelineArtifactStore::class)->path(),
+            $this->app->make(VersionArtifactStore::class)->path(),
+        ];
     }
 }
