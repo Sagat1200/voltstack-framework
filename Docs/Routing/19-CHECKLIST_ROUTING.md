@@ -189,7 +189,7 @@ Criterio de cierre:
 - `[x]` guardar `tree`
 - `[x]` guardar `metadata`
 - `[x]` guardar `pipeline`
-- `[ ]` guardar `version` o checksum minimo
+- `[x]` guardar `version` o checksum minimo
 - `[-]` implementar loader de artifacts para runtime
 - `[ ]` implementar invalidacion basica en desarrollo
 - `[ ]` evitar recompilacion durante request en produccion
@@ -200,7 +200,9 @@ Nota del corte actual:
 - el artefacto de coleccion ya se guarda en `storage/framework/cache/routes/collection.php`
 - el artefacto de tree ya se guarda en `storage/framework/cache/routes/tree.php`
 - el artefacto de metadata ya se guarda en `storage/framework/cache/routes/metadata.php`
-- `Router` ya puede cargar `pipeline.php` de forma perezosa y usar `collection.php` junto con `metadata.php` y `tree.php` de forma explicita mediante `reloadCollectionArtifacts()`
+- el artefacto de version ya se guarda en `storage/framework/cache/routes/version.php`
+- `version.php` mantiene version minima y checksum `sha256` por artifact para `collection`, `tree`, `metadata` y `pipeline`
+- `Router` ya puede cargar `pipeline.php` de forma perezosa y usar `collection.php` junto con `metadata.php` y `tree.php` de forma explicita mediante `reloadCollectionArtifacts()`, validando antes `version.php` si existe
 - `tree.php` indexa candidatas por path estatico y buckets dinamicos basados en `first segment + segment count`, sin duplicar la semantica final de dominio, `HEAD`, `OPTIONS` ni `405`
 - `metadata.php` mantiene snapshots completos de `RouteMetadata` por indice de ruta y puede restaurarlos sobre la coleccion compilada cuando `collection.php` no los trae o queda desactualizado
 - la serializacion de `collection.php` aun excluye closures y otras acciones no serializables
@@ -404,5 +406,5 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader parcial en runtime; falta promover artifacts como fuente principal del runtime
 - `[x]` metadata minima consumible
-- `[-]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php` y `pipeline.php`; faltan versionado/checksum e invalidacion base
+- `[-]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php`, `pipeline.php` y `version.php`; falta invalidacion base y endurecer la politica de recompilacion en produccion
 - `[ ]` URL generator basico operativo

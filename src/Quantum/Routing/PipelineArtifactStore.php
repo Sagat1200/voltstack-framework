@@ -20,6 +20,11 @@ final class PipelineArtifactStore
         return $this->app->cachePath('routes/pipeline.php');
     }
 
+    public function artifactVersion(): int
+    {
+        return self::ARTIFACT_VERSION;
+    }
+
     public function compile(Router $router): PipelineArtifact
     {
         $pipelines = [];

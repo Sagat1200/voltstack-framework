@@ -17,6 +17,7 @@ use Quantum\Routing\MetadataArtifactStore;
 use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
 use Quantum\Routing\TreeArtifactStore;
+use Quantum\Routing\VersionArtifactStore;
 use VoltStack\Framework\Application;
 
 final class HttpKernelTest extends TestCase
@@ -343,6 +344,37 @@ final class HttpKernelTest extends TestCase
         self::assertTrue($payload['guest']);
         self::assertSame('artifact.metadata', $payload['all']['name']);
         self::assertSame(['GET'], $payload['all']['methods']);
+    }
+
+    public function test_it_falls_back_to_live_routes_when_the_version_artifact_detects_a_checksum_mismatch(): void
+    {
+        $router = $this->app->make(Router::class);
+        $route = $router->get('/artifact-version', TestStringController::class . '@show')->name('artifact.version');
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(TreeArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(MetadataArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(PipelineArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(VersionArtifactStore::class)->compileAndWrite($router);
+
+        $collectionPath = $this->app->cachePath('routes/collection.php');
+        $collectionContents = file_get_contents($collectionPath);
+
+        if (! is_string($collectionContents)) {
+            self::fail('Collection artifact contents could not be read.');
+        }
+
+        file_put_contents($collectionPath, $collectionContents . "\n");
+        $router->reloadCollectionArtifacts();
+
+        $compiledRoute = $router->compiledCollection()->named('artifact.version');
+
+        self::assertSame($route, $compiledRoute);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-version'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('controller-string', $response->content());
     }
 
     public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void

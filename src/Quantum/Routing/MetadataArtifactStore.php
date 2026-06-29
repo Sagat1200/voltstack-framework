@@ -20,6 +20,11 @@ final class MetadataArtifactStore
         return $this->app->cachePath('routes/metadata.php');
     }
 
+    public function artifactVersion(): int
+    {
+        return self::ARTIFACT_VERSION;
+    }
+
     public function compile(Router $router): MetadataArtifact
     {
         $metadata = [];

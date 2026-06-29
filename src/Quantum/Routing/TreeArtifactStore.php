@@ -20,6 +20,11 @@ final class TreeArtifactStore
         return $this->app->cachePath('routes/tree.php');
     }
 
+    public function artifactVersion(): int
+    {
+        return self::ARTIFACT_VERSION;
+    }
+
     public function compile(Router $router): TreeArtifact
     {
         $staticRoutes = [];

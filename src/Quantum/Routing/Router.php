@@ -20,9 +20,11 @@ final class Router
     private ?CompiledRouteCollection $artifactCollection = null;
     private ?MetadataArtifact $artifactMetadata = null;
     private ?RouteMatchTree $artifactTree = null;
+    private ?VersionArtifact $artifactVersion = null;
     private bool $artifactCollectionLoaded = false;
     private bool $artifactMetadataLoaded = false;
     private bool $artifactTreeLoaded = false;
+    private bool $artifactVersionLoaded = false;
     private bool $preferArtifactCollection = false;
     /**
      * @var array<string, CompiledMiddlewarePipeline>
@@ -145,6 +147,8 @@ final class Router
         $this->artifactMetadata = null;
         $this->artifactTreeLoaded = false;
         $this->artifactTree = null;
+        $this->artifactVersionLoaded = false;
+        $this->artifactVersion = null;
         $this->preferArtifactCollection = false;
 
         return $registered;
@@ -183,6 +187,8 @@ final class Router
         $this->artifactMetadata = null;
         $this->artifactTreeLoaded = false;
         $this->artifactTree = null;
+        $this->artifactVersionLoaded = false;
+        $this->artifactVersion = null;
         $this->loadCollectionArtifacts();
         $this->loadMetadataArtifacts();
         $this->loadTreeArtifacts();
@@ -313,6 +319,12 @@ final class Router
             return;
         }
 
+        if (! $this->artifactsManifestAllows(['collection', 'metadata', 'tree'])) {
+            $this->artifactCollectionLoaded = true;
+
+            return;
+        }
+
         $artifact = $this->app->make(CollectionArtifactStore::class)->load();
         $this->artifactCollection = $artifact?->compileCollection();
         $this->applyLoadedMetadataArtifacts();
@@ -322,6 +334,12 @@ final class Router
     private function loadMetadataArtifacts(): void
     {
         if ($this->artifactMetadataLoaded) {
+            return;
+        }
+
+        if (! $this->artifactsManifestAllows(['metadata'])) {
+            $this->artifactMetadataLoaded = true;
+
             return;
         }
 
@@ -336,6 +354,12 @@ final class Router
             return;
         }
 
+        if (! $this->artifactsManifestAllows(['tree'])) {
+            $this->artifactTreeLoaded = true;
+
+            return;
+        }
+
         $artifact = $this->app->make(TreeArtifactStore::class)->load();
         $this->artifactTree = $artifact?->compileTree();
         $this->artifactTreeLoaded = true;
@@ -344,6 +368,12 @@ final class Router
     private function loadPipelineArtifacts(): void
     {
         if ($this->artifactPipelinesLoaded) {
+            return;
+        }
+
+        if (! $this->artifactsManifestAllows(['pipeline'])) {
+            $this->artifactPipelinesLoaded = true;
+
             return;
         }
 
@@ -382,5 +412,64 @@ final class Router
         }
 
         $this->artifactMetadata->applyTo($this->artifactCollection);
+    }
+
+    /**
+     * @param array<int, string> $artifactNames
+     */
+    private function artifactsManifestAllows(array $artifactNames): bool
+    {
+        $manifest = $this->loadVersionArtifact();
+
+        if ($manifest === null) {
+            return true;
+        }
+
+        foreach ($artifactNames as $artifactName) {
+            if (! $this->manifestEntryIsValid($manifest, $artifactName)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function loadVersionArtifact(): ?VersionArtifact
+    {
+        if ($this->artifactVersionLoaded) {
+            return $this->artifactVersion;
+        }
+
+        $this->artifactVersion = $this->app->make(VersionArtifactStore::class)->load();
+        $this->artifactVersionLoaded = true;
+
+        return $this->artifactVersion;
+    }
+
+    private function manifestEntryIsValid(VersionArtifact $manifest, string $artifactName): bool
+    {
+        return match ($artifactName) {
+            'collection' => $manifest->validates(
+                'collection',
+                $this->app->make(CollectionArtifactStore::class)->path(),
+                $this->app->make(CollectionArtifactStore::class)->artifactVersion(),
+            ),
+            'metadata' => $manifest->validates(
+                'metadata',
+                $this->app->make(MetadataArtifactStore::class)->path(),
+                $this->app->make(MetadataArtifactStore::class)->artifactVersion(),
+            ),
+            'tree' => $manifest->validates(
+                'tree',
+                $this->app->make(TreeArtifactStore::class)->path(),
+                $this->app->make(TreeArtifactStore::class)->artifactVersion(),
+            ),
+            'pipeline' => $manifest->validates(
+                'pipeline',
+                $this->app->make(PipelineArtifactStore::class)->path(),
+                $this->app->make(PipelineArtifactStore::class)->artifactVersion(),
+            ),
+            default => false,
+        };
     }
 }

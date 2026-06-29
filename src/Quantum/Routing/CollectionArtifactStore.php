@@ -21,6 +21,11 @@ final class CollectionArtifactStore
         return $this->app->cachePath('routes/collection.php');
     }
 
+    public function artifactVersion(): int
+    {
+        return self::ARTIFACT_VERSION;
+    }
+
     public function compile(Router $router): CollectionArtifact
     {
         $routes = [];
