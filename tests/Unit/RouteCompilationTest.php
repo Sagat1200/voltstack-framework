@@ -295,6 +295,38 @@ final class RouteCompilationTest extends TestCase
         self::assertSame('GET', $match->resolvedMethod());
     }
 
+    public function test_route_matcher_does_not_use_reflection_when_matching_attributed_controller_routes(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make([
+            'GET',
+        ], '/users/{id}', TestAttributedMatcherController::class . '@show')));
+
+        $match = (new RouteMatcher())->match(Request::create('/users/42'), $collection->compiled());
+
+        self::assertSame($route, $match->route());
+        self::assertSame(['id' => '42'], $match->parameters());
+    }
+
+    public function test_route_matcher_does_not_use_reflection_when_matching_through_the_compiled_tree(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make([
+            'GET',
+        ], '/users/{id}', TestAttributedMatcherController::class . '@show')));
+        $compiled = $collection->compiled();
+        $tree = new \Quantum\Routing\RouteMatchTree(1, [], [
+            'users' => [
+                2 => [0],
+            ],
+        ]);
+
+        $match = (new RouteMatcher())->match(Request::create('/users/42'), $compiled, $tree);
+
+        self::assertSame($route, $match->route());
+        self::assertSame(['id' => '42'], $match->parameters());
+    }
+
     public function test_route_matcher_marks_head_fallback_matches(): void
     {
         $collection = new RouteCollection();
@@ -388,4 +420,23 @@ final class RouteCompilationTest extends TestCase
         ], $match->parameters());
     }
 
+}
+
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::TARGET_PARAMETER)]
+final class TestExplosiveMatcherAttribute
+{
+    public function __construct()
+    {
+        throw new \RuntimeException('Matcher runtime should not instantiate PHP attributes.');
+    }
+}
+
+#[TestExplosiveMatcherAttribute]
+final class TestAttributedMatcherController
+{
+    #[TestExplosiveMatcherAttribute]
+    public function show(#[TestExplosiveMatcherAttribute] string $id): string
+    {
+        return $id;
+    }
 }

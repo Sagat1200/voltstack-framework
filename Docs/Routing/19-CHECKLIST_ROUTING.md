@@ -247,8 +247,8 @@ Criterio de cierre:
 
 ### 4.2 Pruebas De Calidad Interna
 
-- `[ ]` no usar reflection en runtime de matching
-- `[ ]` no leer atributos en runtime
+ - `[x]` no usar reflection en runtime de matching
+- `[x]` no leer atributos en runtime
 - `[x]` no interpretar route files en runtime
 - `[x]` no hacer merge dinamico de metadata en request
 - `[x]` no construir el pipeline en cada request
@@ -411,6 +411,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` politica base de CSRF definida: en HTTP convencional aplica automaticamente solo a verbos mutantes (`POST`, `PUT`, `PATCH`, `DELETE` y overrides), permite opt-out declarativo por metadata de ruta cuando el middleware corre a nivel de ruta, y excluye el endpoint interno `/_volt/action` porque ese protocolo valida CSRF dentro de su propio controller
 - `[x]` los endpoints internos del runtime (`/_volt/runtime.js`, `/_volt/action`) ya se registran con metadata explicita (`transport=internal`, `endpoint`, `protocol=volt`) y `Request` ya puede distinguirlos de requests HTTP convencionales sin depender solo de strings dispersos
 - `[x]` el bootstrap ya puede omitir la interpretacion de route files en produccion cuando existe un `collection.php` utilizable; el runtime arranca sobre artifacts validos sin reevaluar `routes/web.php`
+- `[x]` el runtime HTTP ya puede despachar controladores con atributos PHP declarados tanto en rutas vivas como desde `collection.php` sin instanciarlos ni depender de ellos durante la peticion
+- `[x]` el matcher ya puede resolver rutas compiladas y candidatas desde `RouteMatchTree` apuntando a controladores con atributos PHP declarados sin reflejarlos ni instanciarlos durante la busqueda
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible

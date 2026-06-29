@@ -83,6 +83,17 @@ final class HttpKernelTest extends TestCase
         self::assertSame('controller-string', $response->content());
     }
 
+    public function test_it_dispatches_controller_routes_without_reading_php_attributes_in_live_runtime(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/controller-attributes-live/{id}', TestAttributedController::class . '@show');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/controller-attributes-live/42'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('attributes:42', $response->content());
+    }
+
     public function test_it_dispatches_action_routes(): void
     {
         $router = $this->app->make(Router::class);
@@ -302,6 +313,20 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(200, $response->statusCode());
         self::assertSame('controller-string', $response->content());
+    }
+
+    public function test_it_dispatches_collection_artifact_routes_without_reading_php_attributes_in_runtime(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/artifact-attributes/{id}', TestAttributedController::class . '@show')->name('artifact.attributes');
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $router->reloadCollectionArtifacts();
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-attributes/99'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('attributes:99', $response->content());
     }
 
     public function test_it_can_match_requests_using_a_loaded_tree_artifact(): void
@@ -1018,6 +1043,25 @@ final class TestStringController
     public function show(): string
     {
         return 'controller-string';
+    }
+}
+
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::TARGET_PARAMETER)]
+final class TestExplosiveRuntimeAttribute
+{
+    public function __construct()
+    {
+        throw new \RuntimeException('Runtime should not instantiate PHP attributes while dispatching routes.');
+    }
+}
+
+#[TestExplosiveRuntimeAttribute]
+final class TestAttributedController
+{
+    #[TestExplosiveRuntimeAttribute]
+    public function show(#[TestExplosiveRuntimeAttribute] string $id): string
+    {
+        return 'attributes:' . $id;
     }
 }
 
