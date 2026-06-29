@@ -97,6 +97,21 @@ final class RouteCompilationTest extends TestCase
         self::assertNull($route->matchPath('/users/abc'));
     }
 
+    public function test_compiled_route_compiles_basic_constraints_without_leaking_inner_captures(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/posts/{slug}/{id}', 'handler'));
+        $route->where('slug', '(foo|bar)')->whereNumber('id');
+
+        self::assertSame([
+            'slug' => '(?:foo|bar)',
+            'id' => '[0-9]+',
+        ], $route->compiledConstraints());
+        self::assertSame([
+            'slug' => 'foo',
+            'id' => '42',
+        ], $route->matchPath('/posts/foo/42'));
+    }
+
     public function test_compiled_route_exposes_a_formally_compiled_pipeline(): void
     {
         $route = new Route(RouteDefinition::make(['GET'], '/users', 'handler'));
@@ -173,6 +188,17 @@ final class RouteCompilationTest extends TestCase
         $this->expectExceptionMessage('Route [/users/{id}/{id}] contains duplicate route parameter [id].');
 
         $collection->compiled();
+    }
+
+    public function test_route_rejects_invalid_constraint_patterns_when_applying_basic_constraint_compilation(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/users/{id}', 'handler')));
+
+        $this->expectException(RouteCompilationException::class);
+        $this->expectExceptionMessage('Route [/users/{id}] contains an invalid constraint pattern for [id].');
+
+        $route->where('id', '[0-9+');
     }
 
     public function test_route_collection_rejects_duplicate_method_and_uri_pairs(): void

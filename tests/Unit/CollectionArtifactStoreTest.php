@@ -58,6 +58,10 @@ final class CollectionArtifactStoreTest extends TestCase
         self::assertNotNull($artifact);
         self::assertSame(1, $artifact->version());
         self::assertCount(count($router->routes()), $artifact->routes());
+        self::assertSame([
+            'tenant' => '[A-Za-z0-9]+',
+            'id' => '[0-9]+',
+        ], $this->artifactRouteByName($artifact->routes(), 'users.show')['constraints']);
 
         $compiled = $artifact->compileCollection();
         $compiledRoute = $compiled->named('users.show');
@@ -72,6 +76,31 @@ final class CollectionArtifactStoreTest extends TestCase
         self::assertSame([TestCollectionArtifactMiddleware::class], $compiledRoute->routePipeline()->middlewares());
         self::assertSame('session', $compiledRoute->routeMetadata()->get('auth'));
         self::assertSame(['mode' => 'spa'], $compiledRoute->routeMetadata()->get('runtime'));
+    }
+
+    public function test_it_writes_compiled_constraint_fragments_into_the_collection_artifact(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/posts/{slug}/{id}', TestSerializedCollectionController::class . '@show')
+            ->name('posts.show')
+            ->where('slug', '(foo|bar)')
+            ->whereNumber('id');
+
+        $store = $this->app->make(CollectionArtifactStore::class);
+        $artifact = $store->compile($router);
+
+        self::assertSame([
+            'slug' => '(?:foo|bar)',
+            'id' => '[0-9]+',
+        ], $this->artifactRouteByName($artifact->routes(), 'posts.show')['constraints']);
+
+        $compiledRoute = $artifact->compileCollection()->named('posts.show');
+
+        self::assertNotNull($compiledRoute);
+        self::assertSame([
+            'slug' => 'foo',
+            'id' => '42',
+        ], $compiledRoute->matchPath('/posts/foo/42'));
     }
 
     public function test_it_rejects_closure_actions_when_generating_the_collection_artifact(): void
@@ -98,6 +127,32 @@ final class CollectionArtifactStoreTest extends TestCase
         $this->expectExceptionMessage('Route [/users/{id] contains malformed uri placeholders.');
 
         $store->compile($router);
+    }
+
+    public function test_it_rejects_invalid_constraint_patterns_before_the_collection_artifact_can_be_generated(): void
+    {
+        $router = $this->app->make(Router::class);
+
+        $this->expectException(RouteCompilationException::class);
+        $this->expectExceptionMessage('Route [/users/{id}] contains an invalid constraint pattern for [id].');
+
+        $router->get('/users/{id}', TestSerializedCollectionController::class . '@show')
+            ->where('id', '[0-9+');
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $routes
+     * @return array<string, mixed>
+     */
+    private function artifactRouteByName(array $routes, string $name): array
+    {
+        foreach ($routes as $route) {
+            if (($route['name'] ?? null) === $name) {
+                return $route;
+            }
+        }
+
+        self::fail(sprintf('Route [%s] was not found in the collection artifact payload.', $name));
     }
 
     private function removeDirectory(string $directory): void

@@ -26,6 +26,11 @@ class CompiledRoute
      */
     private array $domainParameterNames = [];
 
+    /**
+     * @var array<string, string>
+     */
+    private array $compiledConstraints = [];
+
     public function __construct(RouteDefinition $definition)
     {
         $this->definition = $definition;
@@ -104,6 +109,14 @@ class CompiledRoute
     public function parameterNames(): array
     {
         return $this->parameterNames;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function compiledConstraints(): array
+    {
+        return $this->compiledConstraints;
     }
 
     public function allowsMethod(string $method): bool
@@ -202,7 +215,7 @@ class CompiledRoute
     private function compilePattern(): array
     {
         $uri = $this->definition->uri();
-        $constraints = $this->definition->constraints();
+        $constraints = $this->compiledConstraints;
 
         preg_match_all('/\{([^}]+)\}/', $uri, $parameterMatches);
         $parameterNames = $parameterMatches[1];
@@ -235,6 +248,10 @@ class CompiledRoute
 
     private function recompile(): void
     {
+        $this->compiledConstraints = (new ConstraintCompiler())->compile(
+            $this->definition->constraints(),
+            $this->definition->uri(),
+        );
         [$pattern, $parameterNames] = $this->compilePattern();
         $this->pattern = $pattern;
         $this->parameterNames = $parameterNames;
@@ -256,7 +273,7 @@ class CompiledRoute
             return [null, []];
         }
 
-        $constraints = $this->definition->constraints();
+        $constraints = $this->compiledConstraints;
         preg_match_all('/\{([^}]+)\}/', $domain, $parameterMatches);
         $parameterNames = $parameterMatches[1];
         $segments = explode('.', $domain);

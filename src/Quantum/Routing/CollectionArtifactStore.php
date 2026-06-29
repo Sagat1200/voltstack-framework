@@ -44,7 +44,7 @@ final class CollectionArtifactStore
                 'domain' => $route->routeDomain(),
                 'action' => $this->serializeAction($route->action(), $route->uri()),
                 'name' => $route->routeName(),
-                'constraints' => $this->serializeConstraints($route->definition()->constraints(), $route->uri()),
+                'constraints' => $this->serializeConstraints($route->compiledConstraints(), $route->uri()),
                 'middlewares' => $this->serializeMiddlewares($route->routeMiddlewares(), $route->uri()),
                 'metadata' => $this->serializeMetadataBag($route->definition()->metadata(), $route->uri()),
             ];

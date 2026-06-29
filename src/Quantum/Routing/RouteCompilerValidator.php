@@ -121,6 +121,8 @@ final class RouteCompilerValidator
                 ));
             }
         }
+
+        (new ConstraintCompiler())->compile($route->definition()->constraints(), $route->uri());
     }
 
     private function validateSerializableAction(CompiledRoute $route): void

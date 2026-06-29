@@ -81,7 +81,7 @@ Criterio de cierre:
 - `[x]` implementar normalizacion de paths
 - `[x]` implementar merge minimo de metadata
 - `[x]` compilar middleware resueltos por ruta
-- `[ ]` compilar constraints basicos
+- `[x]` compilar constraints basicos
 - `[x]` generar artefacto de coleccion
 - `[x]` generar artefacto de tree o indice de matching
 - `[x]` generar artefacto de metadata
@@ -259,7 +259,7 @@ Criterio de cierre:
 
 - `[x]` ruta duplicada detectada en compilacion
 - `[x]` nombre duplicado detectado en compilacion
-- `[ ]` constraint invalido detectado correctamente
+- `[x]` constraint invalido detectado correctamente
 - `[x]` middleware inexistente detectado antes de runtime
 - `[x]` dispatcher invalido produce error controlado
 - `[x]` parametro requerido faltante en `URL Generator` produce error claro
@@ -406,6 +406,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
 - `[x]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; `collection.php` ya recompone rutas compiladas serializables, `tree.php` ya indexa candidatas de matching, `metadata.php` ya restaura snapshots de `RouteMetadata` y el router ya puede activar automaticamente estos artifacts en produccion como fuente principal valida
 - `[x]` validacion estructural previa a compilacion activa para `compiled()`, `tree.php`, `metadata.php`, `pipeline.php` y `collection.php`; detecta placeholders mal formados, nombres de parametro invalidos y parametros duplicados antes de compilar
+- `[x]` los constraints invalidos ya se detectan durante la validacion previa a compilacion mediante verificacion real de regex, antes de llegar al matcher o a la generacion de artifacts
+- `[x]` los constraints basicos ya se compilan a fragments regex normalizados para runtime y `collection.php`, incluyendo normalizacion de capturas simples internas a grupos no capturantes
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible
