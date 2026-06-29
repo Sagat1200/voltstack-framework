@@ -171,6 +171,8 @@ final class Router
 
     public function compiledCollection(): CompiledRouteCollection
     {
+        $this->enableArtifactsForProduction();
+
         if (! $this->preferArtifactCollection) {
             return $this->routes->compiled();
         }
@@ -207,6 +209,7 @@ final class Router
 
     public function resolvedRoutePipeline(CompiledRoute $route): CompiledMiddlewarePipeline
     {
+        $this->enableArtifactsForProduction();
         $this->loadPipelineArtifacts();
 
         return $this->artifactPipelines[$route->routePipeline()->id()] ?? $route->routePipeline();
@@ -492,6 +495,19 @@ final class Router
         return false;
     }
 
+    private function enableArtifactsForProduction(): void
+    {
+        if ($this->preferArtifactCollection) {
+            return;
+        }
+
+        if (! $this->shouldUseArtifactsInProduction()) {
+            return;
+        }
+
+        $this->preferArtifactCollection = true;
+    }
+
     private function shouldInvalidateArtifactsInDevelopment(): bool
     {
         if (! $this->app->isDevelopment()) {
@@ -499,6 +515,15 @@ final class Router
         }
 
         return (bool) $this->app->config('routing.artifacts.invalidate_in_development', true);
+    }
+
+    private function shouldUseArtifactsInProduction(): bool
+    {
+        if (! $this->app->isProduction()) {
+            return false;
+        }
+
+        return (bool) $this->app->config('routing.artifacts.use_in_production', true);
     }
 
     private function invalidateDevelopmentArtifacts(): void

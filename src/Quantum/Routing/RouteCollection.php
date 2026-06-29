@@ -19,6 +19,7 @@ final class RouteCollection implements Countable, IteratorAggregate
      * @var array<int, Route>
      */
     private array $routes = [];
+    private ?CompiledRouteCollection $compiledCollection = null;
 
     /**
      * @var array<string, int>
@@ -47,6 +48,7 @@ final class RouteCollection implements Countable, IteratorAggregate
         }
 
         $this->routes[] = $route;
+        $this->compiledCollection = null;
         $route->attachCollection($this);
         $this->syncRouteName($route, null);
         $this->syncRouteDomain($route, null);
@@ -85,7 +87,7 @@ final class RouteCollection implements Countable, IteratorAggregate
 
     public function compiled(): CompiledRouteCollection
     {
-        return new CompiledRouteCollection($this->routes);
+        return $this->compiledCollection ??= new CompiledRouteCollection($this->routes);
     }
 
     public function validateRouteName(Route $route, string $name, ?string $previousName): void

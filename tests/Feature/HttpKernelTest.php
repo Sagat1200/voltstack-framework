@@ -429,6 +429,44 @@ final class HttpKernelTest extends TestCase
         self::assertSame('passed', $response->headers()['X-Middleware']);
     }
 
+    public function test_it_uses_routing_artifacts_automatically_in_production_without_manual_reload(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.env', 'production');
+
+        $router = $this->app->make(Router::class);
+        $route = $router->get('/artifact-production', TestResponseController::class . '@show')
+            ->name('artifact.production')
+            ->middleware(TestHeaderMiddleware::class)
+            ->meta('auth', 'session');
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(TreeArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(MetadataArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(PipelineArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(VersionArtifactStore::class)->compileAndWrite($router);
+
+        $compiledCollection = $router->compiledCollection();
+        $compiledRoute = $compiledCollection->named('artifact.production');
+
+        self::assertNotNull($compiledRoute);
+        self::assertNotSame($route, $compiledRoute);
+        self::assertSame($compiledCollection, $router->compiledCollection());
+        self::assertSame('session', $compiledRoute->routeMetadata()->get('auth'));
+
+        $resolvedPipeline = $router->resolvedRoutePipeline($compiledRoute);
+
+        self::assertNotSame($compiledRoute->routePipeline(), $resolvedPipeline);
+        self::assertSame($compiledRoute->routePipeline()->id(), $resolvedPipeline->id());
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-production'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('ok', $response->content());
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
     public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void
     {
         $router = $this->app->make(Router::class);

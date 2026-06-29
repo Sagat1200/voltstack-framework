@@ -192,7 +192,7 @@ Criterio de cierre:
 - `[x]` guardar `version` o checksum minimo
 - `[-]` implementar loader de artifacts para runtime
 - `[x]` implementar invalidacion basica en desarrollo
-- `[ ]` evitar recompilacion durante request en produccion
+- `[x]` evitar recompilacion durante request en produccion
 
 Nota del corte actual:
 
@@ -203,6 +203,7 @@ Nota del corte actual:
 - el artefacto de version ya se guarda en `storage/framework/cache/routes/version.php`
 - `version.php` mantiene version minima y checksum `sha256` por artifact para `collection`, `tree`, `metadata` y `pipeline`
 - `Router` ya puede cargar `pipeline.php` de forma perezosa y usar `collection.php` junto con `metadata.php` y `tree.php` de forma explicita mediante `reloadCollectionArtifacts()`, validando antes `version.php` si existe
+- en `production`, el router activa automaticamente artifacts validos sin requerir `reload*Artifacts()` manual y reutiliza la coleccion compilada en memoria cuando debe caer al fallback vivo
 - en `app.env = local|development|dev`, el router invalida automaticamente `collection.php`, `tree.php`, `metadata.php`, `pipeline.php` y `version.php` cuando se intenta reutilizarlos, salvo que `routing.artifacts.invalidate_in_development` se configure en `false`
 - `tree.php` indexa candidatas por path estatico y buckets dinamicos basados en `first segment + segment count`, sin duplicar la semantica final de dominio, `HEAD`, `OPTIONS` ni `405`
 - `metadata.php` mantiene snapshots completos de `RouteMetadata` por indice de ruta y puede restaurarlos sobre la coleccion compilada cuando `collection.php` no los trae o queda desactualizado
@@ -252,7 +253,7 @@ Criterio de cierre:
 - `[x]` no hacer merge dinamico de metadata en request
 - `[x]` no construir el pipeline en cada request
 - `[x]` no recompilar `CompiledRouteCollection` cuando se usa `collection.php`
-- `[ ]` no recompilar artefactos en produccion
+- `[x]` no recompilar artefactos en produccion
 
 ### 4.3 Pruebas De Errores
 
@@ -403,9 +404,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[-]` inicio de implementacion de `V1 Core Routing`
 - `[-]` matcher multi-metodo operativo con `RouteMatch` minimo, dominio opcional, constraints basicos, `method override` controlado y semantica HTTP base (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`); falta consolidar prioridad/artefactos compilados
 - `[x]` contrato `404/405/Allow` implementado y cubierto por pruebas focalizadas, incluyendo `method override` limitado a `POST -> PUT/PATCH/DELETE`
-- `[-]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; `collection.php` ya recompone rutas compiladas serializables, `tree.php` ya indexa candidatas de matching, `metadata.php` ya restaura snapshots de `RouteMetadata` y el router puede usar los tres como fuente explicita, pero falta consolidar un arranque full artifact-first
+- `[x]` `RouteDefinition`, `CompiledRoute`, `CompiledRouteCollection` y `RouteCollection` minimos integrados al router actual; `collection.php` ya recompone rutas compiladas serializables, `tree.php` ya indexa candidatas de matching, `metadata.php` ya restaura snapshots de `RouteMetadata` y el router ya puede activar automaticamente estos artifacts en produccion como fuente principal valida
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
-- `[-]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader parcial en runtime; falta promover artifacts como fuente principal del runtime
+- `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible
-- `[-]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php`, `pipeline.php` y `version.php`; ya existe invalidacion automatica base en desarrollo y falta endurecer la politica de recompilacion en produccion
+- `[x]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php`, `pipeline.php` y `version.php`; ya existe invalidacion automatica base en desarrollo y politica minima de no recompilacion durante request en produccion
 - `[ ]` URL generator basico operativo
