@@ -11,6 +11,7 @@ use Quantum\Http\Response;
 use Quantum\Http\Request;
 use Quantum\Routing\Dispatching\DispatcherResolver;
 use Quantum\Routing\Exceptions\MethodNotAllowedException;
+use Quantum\Routing\Exceptions\RouteUrlGenerationException;
 use VoltStack\Framework\Application;
 
 final class Router
@@ -215,6 +216,38 @@ final class Router
         return $this->artifactPipelines[$route->routePipeline()->id()] ?? $route->routePipeline();
     }
 
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    public function route(string $name, array $parameters = [], bool $absolute = false): string
+    {
+        $normalizedName = trim($name);
+        $route = $this->compiledCollection()->named($normalizedName);
+
+        if ($route === null) {
+            throw RouteUrlGenerationException::forUnknownRoute($normalizedName);
+        }
+
+        $fragment = $this->extractRouteFragment($parameters, $normalizedName);
+        $explicitQuery = $this->extractRouteQuery($parameters, $normalizedName);
+        $consumedParameters = [];
+        $host = $route->routeDomain() === null
+            ? null
+            : $this->replaceRouteParameters($route->routeDomain(), $parameters, $normalizedName, $consumedParameters);
+        $path = $this->replaceRouteParameters($route->uri(), $parameters, $normalizedName, $consumedParameters);
+
+        foreach (array_keys($consumedParameters) as $parameterName) {
+            unset($parameters[$parameterName]);
+        }
+
+        $queryParameters = array_replace($parameters, $explicitQuery);
+        $url = $absolute
+            ? $this->absoluteRouteUrl($path, $host)
+            : $this->relativeRouteUrl($path, $host);
+
+        return $this->appendQueryStringAndFragment($url, $queryParameters, $fragment);
+    }
+
     public function dispatch(Request $request): mixed
     {
         $collection = $this->compiledCollection();
@@ -318,6 +351,292 @@ final class Router
     private function middlewareAliases(): MiddlewareAliasRegistry
     {
         return $this->app->make(MiddlewareAliasRegistry::class);
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     * @param array<string, true> $consumedParameters
+     */
+    private function replaceRouteParameters(string $template, array $parameters, string $routeName, array &$consumedParameters): string
+    {
+        return preg_replace_callback(
+            '/\{([^}]+)\}/',
+            function (array $matches) use ($parameters, $routeName, &$consumedParameters): string {
+                $parameterName = trim((string) ($matches[1] ?? ''));
+
+                if (! array_key_exists($parameterName, $parameters)) {
+                    throw RouteUrlGenerationException::forMissingParameter($routeName, $parameterName);
+                }
+
+                $consumedParameters[$parameterName] = true;
+
+                return rawurlencode($this->stringifyRouteValue(
+                    $parameters[$parameterName],
+                    $routeName,
+                    $parameterName,
+                ));
+            },
+            $template,
+        ) ?? $template;
+    }
+
+    private function stringifyRouteValue(mixed $value, string $routeName, string $parameterName): string
+    {
+        if ($value instanceof \BackedEnum) {
+            return (string) $value->value;
+        }
+
+        if ($value instanceof \UnitEnum) {
+            return $value->name;
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        if ($value instanceof \Stringable) {
+            return (string) $value;
+        }
+
+        throw RouteUrlGenerationException::forInvalidParameter($routeName, $parameterName, $value);
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function extractRouteQuery(array &$parameters, string $routeName): array
+    {
+        if (! array_key_exists('_query', $parameters)) {
+            return [];
+        }
+
+        $query = $parameters['_query'];
+        unset($parameters['_query']);
+
+        if ($query === null) {
+            return [];
+        }
+
+        if (! is_array($query)) {
+            throw RouteUrlGenerationException::forInvalidQuery($routeName);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    private function extractRouteFragment(array &$parameters, string $routeName): ?string
+    {
+        if (! array_key_exists('_fragment', $parameters)) {
+            return null;
+        }
+
+        $fragment = $parameters['_fragment'];
+        unset($parameters['_fragment']);
+
+        if ($fragment === null || $fragment === '') {
+            return null;
+        }
+
+        if ($fragment instanceof \BackedEnum) {
+            return (string) $fragment->value;
+        }
+
+        if ($fragment instanceof \UnitEnum) {
+            return $fragment->name;
+        }
+
+        if (is_scalar($fragment) || $fragment instanceof \Stringable) {
+            return (string) $fragment;
+        }
+
+        throw RouteUrlGenerationException::forInvalidFragment($routeName, $fragment);
+    }
+
+    /**
+     * @param array<string, mixed> $queryParameters
+     */
+    private function appendQueryStringAndFragment(string $url, array $queryParameters, ?string $fragment): string
+    {
+        if ($queryParameters !== []) {
+            $query = http_build_query($queryParameters, '', '&', PHP_QUERY_RFC3986);
+
+            if ($query !== '') {
+                $url .= '?' . $query;
+            }
+        }
+
+        if ($fragment !== null) {
+            $url .= '#' . rawurlencode($fragment);
+        }
+
+        return $url;
+    }
+
+    private function relativeRouteUrl(string $path, ?string $host): string
+    {
+        $prefixedPath = $this->prefixConfiguredBasePath($path);
+
+        if ($host === null) {
+            return $prefixedPath;
+        }
+
+        return '//' . $host . $prefixedPath;
+    }
+
+    private function absoluteRouteUrl(string $path, ?string $host): string
+    {
+        $baseUrl = $this->resolvedBaseUrlParts();
+        $origin = $host === null ? $baseUrl['origin'] : $this->originWithHost($baseUrl['origin'], $host);
+
+        return $origin . $this->prefixConfiguredBasePath($path);
+    }
+
+    private function prefixConfiguredBasePath(string $path): string
+    {
+        $basePath = $this->configuredBasePath();
+
+        if ($basePath === '') {
+            return $path;
+        }
+
+        return $path === '/'
+            ? $basePath
+            : $basePath . $path;
+    }
+
+    private function configuredBasePath(): string
+    {
+        $baseUrl = trim((string) $this->app->config('app.url', ''));
+
+        if ($baseUrl === '') {
+            return '';
+        }
+
+        $path = parse_url($baseUrl, PHP_URL_PATH);
+
+        if (! is_string($path) || $path === '' || $path === '/') {
+            return '';
+        }
+
+        return '/' . trim($path, '/');
+    }
+
+    /**
+     * @return array{origin: string}
+     */
+    private function resolvedBaseUrlParts(): array
+    {
+        $configuredBaseUrl = trim((string) $this->app->config('app.url', ''));
+
+        if ($configuredBaseUrl !== '') {
+            $origin = $this->normalizeOrigin($configuredBaseUrl);
+
+            if ($origin === null) {
+                throw RouteUrlGenerationException::forInvalidBaseUrl($configuredBaseUrl);
+            }
+
+            return ['origin' => $origin];
+        }
+
+        $currentRequestOrigin = $this->currentRequestOrigin();
+
+        if ($currentRequestOrigin !== null) {
+            return ['origin' => $currentRequestOrigin];
+        }
+
+        throw RouteUrlGenerationException::forMissingBaseUrl();
+    }
+
+    private function normalizeOrigin(string $url): ?string
+    {
+        $parts = parse_url($url);
+
+        if (! is_array($parts)) {
+            return null;
+        }
+
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+
+        if (! is_string($scheme) || $scheme === '' || ! is_string($host) || $host === '') {
+            return null;
+        }
+
+        $origin = strtolower($scheme) . '://' . strtolower($host);
+
+        if (isset($parts['port']) && is_int($parts['port'])) {
+            $origin .= ':' . $parts['port'];
+        }
+
+        return $origin;
+    }
+
+    private function currentRequestOrigin(): ?string
+    {
+        try {
+            /** @var Request $request */
+            $request = $this->app->make(Request::class);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $host = trim($request->host());
+
+        if ($host === '') {
+            return null;
+        }
+
+        return $this->requestScheme($request) . '://' . $host;
+    }
+
+    private function requestScheme(Request $request): string
+    {
+        $uriScheme = parse_url($request->uri(), PHP_URL_SCHEME);
+
+        if (is_string($uriScheme) && $uriScheme !== '') {
+            return strtolower($uriScheme);
+        }
+
+        $forwardedProto = $request->header('X-Forwarded-Proto');
+
+        if (is_string($forwardedProto) && trim($forwardedProto) !== '') {
+            return strtolower(trim(explode(',', $forwardedProto, 2)[0]));
+        }
+
+        $requestScheme = $request->server('REQUEST_SCHEME');
+
+        if (is_string($requestScheme) && trim($requestScheme) !== '') {
+            return strtolower(trim($requestScheme));
+        }
+
+        $https = $request->server('HTTPS');
+
+        if (is_string($https) && $https !== '' && strtoupper($https) !== 'OFF' && $https !== '0') {
+            return 'https';
+        }
+
+        return 'http';
+    }
+
+    private function originWithHost(string $origin, string $host): string
+    {
+        $parts = parse_url($origin);
+
+        if (! is_array($parts) || ! is_string($parts['scheme'] ?? null)) {
+            return 'https://' . $host;
+        }
+
+        $prefixedOrigin = strtolower($parts['scheme']) . '://' . $host;
+
+        if (isset($parts['port']) && is_int($parts['port'])) {
+            $prefixedOrigin .= ':' . $parts['port'];
+        }
+
+        return $prefixedOrigin;
     }
 
     private function loadCollectionArtifacts(): void

@@ -7,6 +7,7 @@ use Quantum\Auth\AuthManager;
 use Quantum\Cache\Repository as CacheRepository;
 use Quantum\Http\Response;
 use Quantum\Http\ResponseFactory;
+use Quantum\Routing\Router;
 use Quantum\Security\CsrfTokenManager;
 use Quantum\Validation\Validator;
 use Quantum\View\View;
@@ -118,6 +119,16 @@ if (! function_exists('response')) {
         }
 
         return $factory->make($content, $statusCode, $headers);
+    }
+}
+
+if (! function_exists('route')) {
+    function route(string $name, array $parameters = [], bool $absolute = false): string
+    {
+        /** @var Router $router */
+        $router = app(Router::class);
+
+        return $router->route($name, $parameters, $absolute);
     }
 }
 

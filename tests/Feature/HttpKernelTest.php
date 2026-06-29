@@ -14,6 +14,7 @@ use Quantum\HttpKernel\HttpKernel;
 use Quantum\Routing\CollectionArtifactStore;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
+use Quantum\Routing\Exceptions\RouteUrlGenerationException;
 use Quantum\Routing\MetadataArtifactStore;
 use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
@@ -465,6 +466,66 @@ final class HttpKernelTest extends TestCase
         self::assertSame(200, $response->statusCode());
         self::assertSame('ok', $response->content());
         self::assertSame('passed', $response->headers()['X-Middleware']);
+    }
+
+    public function test_it_generates_relative_named_route_urls_with_query_strings_and_fragments(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/users/{user}/posts/{post}', fn() => 'ok')->name('users.posts.show');
+
+        $url = route('users.posts.show', [
+            'user' => 42,
+            'post' => 100,
+            'filter' => 'recent',
+            '_query' => ['page' => 2],
+            '_fragment' => 'comments',
+        ]);
+
+        self::assertSame('/users/42/posts/100?filter=recent&page=2#comments', $url);
+    }
+
+    public function test_it_generates_domain_aware_relative_and_absolute_named_route_urls(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/dashboard/{page}', fn() => 'ok')
+            ->name('tenant.dashboard')
+            ->domain('{tenant}.example.com');
+
+        self::assertSame('//acme.example.com/dashboard/home', route('tenant.dashboard', [
+            'tenant' => 'acme',
+            'page' => 'home',
+        ]));
+
+        self::assertSame('https://acme.example.com/dashboard/home', route('tenant.dashboard', [
+            'tenant' => 'acme',
+            'page' => 'home',
+        ], true));
+    }
+
+    public function test_it_generates_named_route_urls_from_loaded_collection_artifacts(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/artifact-url/{id}', fn() => 'ok')->name('artifact.url');
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $router->reloadCollectionArtifacts();
+
+        self::assertSame('/artifact-url/42', $router->route('artifact.url', ['id' => 42]));
+    }
+
+    public function test_it_throws_a_clear_error_when_a_required_route_parameter_is_missing_during_url_generation(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/users/{id}', fn() => 'ok')->name('users.show');
+
+        $this->expectException(RouteUrlGenerationException::class);
+        $this->expectExceptionMessage('Missing required route parameter [id] for route [users.show].');
+
+        route('users.show');
     }
 
     public function test_it_rejects_unknown_route_middleware_aliases_during_registration(): void

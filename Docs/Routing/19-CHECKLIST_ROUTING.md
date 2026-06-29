@@ -215,13 +215,13 @@ Criterio de cierre:
 
 ### 3.10 URL Generator Basico
 
-- `[ ]` generar URL por nombre de ruta
-- `[ ]` resolver parametros basicos
-- `[ ]` soportar query string
-- `[ ]` soportar fragment
-- `[ ]` soportar absoluto y relativo
-- `[ ]` soportar dominio si la ruta lo define
-- `[ ]` fallar de forma clara cuando falten parametros
+- `[x]` generar URL por nombre de ruta
+- `[x]` resolver parametros basicos
+- `[x]` soportar query string
+- `[x]` soportar fragment
+- `[x]` soportar absoluto y relativo
+- `[x]` soportar dominio si la ruta lo define
+- `[x]` fallar de forma clara cuando falten parametros
 
 Criterio de cierre:
 
@@ -243,7 +243,7 @@ Criterio de cierre:
 - `[x]` confirmar comportamiento de `OPTIONS`
 - `[x]` confirmar que el dispatcher ejecuta controller y closure
 - `[x]` confirmar que el pipeline corre en el orden esperado
-- `[ ]` confirmar que `URL Generator` construye una ruta nombrada con parametros
+- `[x]` confirmar que `URL Generator` construye una ruta nombrada con parametros
 
 ### 4.2 Pruebas De Calidad Interna
 
@@ -262,7 +262,7 @@ Criterio de cierre:
 - `[ ]` constraint invalido detectado correctamente
 - `[x]` middleware inexistente detectado antes de runtime
 - `[x]` dispatcher invalido produce error controlado
-- `[ ]` parametro requerido faltante en `URL Generator` produce error claro
+- `[x]` parametro requerido faltante en `URL Generator` produce error claro
 
 ---
 
@@ -280,7 +280,7 @@ Marcar `V1 Core Routing` como cerrado solo si todas estas condiciones se cumplen
 - `[x]` el pipeline funciona con orden estable
 - `[x]` la metadata minima ya puede ser consumida por seguridad y runtime
 - `[ ]` los artifacts pueden cargarse en runtime
-- `[ ]` el URL generator basico funciona
+- `[x]` el URL generator basico funciona
 
 ---
 
@@ -409,4 +409,4 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible
 - `[x]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php`, `pipeline.php` y `version.php`; ya existe invalidacion automatica base en desarrollo y politica minima de no recompilacion durante request en produccion
-- `[ ]` URL generator basico operativo
+- `[x]` URL generator basico operativo mediante `Router::route(...)` y helper global `route()`, con soporte para parametros, query string residual o explicita (`_query`), fragment (`_fragment`), dominio y generacion absoluta/relativa
