@@ -517,6 +517,33 @@ final class HttpKernelTest extends TestCase
         self::assertSame('/artifact-url/42', $router->route('artifact.url', ['id' => 42]));
     }
 
+    public function test_it_marks_internal_volt_routes_with_explicit_transport_metadata(): void
+    {
+        $router = $this->app->make(Router::class);
+        $compiledRoutes = $router->compiledCollection()->all();
+        $runtimeAssetRoute = null;
+        $protocolActionRoute = null;
+
+        foreach ($compiledRoutes as $route) {
+            if ($route->uri() === '/_volt/runtime.js') {
+                $runtimeAssetRoute = $route;
+            }
+
+            if ($route->uri() === '/_volt/action') {
+                $protocolActionRoute = $route;
+            }
+        }
+
+        self::assertNotNull($runtimeAssetRoute);
+        self::assertNotNull($protocolActionRoute);
+        self::assertSame('internal', $runtimeAssetRoute->routeMetadata()->get('transport'));
+        self::assertSame('volt.runtime.asset', $runtimeAssetRoute->routeMetadata()->get('endpoint'));
+        self::assertSame('volt', $runtimeAssetRoute->routeMetadata()->get('protocol'));
+        self::assertSame('internal', $protocolActionRoute->routeMetadata()->get('transport'));
+        self::assertSame('volt.protocol.action', $protocolActionRoute->routeMetadata()->get('endpoint'));
+        self::assertSame('volt', $protocolActionRoute->routeMetadata()->get('protocol'));
+    }
+
     public function test_it_throws_a_clear_error_when_a_required_route_parameter_is_missing_during_url_generation(): void
     {
         $router = $this->app->make(Router::class);

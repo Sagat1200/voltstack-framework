@@ -37,4 +37,21 @@ final class Bootstrapper
         $config = $this->app->make(ConfigRepository::class);
         $config->loadPath($configPath ?? $this->app->configPath());
     }
+
+    public function loadRoutes(string|callable $routes): void
+    {
+        $router = $this->app->make(\Quantum\Routing\Router::class);
+
+        if ($router->canServeCompiledRoutesWithoutLiveRegistration()) {
+            return;
+        }
+
+        $loader = is_string($routes) ? require $routes : $routes;
+
+        if (! is_callable($loader)) {
+            throw new \RuntimeException('Bootstrapper::loadRoutes expects a route file that returns a callable or a callable loader.');
+        }
+
+        $loader($router);
+    }
 }

@@ -31,7 +31,7 @@ final class HtmlDocumentBootstrapper
 
     public function shouldBootstrap(Request $request, Response $response): bool
     {
-        if ($request->isVoltActionRequest()) {
+        if (! $request->isConventionalHttpRequest()) {
             return false;
         }
 

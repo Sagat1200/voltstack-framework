@@ -60,5 +60,34 @@ final class RequestTest extends TestCase
 
         self::assertSame('POST', $request->method());
         self::assertTrue($request->isVoltActionRequest());
+        self::assertTrue($request->isInternalEndpoint());
+        self::assertFalse($request->isConventionalHttpRequest());
+        self::assertSame('volt.protocol.action', $request->routeEndpoint());
+        self::assertSame('internal', $request->routeTransport());
+    }
+
+    public function test_it_classifies_the_internal_runtime_asset_endpoint_as_non_conventional_http(): void
+    {
+        $request = Request::create('/_volt/runtime.js', 'GET');
+
+        self::assertTrue($request->isInternalEndpoint());
+        self::assertFalse($request->isConventionalHttpRequest());
+        self::assertSame('volt.runtime.asset', $request->routeEndpoint());
+        self::assertSame('internal', $request->routeTransport());
+    }
+
+    public function test_it_prefers_route_metadata_when_classifying_internal_endpoints(): void
+    {
+        $request = Request::create('/custom/internal', 'POST');
+        $request->setRouteMetadata([
+            'transport' => 'internal',
+            'endpoint' => 'volt.protocol.action',
+            'protocol' => 'volt',
+        ]);
+
+        self::assertTrue($request->isInternalEndpoint());
+        self::assertFalse($request->isConventionalHttpRequest());
+        self::assertTrue($request->isVoltActionRequest());
+        self::assertSame('volt.protocol.action', $request->routeEndpoint());
     }
 }

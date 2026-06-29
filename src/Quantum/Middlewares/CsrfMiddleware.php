@@ -33,7 +33,7 @@ final class CsrfMiddleware implements MiddlewareInterface
 
     private function shouldVerifyToken(Request $request): bool
     {
-        if ($request->isVoltActionRequest()) {
+        if (! $request->isConventionalHttpRequest()) {
             return false;
         }
 

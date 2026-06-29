@@ -7,6 +7,10 @@ namespace Quantum\Http;
 final class Request
 {
     private const METHOD_OVERRIDE_WHITELIST = ['PUT', 'PATCH', 'DELETE'];
+    private const INTERNAL_ROUTE_ENDPOINTS = [
+        '/_volt/runtime.js' => 'volt.runtime.asset',
+        '/_volt/action' => 'volt.protocol.action',
+    ];
 
     /**
      * @param array<string, mixed> $query
@@ -272,9 +276,41 @@ final class Request
         return strtoupper((string) $this->header('X-Volt-Navigate', '')) === 'TRUE';
     }
 
+    public function routeEndpoint(): ?string
+    {
+        $endpoint = $this->routeMeta('endpoint');
+
+        if (is_string($endpoint) && trim($endpoint) !== '') {
+            return trim($endpoint);
+        }
+
+        return self::INTERNAL_ROUTE_ENDPOINTS[$this->path()] ?? null;
+    }
+
+    public function routeTransport(): string
+    {
+        $transport = $this->routeMeta('transport');
+
+        if (is_string($transport) && trim($transport) !== '') {
+            return strtolower(trim($transport));
+        }
+
+        return $this->routeEndpoint() === null ? 'http' : 'internal';
+    }
+
+    public function isInternalEndpoint(): bool
+    {
+        return $this->routeTransport() === 'internal';
+    }
+
+    public function isConventionalHttpRequest(): bool
+    {
+        return ! $this->isInternalEndpoint();
+    }
+
     public function isVoltActionRequest(): bool
     {
-        return $this->path() === '/_volt/action'
+        return $this->routeEndpoint() === 'volt.protocol.action'
             || ($this->isVoltRequest() && ! $this->isVoltNavigation() && $this->isJson());
     }
 
@@ -312,7 +348,7 @@ final class Request
 
     private function canOverrideMethod(): bool
     {
-        return $this->originalMethod() === 'POST' && $this->path() !== '/_volt/action';
+        return $this->originalMethod() === 'POST' && $this->isConventionalHttpRequest();
     }
 
     private function methodOverride(): ?string

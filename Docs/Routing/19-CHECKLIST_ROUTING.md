@@ -176,7 +176,7 @@ Criterio de cierre:
 - `[x]` definir comportamiento oficial de `OPTIONS`
 - `[x]` decidir si existira `method override`
 - `[x]` definir cuando aplica CSRF segun verbo o contexto
-- `[ ]` separar claramente endpoints HTTP convencionales de acciones internas del protocolo reactivo
+- `[x]` separar claramente endpoints HTTP convencionales de acciones internas del protocolo reactivo
 
 Criterio de cierre:
 
@@ -249,7 +249,7 @@ Criterio de cierre:
 
 - `[ ]` no usar reflection en runtime de matching
 - `[ ]` no leer atributos en runtime
-- `[ ]` no interpretar route files en runtime
+- `[x]` no interpretar route files en runtime
 - `[x]` no hacer merge dinamico de metadata en request
 - `[x]` no construir el pipeline en cada request
 - `[x]` no recompilar `CompiledRouteCollection` cuando se usa `collection.php`
@@ -409,6 +409,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` los constraints invalidos ya se detectan durante la validacion previa a compilacion mediante verificacion real de regex, antes de llegar al matcher o a la generacion de artifacts
 - `[x]` los constraints basicos ya se compilan a fragments regex normalizados para runtime y `collection.php`, incluyendo normalizacion de capturas simples internas a grupos no capturantes
 - `[x]` politica base de CSRF definida: en HTTP convencional aplica automaticamente solo a verbos mutantes (`POST`, `PUT`, `PATCH`, `DELETE` y overrides), permite opt-out declarativo por metadata de ruta cuando el middleware corre a nivel de ruta, y excluye el endpoint interno `/_volt/action` porque ese protocolo valida CSRF dentro de su propio controller
+- `[x]` los endpoints internos del runtime (`/_volt/runtime.js`, `/_volt/action`) ya se registran con metadata explicita (`transport=internal`, `endpoint`, `protocol=volt`) y `Request` ya puede distinguirlos de requests HTTP convencionales sin depender solo de strings dispersos
+- `[x]` el bootstrap ya puede omitir la interpretacion de route files en produccion cuando existe un `collection.php` utilizable; el runtime arranca sobre artifacts validos sin reevaluar `routes/web.php`
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible

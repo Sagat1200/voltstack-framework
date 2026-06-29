@@ -208,6 +208,23 @@ final class Router
         $this->loadPipelineArtifacts();
     }
 
+    public function canServeCompiledRoutesWithoutLiveRegistration(): bool
+    {
+        if (! $this->shouldUseArtifactsInProduction()) {
+            return false;
+        }
+
+        if (! $this->artifactsEnabledForRuntime()) {
+            return false;
+        }
+
+        if (! is_file($this->app->make(CollectionArtifactStore::class)->path())) {
+            return false;
+        }
+
+        return $this->artifactsManifestAllows(['collection', 'metadata', 'tree']);
+    }
+
     public function resolvedRoutePipeline(CompiledRoute $route): CompiledMiddlewarePipeline
     {
         $this->enableArtifactsForProduction();

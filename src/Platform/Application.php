@@ -261,8 +261,16 @@ class Application extends Container
         if (! isset($this->bindings[Router::class])) {
             $this->singleton(Router::class, function (Application $app): Router {
                 $router = new Router($app);
-                $router->get('/_volt/runtime.js', RuntimeAssetController::class);
-                $router->post('/_volt/action', ProtocolController::class);
+                $router->get('/_volt/runtime.js', RuntimeAssetController::class)->meta([
+                    'transport' => 'internal',
+                    'endpoint' => 'volt.runtime.asset',
+                    'protocol' => 'volt',
+                ]);
+                $router->post('/_volt/action', ProtocolController::class)->meta([
+                    'transport' => 'internal',
+                    'endpoint' => 'volt.protocol.action',
+                    'protocol' => 'volt',
+                ]);
 
                 return $router;
             });
