@@ -320,18 +320,11 @@ Abrir solo cuando `V1` este cerrado.
 
 ### 7.3 Integracion Con Runtime SPA Reactivo
 
-- `[ ]` mantener navegacion SPA por `GET`
-- `[ ]` mantener acciones internas del protocolo en `POST` hasta nueva decision formal
+- `[x]` mantener navegacion SPA por `GET`
+- `[x]` mantener acciones internas del protocolo en `POST` hasta nueva decision formal
 - `[x]` reutilizar metadata compilada desde el runtime
 - `[x]` alinear errores de router, dispatcher y runtime
 - `[x]` documentar claramente que verbos HTTP soporta el runtime y cuales solo soporta el framework
-
-Nota del corte actual:
-
-- el runtime reactivo consume `GET` para navegacion SPA y `GET` para servir `/_volt/runtime.js`
-- el protocolo interno de acciones consume `POST` en `/_volt/action`
-- `HEAD` y `OPTIONS` siguen siendo semantica del router y no verbos publicos del protocolo reactivo
-- `PUT`, `PATCH` y `DELETE` permanecen disponibles para rutas HTTP del framework, pero el runtime reactivo no los usa todavia como verbos propios
 
 Criterio de cierre:
 
@@ -423,9 +416,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` una instancia nueva del runtime ya puede arrancar en `production` usando `collection.php`, `metadata.php`, `pipeline.php` y `version.php` sin `reload*Artifacts()` manual ni registro vivo de rutas; el bootstrap salta `routes/web.php` y la request se atiende desde artifacts
 - `[x]` `HtmlDocumentBootstrapper` ya puede reutilizar metadata compilada restaurada desde `metadata.php` para completar `data-volt-document`, `data-volt-navigation-mode` y `data-volt-page-transition` cuando el HTML no declara esos markers explicitamente
 - `[x]` el `ExceptionHandler` ya entrega para `/_volt/action` un contrato de error alineado con router, dispatcher y runtime mediante `error.kind=protocol-error`, `error.code`, `error.status` y detalles como `allow`/`allowHeader`, cubriendo `404`, `405`, `419`, `422` y `500`
-- `[x]` la documentacion operativa del runtime ya deja explicito que `visit()` navega con `GET`, `/_volt/runtime.js` se sirve por `GET`, `/_volt/action` usa `POST`, y que `HEAD`/`OPTIONS` pertenecen a la semantica del router mientras `PUT`/`PATCH`/`DELETE` siguen reservados al framework
 - `[x]` dispatcher basico operativo con `DispatcherResolver`, `ClosureDispatcher`, `ControllerDispatcher`, `ActionDispatcher`, `ComponentDispatcher` y `ResponseNormalizer`; la separacion posterior por tipos avanzados queda fuera del cierre minimo de `V1`
 - `[x]` pipeline HTTP minimo operativo con middleware global, middleware por grupo, middleware declarativo por ruta, aliases minimos resueltos en registro, deduplicacion estable, compilacion formal en memoria, artefacto persistido y loader automatico en runtime para produccion
 - `[x]` metadata minima consumible
 - `[x]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php`, `pipeline.php` y `version.php`; ya existe invalidacion automatica base en desarrollo y politica minima de no recompilacion durante request en produccion
 - `[x]` URL generator basico operativo mediante `Router::route(...)` y helper global `route()`, con soporte para parametros, query string residual o explicita (`_query`), fragment (`_fragment`), dominio y generacion absoluta/relativa
+- `[x]` la integracion con runtime SPA reactivo ya queda cerrada en su contrato actual: `visit()` se mantiene sobre `GET`, `dispatchAction()` se mantiene sobre `POST`, las rutas internas compiladas exponen esos verbos y el codigo fuente del runtime queda cubierto por tests para evitar regresiones accidentales

@@ -370,6 +370,36 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $runtimeAsset->content());
     }
 
+    public function test_runtime_source_keeps_spa_navigation_on_get_and_protocol_actions_on_post(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '44-navigation-visit.js'
+        );
+        $actionSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '45-action-dispatch.js'
+        );
+
+        self::assertIsString($navigationSource);
+        self::assertIsString($actionSource);
+        self::assertStringContainsString('method: "GET"', $navigationSource);
+        self::assertStringContainsString('"X-Volt-Navigate": "true"', $navigationSource);
+        self::assertStringContainsString('method: "POST"', $actionSource);
+        self::assertStringContainsString('"/_volt/action"', $actionSource);
+    }
+
     private function handleSkeletonRequest(string $path): Response
     {
         $app = new Application(self::$skeletonBasePath);
