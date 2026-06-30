@@ -547,11 +547,16 @@ final class HttpKernelTest extends TestCase
         $router = $this->app->make(Router::class);
         $compiledRoutes = $router->compiledCollection()->all();
         $runtimeAssetRoute = null;
+        $routesManifestRoute = null;
         $protocolActionRoute = null;
 
         foreach ($compiledRoutes as $route) {
             if ($route->uri() === '/_volt/runtime.js') {
                 $runtimeAssetRoute = $route;
+            }
+
+            if ($route->uri() === '/_volt/routes-manifest.json') {
+                $routesManifestRoute = $route;
             }
 
             if ($route->uri() === '/_volt/action') {
@@ -560,10 +565,14 @@ final class HttpKernelTest extends TestCase
         }
 
         self::assertNotNull($runtimeAssetRoute);
+        self::assertNotNull($routesManifestRoute);
         self::assertNotNull($protocolActionRoute);
         self::assertSame('internal', $runtimeAssetRoute->routeMetadata()->get('transport'));
         self::assertSame('volt.runtime.asset', $runtimeAssetRoute->routeMetadata()->get('endpoint'));
         self::assertSame('volt', $runtimeAssetRoute->routeMetadata()->get('protocol'));
+        self::assertSame('internal', $routesManifestRoute->routeMetadata()->get('transport'));
+        self::assertSame('volt.routes.manifest', $routesManifestRoute->routeMetadata()->get('endpoint'));
+        self::assertSame('volt', $routesManifestRoute->routeMetadata()->get('protocol'));
         self::assertSame('internal', $protocolActionRoute->routeMetadata()->get('transport'));
         self::assertSame('volt.protocol.action', $protocolActionRoute->routeMetadata()->get('endpoint'));
         self::assertSame('volt', $protocolActionRoute->routeMetadata()->get('protocol'));
@@ -574,11 +583,16 @@ final class HttpKernelTest extends TestCase
         $router = $this->app->make(Router::class);
         $compiledRoutes = $router->compiledCollection()->all();
         $runtimeAssetRoute = null;
+        $routesManifestRoute = null;
         $protocolActionRoute = null;
 
         foreach ($compiledRoutes as $route) {
             if ($route->uri() === '/_volt/runtime.js') {
                 $runtimeAssetRoute = $route;
+            }
+
+            if ($route->uri() === '/_volt/routes-manifest.json') {
+                $routesManifestRoute = $route;
             }
 
             if ($route->uri() === '/_volt/action') {
@@ -587,9 +601,12 @@ final class HttpKernelTest extends TestCase
         }
 
         self::assertNotNull($runtimeAssetRoute);
+        self::assertNotNull($routesManifestRoute);
         self::assertNotNull($protocolActionRoute);
         self::assertSame(['GET'], $runtimeAssetRoute->methods());
         self::assertSame(['GET'], $runtimeAssetRoute->routeMetadata()->get('methods'));
+        self::assertSame(['GET'], $routesManifestRoute->methods());
+        self::assertSame(['GET'], $routesManifestRoute->routeMetadata()->get('methods'));
         self::assertSame(['POST'], $protocolActionRoute->methods());
         self::assertSame(['POST'], $protocolActionRoute->routeMetadata()->get('methods'));
     }
@@ -1041,11 +1058,80 @@ final class HttpKernelTest extends TestCase
         self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
         self::assertArrayHasKey('ETag', $response->headers());
         self::assertArrayHasKey('Last-Modified', $response->headers());
-        self::assertStringContainsString('window.Volt.contract=', $response->content());
-        self::assertStringContainsString('factory:"createPublicComponentsApi"', $response->content());
+        self::assertStringContainsString('window.Volt.contract = createPublicRuntimeContract();', $response->content());
+        self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $response->content());
         self::assertStringContainsString('volt:component-destroyed', $response->content());
-        self::assertStringContainsString('window.Volt.visit=function', $response->content());
-        self::assertStringContainsString('factory:"createPublicTelemetryApi"', $response->content());
+        self::assertStringContainsString('window.Volt.visit = function (url, options) {', $response->content());
+        self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $response->content());
+    }
+
+    public function test_it_serves_the_frontend_route_manifest_as_a_cacheable_json_asset(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/manifest-users/{user}', TestStringController::class . '@show')
+            ->name('manifest.users.show')
+            ->meta([
+                'auth' => 'session',
+                'prefetch' => true,
+                'runtime' => [
+                    'layout' => 'app-shell',
+                    'transition' => [
+                        'name' => 'fade',
+                        'profile' => 'smooth',
+                    ],
+                    'hydrate' => [
+                        'enabled' => true,
+                        'strategy' => 'partial',
+                    ],
+                    'document' => 'reload',
+                ],
+            ]);
+        $router->post('/manifest-users', TestStringController::class . '@show')
+            ->name('manifest.users.store')
+            ->meta([
+                'runtime' => [
+                    'transition' => 'slide',
+                    'hydrate' => false,
+                ],
+            ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/_volt/routes-manifest.json'));
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('application/json; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertSame('public, max-age=0, must-revalidate', $response->headers()['Cache-Control']);
+        self::assertSame('nosniff', $response->headers()['X-Content-Type-Options']);
+        self::assertArrayHasKey('ETag', $response->headers());
+        self::assertArrayHasKey('Last-Modified', $response->headers());
+        self::assertSame('VoltStack Frontend Manifest', $payload['protocol']['name'] ?? null);
+        self::assertSame('1.0', $payload['protocol']['version'] ?? null);
+        self::assertNotEmpty($payload['version']['checksum'] ?? null);
+        self::assertContains([
+            'name' => 'manifest.users.show',
+            'path' => '/manifest-users/{user}',
+            'methods' => ['GET'],
+            'capabilities' => ['navigate', 'hydrate', 'prefetch'],
+            'runtime' => [
+                'layout' => 'app-shell',
+                'transition' => 'fade',
+                'hydrate' => true,
+            ],
+        ], $payload['routes'] ?? []);
+        self::assertContains([
+            'name' => 'manifest.users.store',
+            'path' => '/manifest-users',
+            'methods' => ['POST'],
+            'capabilities' => [],
+            'runtime' => [
+                'transition' => 'slide',
+                'hydrate' => false,
+            ],
+        ], $payload['routes'] ?? []);
+        self::assertStringNotContainsString('"middleware"', $response->content());
+        self::assertStringNotContainsString('"auth"', $response->content());
+        self::assertStringNotContainsString('"document"', $response->content());
     }
 
     public function test_it_preserves_declared_document_navigation_mode_when_bootstrapping_html(): void

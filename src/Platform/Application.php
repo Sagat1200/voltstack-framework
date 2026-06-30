@@ -41,6 +41,7 @@ use VoltStack\Runtime\Context\ScopeManager;
 use VoltStack\Runtime\Hydration\Dehydrator;
 use VoltStack\Runtime\Hydration\Hydrator;
 use VoltStack\Runtime\Protocol\Checksum;
+use VoltStack\Runtime\Protocol\FrontendRouteManifestController;
 use VoltStack\Runtime\Protocol\ProtocolController;
 use VoltStack\Runtime\Protocol\RuntimeAssetController;
 use RuntimeException;
@@ -265,6 +266,11 @@ class Application extends Container
                 $router->get('/_volt/runtime.js', RuntimeAssetController::class)->meta([
                     'transport' => 'internal',
                     'endpoint' => 'volt.runtime.asset',
+                    'protocol' => 'volt',
+                ]);
+                $router->get('/_volt/routes-manifest.json', FrontendRouteManifestController::class)->meta([
+                    'transport' => 'internal',
+                    'endpoint' => 'volt.routes.manifest',
                     'protocol' => 'volt',
                 ]);
                 $router->post('/_volt/action', ProtocolController::class)->meta([

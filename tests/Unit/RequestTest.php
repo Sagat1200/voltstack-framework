@@ -76,6 +76,16 @@ final class RequestTest extends TestCase
         self::assertSame('internal', $request->routeTransport());
     }
 
+    public function test_it_classifies_the_internal_frontend_route_manifest_endpoint_as_non_conventional_http(): void
+    {
+        $request = Request::create('/_volt/routes-manifest.json', 'GET');
+
+        self::assertTrue($request->isInternalEndpoint());
+        self::assertFalse($request->isConventionalHttpRequest());
+        self::assertSame('volt.routes.manifest', $request->routeEndpoint());
+        self::assertSame('internal', $request->routeTransport());
+    }
+
     public function test_it_prefers_route_metadata_when_classifying_internal_endpoints(): void
     {
         $request = Request::create('/custom/internal', 'POST');

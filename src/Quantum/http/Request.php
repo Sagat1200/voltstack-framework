@@ -9,6 +9,7 @@ final class Request
     private const METHOD_OVERRIDE_WHITELIST = ['PUT', 'PATCH', 'DELETE'];
     private const INTERNAL_ROUTE_ENDPOINTS = [
         '/_volt/runtime.js' => 'volt.runtime.asset',
+        '/_volt/routes-manifest.json' => 'volt.routes.manifest',
         '/_volt/action' => 'volt.protocol.action',
     ];
 

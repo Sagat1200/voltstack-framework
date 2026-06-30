@@ -247,7 +247,7 @@ Criterio de cierre:
 
 ### 4.2 Pruebas De Calidad Interna
 
- - `[x]` no usar reflection en runtime de matching
+- `[x]` no usar reflection en runtime de matching
 - `[x]` no leer atributos en runtime
 - `[x]` no interpretar route files en runtime
 - `[x]` no hacer merge dinamico de metadata en request
@@ -303,10 +303,10 @@ Abrir solo cuando `V1` este cerrado.
 
 ### 7.1 Metadata Y Manifest Publico
 
-- `[ ]` definir metadata SPA publica minima
-- `[ ]` generar `Frontend Route Manifest` minimo
-- `[ ]` exponer `routes`, `methods`, `path` y `public capabilities`
-- `[ ]` evitar exponer middleware, policies o metadata privada
+- `[x]` definir metadata SPA publica minima
+- `[x]` generar `Frontend Route Manifest` minimo
+- `[x]` exponer `routes`, `methods`, `path` y `public capabilities`
+- `[x]` evitar exponer middleware, policies o metadata privada
 
 Propuesta minima recomendada para abrir este bloque:
 
@@ -366,6 +366,16 @@ Criterio minimo para marcar `7.1`:
 - el runtime puede decidir si una ruta publica es navegable por SPA usando solo `name`, `path`, `methods` y `capabilities`
 - el manifiesto no expone datos privados ni obliga al cliente a conocer `Route`, `CompiledRoute` o artifacts internos
 - la informacion necesaria para `layout`, `transition` y `hydrate` ya sale de metadata compilada publica y estable
+
+Nota del corte actual:
+
+- existe `FrontendRouteManifest` como contrato publico minimo serializable
+- existe `FrontendRouteManifestStore` que compila el manifiesto desde `CompiledRouteCollection`
+- el manifiesto se publica como `JSON` cacheable en `/_volt/routes-manifest.json`
+- el manifiesto actual expone `name`, `path`, `methods`, `capabilities` y un bloque `runtime` publico reducido
+- el bloque `runtime` publico actual solo incluye `layout`, `transition` y `hydrate`
+- la serializacion excluye rutas internas como `/_volt/*`, rutas sin nombre, `middleware`, `auth`, `document`, policies y referencias internas del container
+- hay pruebas focalizadas de store y de endpoint publico para validar serializacion minima y exclusion de metadata privada
 
 ### 7.2 SPA Routing Protocol Minimo
 
