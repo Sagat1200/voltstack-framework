@@ -308,6 +308,65 @@ Abrir solo cuando `V1` este cerrado.
 - `[ ]` exponer `routes`, `methods`, `path` y `public capabilities`
 - `[ ]` evitar exponer middleware, policies o metadata privada
 
+Propuesta minima recomendada para abrir este bloque:
+
+- el `Frontend Route Manifest` debe derivarse solo de artifacts compilados y metadata publica ya normalizada
+- el manifiesto minimo no debe depender de adapters concretos ni de implementaciones internas del router
+- el manifiesto minimo puede publicarse como `JSON` y versionarse por separado del artifact interno de routing
+
+Contrato minimo sugerido:
+
+```json
+{
+  "protocol": {
+    "name": "VoltStack Frontend Manifest",
+    "version": "1.0"
+  },
+  "version": {
+    "manifest": 1,
+    "checksum": "sha256..."
+  },
+  "routes": [
+    {
+      "name": "users.show",
+      "path": "/users/{user}",
+      "methods": ["GET"],
+      "capabilities": ["navigate", "hydrate"],
+      "runtime": {
+        "layout": "dashboard",
+        "transition": "fade",
+        "hydrate": true
+      }
+    }
+  ]
+}
+```
+
+Campos publicos minimos por ruta:
+
+- `name`: identificador publico y estable para navegacion y generacion de URLs en clientes
+- `path`: patron publico navegable ya normalizado
+- `methods`: verbos HTTP publicos soportados por la ruta; para SPA minima solo se debe consumir `GET`
+- `capabilities`: lista declarativa de capacidades publicas como `navigate`, `hydrate`, `prefetch`
+- `runtime.layout`: layout publico consumible por el runtime sin exponer detalles internos
+- `runtime.transition`: sugerencia visual publica y opcional
+- `runtime.hydrate`: flag publico minimo para indicar si la pantalla requiere hidratacion SPA
+
+Campos que no deben serializarse en esta fase:
+
+- middleware
+- policies
+- aliases internos
+- constraints internas no necesarias para el cliente
+- metadata privada de seguridad
+- class-strings PHP, closures o referencias del container
+
+Criterio minimo para marcar `7.1`:
+
+- el runtime puede decidir si una ruta publica es navegable por SPA usando solo `name`, `path`, `methods` y `capabilities`
+- el manifiesto no expone datos privados ni obliga al cliente a conocer `Route`, `CompiledRoute` o artifacts internos
+- la informacion necesaria para `layout`, `transition` y `hydrate` ya sale de metadata compilada publica y estable
+
 ### 7.2 SPA Routing Protocol Minimo
 
 - `[ ]` definir payload de navegacion minima
@@ -317,6 +376,59 @@ Abrir solo cuando `V1` este cerrado.
 - `[x]` incluir `hydrate`
 - `[x]` incluir `redirect`
 - `[x]` incluir `error`
+
+Propuesta minima recomendada para este payload:
+
+- debe construirse a partir del `Frontend Route Manifest` publico y no desde estructuras internas del router
+- debe describir navegacion, no modelar estado completo de la aplicacion
+- debe reservar extensiones futuras sin introducir subsistemas vacios en `V2`
+
+Contrato minimo sugerido:
+
+```json
+{
+  "navigation": {
+    "target": "/users/15",
+    "method": "GET"
+  },
+  "screen": {
+    "route": "users.show"
+  },
+  "runtime": {
+    "layout": "dashboard",
+    "transition": "fade",
+    "hydrate": true
+  },
+  "redirect": null,
+  "error": null
+}
+```
+
+Campos minimos del payload:
+
+- `navigation.target`: URL final que el runtime debe navegar
+- `navigation.method`: verbo efectivo; en esta fase debe restringirse a `GET`
+- `screen.route`: nombre publico de la ruta resuelta para trazabilidad y tooling
+- `runtime.layout`: layout publico aplicable a la pantalla destino
+- `runtime.transition`: transicion publica opcional
+- `runtime.hydrate`: indica si la respuesta debe hidratarse en el runtime SPA
+- `redirect`: instruccion de redireccion uniforme cuando aplica
+- `error`: representacion uniforme de error navegable cuando la navegacion no puede completarse
+
+Campos explicitamente fuera del payload minimo:
+
+- payloads de acciones reactivas
+- metadata privada del router
+- middleware resuelto
+- policies
+- estado global completo
+- snapshots de componentes salvo que una fase posterior formalice ese contrato
+
+Dependencia formal recomendada:
+
+- no marcar `7.2` como cerrado antes de cerrar `7.1`
+- todo campo de `layout`, `transition` y `hydrate` debe poder justificarse previamente en el manifiesto publico
+- si un dato no puede exponerse de forma publica y estable en `7.1`, no debe entrar todavia al payload minimo
 
 ### 7.3 Integracion Con Runtime SPA Reactivo
 
