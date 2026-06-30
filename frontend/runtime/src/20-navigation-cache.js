@@ -1,4 +1,4 @@
-﻿  function navigationCacheAliases(entryOrUrl, finalUrl) {
+  function navigationCacheAliases(entryOrUrl, finalUrl) {
     const aliases = [];
 
     function pushAlias(value) {
@@ -146,6 +146,7 @@
 
     return {
       url: entry.url,
+      target: entry.target || entry.url,
       finalUrl: entry.finalUrl,
       html: entry.html,
       document: documentPayload,
@@ -226,7 +227,17 @@
     }
 
     const normalizedUrl = normalizeNavigationUrl(url);
+    const payloadTarget =
+      typeof payload.target === "string" && payload.target !== ""
+        ? normalizeNavigationUrl(payload.target)
+        : normalizedUrl;
     const finalUrl = normalizeNavigationUrl(payload.finalUrl || normalizedUrl);
+    const redirectTarget =
+      typeof payload.redirect === "string" && payload.redirect !== ""
+        ? normalizeNavigationUrl(payload.redirect)
+        : finalUrl !== normalizedUrl
+          ? finalUrl
+          : null;
     const cacheControl = mergeNavigationCacheControl(
       control,
       payload.cacheControl && typeof payload.cacheControl === "object"
@@ -264,6 +275,7 @@
       cacheKey: aliases.join("::"),
       aliases: aliases,
       url: normalizedUrl,
+      target: payloadTarget,
       finalUrl: finalUrl,
       html: payload.html,
       fetchedAt: now,
@@ -271,10 +283,19 @@
       expiresAt: now + ttl,
       source: source || "prefetch",
       cacheControl: cacheControl,
+      redirect: redirectTarget,
+      layout:
+        typeof payload.layout === "string" && payload.layout !== ""
+          ? payload.layout
+          : documentLayoutIdentity(parseNavigationDocument(payload.html)),
       navigationMode:
         payload.navigationMode && typeof payload.navigationMode === "object"
           ? payload.navigationMode
           : navigationModeForDocument(parseNavigationDocument(payload.html)),
+      hydrate:
+        payload.hydrate && typeof payload.hydrate === "object"
+          ? payload.hydrate
+          : hydrationForDocument(parseNavigationDocument(payload.html)),
       pageTransition:
         payload.pageTransition && typeof payload.pageTransition === "object"
           ? payload.pageTransition
@@ -562,21 +583,35 @@
     };
     const promise = requestPage(normalizedUrl, requestSignal)
       .then(function (payload) {
+        if (payload && payload.error && typeof payload.error === "object") {
+          return payload;
+        }
+
         const responseControl = navigationCacheControlForDocument(
           payload.document,
         );
         const responseMode = navigationModeForDocument(payload.document);
+        const responseHydrate = hydrationForDocument(payload.document);
         const responsePageTransition = pageTransitionForDocument(
           payload.document,
         );
+        const responseLayout = documentLayoutIdentity(payload.document);
+        const responseRedirect =
+          payload.finalUrl && payload.finalUrl !== normalizedUrl
+            ? payload.finalUrl
+            : null;
         const effectiveControl = mergeNavigationCacheControl(
           requestedControl,
           responseControl,
         );
         const enrichedPayload = Object.assign({}, payload, {
+          target: normalizedUrl,
           cacheControl: effectiveControl,
+          redirect: responseRedirect,
+          layout: responseLayout,
           navigationMode:
             responseMode.mode !== "auto" ? responseMode : requestedMode,
+          hydrate: responseHydrate,
           pageTransition: responsePageTransition,
         });
 

@@ -15,6 +15,11 @@ final class HtmlDocumentBootstrapper
         'volt-document',
         'volt:document',
     ];
+    private const LAYOUT_ATTRIBUTE_NAMES = [
+        'data-volt-layout',
+        'volt-layout',
+        'volt:layout',
+    ];
     private const NAVIGATION_MODE_ATTRIBUTE_NAMES = [
         'data-volt-navigation-mode',
         'volt-navigation-mode',
@@ -33,9 +38,63 @@ final class HtmlDocumentBootstrapper
         'volt-page-transition',
         'volt:page-transition',
     ];
+    private const PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES = [
+        'data-volt-page-transition-profile',
+        'volt-page-transition-profile',
+        'volt:page-transition-profile',
+    ];
+    private const PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES = [
+        'data-volt-page-transition-duration',
+        'volt-page-transition-duration',
+        'volt:page-transition-duration',
+    ];
+    private const PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES = [
+        'data-volt-page-transition-mode',
+        'volt-page-transition-mode',
+        'volt:page-transition-mode',
+    ];
     private const PAGE_TRANSITION_META_NAMES = [
         'volt-page-transition',
         'volt:page-transition',
+    ];
+    private const PAGE_TRANSITION_PROFILE_META_NAMES = [
+        'volt-page-transition-profile',
+        'volt:page-transition-profile',
+    ];
+    private const PAGE_TRANSITION_DURATION_META_NAMES = [
+        'volt-page-transition-duration',
+        'volt:page-transition-duration',
+    ];
+    private const PAGE_TRANSITION_MODE_META_NAMES = [
+        'volt-page-transition-mode',
+        'volt:page-transition-mode',
+    ];
+    private const HYDRATE_ATTRIBUTE_NAMES = [
+        'data-volt-hydrate',
+        'volt-hydrate',
+        'volt:hydrate',
+    ];
+    private const HYDRATE_STRATEGY_ATTRIBUTE_NAMES = [
+        'data-volt-hydrate-strategy',
+        'volt-hydrate-strategy',
+        'volt:hydrate-strategy',
+    ];
+    private const HYDRATE_DIRTY_STATE_ATTRIBUTE_NAMES = [
+        'data-volt-hydrate-dirty-state',
+        'volt-hydrate-dirty-state',
+        'volt:hydrate-dirty-state',
+    ];
+    private const HYDRATE_META_NAMES = [
+        'volt-hydrate',
+        'volt:hydrate',
+    ];
+    private const HYDRATE_STRATEGY_META_NAMES = [
+        'volt-hydrate-strategy',
+        'volt:hydrate-strategy',
+    ];
+    private const HYDRATE_DIRTY_STATE_META_NAMES = [
+        'volt-hydrate-dirty-state',
+        'volt:hydrate-dirty-state',
     ];
 
     public function shouldBootstrap(Request $request, Response $response): bool
@@ -110,11 +169,9 @@ final class HtmlDocumentBootstrapper
             $content = $this->ensureBodyAttribute($content, self::NAVIGATION_MODE_ATTRIBUTE_NAMES, $navigationMode);
         }
 
-        $pageTransition = $this->resolvedPageTransition($request, $content);
-
-        if ($pageTransition !== null) {
-            $content = $this->ensureBodyAttribute($content, self::PAGE_TRANSITION_ATTRIBUTE_NAMES, $pageTransition);
-        }
+        $content = $this->decorateLayoutAttributes($request, $content);
+        $content = $this->decoratePageTransitionAttributes($request, $content);
+        $content = $this->decorateHydrationAttributes($request, $content);
 
         return $content;
     }
@@ -221,26 +278,269 @@ final class HtmlDocumentBootstrapper
             : null;
     }
 
-    private function resolvedPageTransition(Request $request, string $content): ?string
+    private function decoratePageTransitionAttributes(Request $request, string $content): string
     {
-        if (
-            $this->declaredMetaContent($content, self::PAGE_TRANSITION_META_NAMES) !== null
-            || $this->bodyAttributeValue($content, self::PAGE_TRANSITION_ATTRIBUTE_NAMES) !== null
-        ) {
-            return null;
+        $transition = $this->runtimePageTransition($request);
+
+        if ($transition === []) {
+            return $content;
         }
 
+        $projections = [
+            [self::PAGE_TRANSITION_ATTRIBUTE_NAMES, self::PAGE_TRANSITION_META_NAMES, 'name'],
+            [self::PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES, self::PAGE_TRANSITION_PROFILE_META_NAMES, 'profile'],
+            [self::PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES, self::PAGE_TRANSITION_DURATION_META_NAMES, 'duration'],
+            [self::PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES, self::PAGE_TRANSITION_MODE_META_NAMES, 'mode'],
+        ];
+
+        foreach ($projections as [$attributeNames, $metaNames, $key]) {
+            $value = $transition[$key] ?? null;
+
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            if (
+                $this->declaredMetaContent($content, $metaNames) !== null
+                || $this->bodyAttributeValue($content, $attributeNames) !== null
+            ) {
+                continue;
+            }
+
+            $content = $this->ensureBodyAttribute($content, $attributeNames, trim($value));
+        }
+
+        return $content;
+    }
+
+    private function decorateLayoutAttributes(Request $request, string $content): string
+    {
+        if ($this->bodyAttributeValue($content, self::LAYOUT_ATTRIBUTE_NAMES) !== null) {
+            return $content;
+        }
+
+        $layout = $request->routeRuntimeMeta('layout');
+
+        if (! is_string($layout) || trim($layout) === '') {
+            return $content;
+        }
+
+        return $this->ensureBodyAttribute($content, self::LAYOUT_ATTRIBUTE_NAMES, trim($layout));
+    }
+
+    private function decorateHydrationAttributes(Request $request, string $content): string
+    {
+        $hydration = $this->runtimeHydration($request);
+
+        if ($hydration === []) {
+            return $content;
+        }
+
+        $projections = [
+            [self::HYDRATE_ATTRIBUTE_NAMES, self::HYDRATE_META_NAMES, 'enabled'],
+            [self::HYDRATE_STRATEGY_ATTRIBUTE_NAMES, self::HYDRATE_STRATEGY_META_NAMES, 'strategy'],
+            [self::HYDRATE_DIRTY_STATE_ATTRIBUTE_NAMES, self::HYDRATE_DIRTY_STATE_META_NAMES, 'dirtyState'],
+        ];
+
+        foreach ($projections as [$attributeNames, $metaNames, $key]) {
+            $value = $hydration[$key] ?? null;
+
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            if (
+                $this->declaredMetaContent($content, $metaNames) !== null
+                || $this->bodyAttributeValue($content, $attributeNames) !== null
+            ) {
+                continue;
+            }
+
+            $content = $this->ensureBodyAttribute($content, $attributeNames, trim($value));
+        }
+
+        return $content;
+    }
+
+    /**
+     * @return array{name?: string, profile?: string, duration?: string, mode?: string}
+     */
+    private function runtimePageTransition(Request $request): array
+    {
         $transition = $request->routeRuntimeMeta('transition');
 
-        if (! is_string($transition)) {
+        if (! is_array($transition)) {
             $transition = $request->routeRuntimeMeta('pageTransition');
         }
 
-        if (! is_string($transition) || trim($transition) === '') {
-            return null;
+        if (is_string($transition) && trim($transition) !== '') {
+            return ['name' => trim($transition)];
         }
 
-        return trim($transition);
+        if (! is_array($transition)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach (
+            [
+                'name' => ['name', 'transition'],
+                'profile' => ['profile'],
+                'duration' => ['duration'],
+                'mode' => ['mode'],
+            ] as $target => $candidates
+        ) {
+            foreach ($candidates as $candidate) {
+                $value = $transition[$candidate] ?? null;
+
+                if ($value === null || $value === '') {
+                    continue;
+                }
+
+                if (is_int($value) || is_float($value)) {
+                    $normalized[$target] = (string) $value;
+                    break;
+                }
+
+                if (is_string($value) && trim($value) !== '') {
+                    $normalized[$target] = trim($value);
+                    break;
+                }
+            }
+        }
+
+        $fallbackMap = [
+            'profile' => ['pageTransitionProfile', 'transitionProfile'],
+            'duration' => ['pageTransitionDuration', 'transitionDuration'],
+            'mode' => ['pageTransitionMode', 'transitionMode'],
+        ];
+
+        foreach ($fallbackMap as $target => $keys) {
+            if (isset($normalized[$target])) {
+                continue;
+            }
+
+            foreach ($keys as $key) {
+                $value = $request->routeRuntimeMeta($key);
+
+                if ($value === null || $value === '') {
+                    continue;
+                }
+
+                if (is_int($value) || is_float($value)) {
+                    $normalized[$target] = (string) $value;
+                    break;
+                }
+
+                if (is_string($value) && trim($value) !== '') {
+                    $normalized[$target] = trim($value);
+                    break;
+                }
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return array{enabled?: string, strategy?: string, dirtyState?: string}
+     */
+    private function runtimeHydration(Request $request): array
+    {
+        $hydrate = $request->routeRuntimeMeta('hydrate');
+
+        if (is_bool($hydrate)) {
+            return ['enabled' => $hydrate ? 'true' : 'false'];
+        }
+
+        if (is_string($hydrate) && trim($hydrate) !== '') {
+            $normalized = strtolower(trim($hydrate));
+
+            if (in_array($normalized, ['true', 'false', 'on', 'off', 'enabled', 'disabled'], true)) {
+                return [
+                    'enabled' => in_array($normalized, ['true', 'on', 'enabled'], true) ? 'true' : 'false',
+                ];
+            }
+
+            return [
+                'enabled' => 'true',
+                'strategy' => trim($hydrate),
+            ];
+        }
+
+        if (! is_array($hydrate)) {
+            return $this->runtimeHydrationFallback($request);
+        }
+
+        $normalized = [];
+        $enabled = $hydrate['enabled'] ?? null;
+
+        if (is_bool($enabled)) {
+            $normalized['enabled'] = $enabled ? 'true' : 'false';
+        } elseif (is_string($enabled) && trim($enabled) !== '') {
+            $normalized['enabled'] = strtolower(trim($enabled));
+        }
+
+        foreach (
+            [
+                'strategy' => ['strategy'],
+                'dirtyState' => ['dirtyState', 'dirty'],
+            ] as $target => $candidates
+        ) {
+            foreach ($candidates as $candidate) {
+                $value = $hydrate[$candidate] ?? null;
+
+                if (! is_string($value) || trim($value) === '') {
+                    continue;
+                }
+
+                $normalized[$target] = trim($value);
+                break;
+            }
+        }
+
+        if (! isset($normalized['enabled']) && isset($normalized['strategy'])) {
+            $normalized['enabled'] = 'true';
+        }
+
+        return $normalized !== [] ? $normalized : $this->runtimeHydrationFallback($request);
+    }
+
+    /**
+     * @return array{enabled?: string, strategy?: string, dirtyState?: string}
+     */
+    private function runtimeHydrationFallback(Request $request): array
+    {
+        $normalized = [];
+
+        foreach (
+            [
+                'strategy' => ['hydrationStrategy', 'hydrateStrategy'],
+                'dirtyState' => ['hydrationDirtyState', 'hydrateDirtyState'],
+            ] as $target => $keys
+        ) {
+            foreach ($keys as $key) {
+                $value = $request->routeRuntimeMeta($key);
+
+                if (! is_string($value) || trim($value) === '') {
+                    continue;
+                }
+
+                $normalized[$target] = trim($value);
+                break;
+            }
+        }
+
+        $enabled = $request->routeRuntimeMeta('hydrationEnabled');
+
+        if (is_bool($enabled)) {
+            $normalized['enabled'] = $enabled ? 'true' : 'false';
+        } elseif (! isset($normalized['enabled']) && $normalized !== []) {
+            $normalized['enabled'] = 'true';
+        }
+
+        return $normalized;
     }
 
     /**

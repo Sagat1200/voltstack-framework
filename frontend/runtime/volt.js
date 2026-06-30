@@ -1,2 +1,11873 @@
-var Js=Object.defineProperty;var i=(c,Ae)=>Js(c,"name",{value:Ae,configurable:!0});(function(){if(typeof window<"u"&&window.__voltRuntimeBooted===!0)return;typeof window<"u"&&(window.__voltRuntimeBooted=!0);const c={navigationRequestId:0,navigationController:null,navigationCache:new Map,navigationInFlight:new Map,persistentFragments:new Map,navigationPreloadHints:new Set,navigationPrefetchInterest:new Map,navigationPrefetchElements:new WeakMap,navigationViewportObserver:null,navigationViewportObserved:new WeakSet,navigationHeuristicHandle:null,componentRequestStates:new Map,statePolicies:new Map,loadingDelays:new Map,loadingActivatedAt:new Map,loadingMinClearDelays:new Map,successTimeouts:new Map,successActivatedAt:new Map,successMinClearDelays:new Map,errorTimeouts:new Map,dirtyDebounces:new Map,modelSyncDebounces:new WeakMap,modelSyncTrackedElements:new Set,clientStateScope:null,clientStateValues:new Map,sharedStateValues:new Map,clientStateSubscribers:new Map,sharedStateSubscribers:new Map,clientStateGlobalSubscribers:new Set,sharedStateGlobalSubscribers:new Set,directiveSequence:0,onDirectiveOnce:new WeakMap,onDirectiveTrackedElements:new Set,activeComponents:new Map,activeComponentsMeta:{refreshedAt:null,reason:"boot",count:0},navigationPrefetchTrackedElements:new Set,navigationViewportTrackedElements:new Set,telemetryEntries:[],telemetryMaxEntries:60,telemetrySequence:0},Ae=1,bo=5e3,Ao=10,So=8e3,wo=1,Eo=180,un=180,cn=240,Co=8e3,xt="__volt_sync__",To=220,wt="a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]",ln=["volt-cache-control","volt:navigation-cache"],fn=["volt-navigation-mode","volt:navigation-mode"],No=["volt-document","volt:document"],dn=["volt-page-transition","volt:page-transition"],pn=["volt-page-transition-profile","volt:page-transition-profile"],mn=["volt-page-transition-duration","volt:page-transition-duration"],gn=["volt-page-transition-mode","volt:page-transition-mode"],yn=["volt-fragment-control","volt:fragment-cache"],hn="[data-volt-preserve], [volt-preserve], [volt\\:preserve]",vn="[data-volt-persist], [volt-persist], [volt\\:persist]",Do=hn+", "+vn,bn=Object.freeze({soft:Object.freeze({name:"fade",duration:220,mode:"out-in"}),gentle:Object.freeze({name:"fade",duration:320,mode:"out-in"}),crisp:Object.freeze({name:"fade",duration:160,mode:"out-in"}),classic:Object.freeze({name:"default",duration:180,mode:"out-in"})});function An(t){return t?(c.componentRequestStates.has(t)||c.componentRequestStates.set(t,{requestId:0,controller:null}),c.componentRequestStates.get(t)):null}i(An,"componentRequestState");function yt(t){return t.closest('[data-volt-root="true"]')}i(yt,"findRoot");function Zt(t){const e=document.querySelectorAll('[data-volt-root="true"]');for(let n=0;n<e.length;n+=1)if(e[n].getAttribute("data-volt-component")===t)return e[n];return null}i(Zt,"findRootByComponent");function Sn(t){const e=t.getAttribute("data-volt-snapshot");return e?JSON.parse(e):null}i(Sn,"readSnapshot");function wn(t){const e={};return t.querySelectorAll("[volt-model], [volt\\:model]").forEach(function(n){const r=v(n,["volt-model","volt:model"]);if(r){if(n.type==="checkbox"){e[r]=!!n.checked;return}e[r]=n.value}}),e}i(wn,"collectModelUpdates");function Mo(t){const e={};return new FormData(t).forEach(function(r,o){typeof r=="string"&&(e[o]=r)}),e}i(Mo,"collectFormData");function _(t){return window.CSS&&typeof window.CSS.escape=="function"?window.CSS.escape(t):String(t).replace(/[^a-zA-Z0-9\-_]/g,"\\$&")}i(_,"cssEscape");function v(t,e){for(let n=0;n<e.length;n+=1){const r=t.getAttribute(e[n]);if(r!==null&&r!=="")return r}return null}i(v,"directiveValue");function B(t,e){return t&&t.target instanceof Element?t.target.closest(e):null}i(B,"closestFromEventTarget");function P(t,e){for(let n=0;n<e.length;n+=1)if(t.hasAttribute(e[n]))return{name:e[n],value:t.getAttribute(e[n])||""};return null}i(P,"directiveAttribute");function xo(){return["volt-dispatch","volt:dispatch"]}i(xo,"dispatchDirectiveNames");function Po(){return["volt-on","volt:on"]}i(Po,"onDirectiveNames");function Oo(t){return typeof t!="string"?[]:t.split("|").map(function(e){return e.trim()}).filter(function(e){return/^[A-Za-z][A-Za-z0-9:._-]*$/.test(e)})}i(Oo,"parseDispatchDirectiveEvents");function Ro(){return"[volt-on], [volt\\:on]"}i(Ro,"onDirectiveSelector");function En(t){const e=String(t||"").trim().toLowerCase();return e==="esc"?"escape":e==="spacebar"||e===" "?"space":e}i(En,"normalizeOnDirectiveKeyFilter");function ko(t){return c.onDirectiveOnce.has(t)||c.onDirectiveOnce.set(t,new Set),c.onDirectiveTrackedElements.add(t),c.onDirectiveOnce.get(t)}i(ko,"onDirectiveOnceStore");function Io(t,e){const n=typeof t=="string"?t.trim():"";if(n==="")return{valid:!1,value:null};if(n==="$event.target.value")return{valid:!0,value:e&&e.target&&"value"in e.target?e.target.value:void 0};if(n==="$event.target.checked")return{valid:!0,value:e&&e.target&&"checked"in e.target?!!e.target.checked:void 0};const r=xe(n);return r!==null?{valid:!0,value:r}:/^(true|false)$/i.test(n)?{valid:!0,value:n.toLowerCase()==="true"}:/^null$/i.test(n)?{valid:!0,value:null}:/^-?\d+(?:\.\d+)?$/.test(n)?{valid:!0,value:Number(n)}:{valid:!1,value:null}}i(Io,"onDirectiveActionValue");function _o(t){if(typeof t!="string"||t.trim()==="")return null;const e=t.trim().split(".").map(function(s){return s.trim().toLowerCase()}).filter(function(s){return s!==""});if(e.length===0)return null;const n=e[0];if(["click","input","change","submit","focus","blur","keydown","keyup"].indexOf(n)===-1)return null;const o={prevent:!1,stop:!1,once:!1,self:!1};let a=null;for(let s=1;s<e.length;s+=1){const u=e[s];if(Object.prototype.hasOwnProperty.call(o,u)){o[u]=!0;continue}if((n==="keydown"||n==="keyup")&&!a){a=En(u);continue}return null}return{name:n,modifiers:o,keyFilter:a,raw:t.trim()}}i(_o,"parseOnDirectiveEventSpec");function qo(t){if(typeof t!="string"||t.trim()==="")return null;const e=t.trim(),n=e.match(/^dispatch:([A-Za-z][A-Za-z0-9:._-]*)$/);if(n)return{type:"dispatch",name:n[1],raw:e};const r=e.match(/^state:toggle\s+(client|shared):([A-Za-z0-9_.-]+)$/i);if(r)return{type:"toggle",scope:T(r[1]),path:r[2],raw:e};const o=e.match(/^state:delete\s+(client|shared):([A-Za-z0-9_.-]+)$/i);if(o)return{type:"delete",scope:T(o[1]),path:o[2],raw:e};const a=e.match(/^state:set\s+(client|shared):([A-Za-z0-9_.-]+)\s*=\s*(.+)$/i);return a?{type:"set",scope:T(a[1]),path:a[2],valueExpression:a[3].trim(),raw:e}:null}i(qo,"parseOnDirectiveAction");function Lo(t,e){if(typeof t!="string"||t.trim()==="")return null;const n=Xt(t);if(n===-1)return null;const r=_o(t.slice(0,n).trim()),o=qo(t.slice(n+2).trim());return!r||!o?null:{key:String(e)+":"+t.trim(),event:r,action:o,raw:t.trim()}}i(Lo,"parseOnDirectiveRule");function jo(t){return Rt(t,"|").map(function(e,n){return Lo(e,n)}).filter(function(e){return!!e})}i(jo,"parseOnDirectiveRules");function Cn(t){return!t||typeof t.getAttribute!="function"||"disabled"in t&&t.disabled?!0:(t.getAttribute("aria-disabled")||"").toLowerCase()==="true"}i(Cn,"dispatchDirectiveDisabled");function Fo(t){return!t||typeof t.getAttribute!="function"?ht():t.getAttribute("data-volt-component")||t.getAttribute("data-volt-scope-id")||ht()}i(Fo,"dispatchDirectiveScopeId");function Tn(t,e,n,r){return{sourceElement:e,directive:n,scopeId:Fo(t),clientScope:ht(),sharedScope:"shared",component:t&&typeof t.getAttribute=="function"&&t.getAttribute("data-volt-component")||null,originalEvent:r}}i(Tn,"dispatchDirectiveDetail");function Vo(t,e,n,r,o){return!t||!n||Cn(t)?!1:(t.dispatchEvent(new CustomEvent(n,{detail:Tn(e,t,r||"dispatch:"+n,o),bubbles:!0,cancelable:!0})),!0)}i(Vo,"emitNamedDispatchDirectiveEvent");function zo(t,e,n,r){const o=Oo(n);if(!t||o.length===0||Cn(t))return!1;const a=Tn(e,t,n,r);return o.forEach(function(s){t.dispatchEvent(new CustomEvent(s,{detail:a,bubbles:!0,cancelable:!0}))}),!0}i(zo,"emitDispatchDirective");function Uo(t,e,n){return!t||!t.event||t.event.name!==e?!1:(e==="keydown"||e==="keyup")&&t.event.keyFilter?En(n&&n.key)===t.event.keyFilter:!0}i(Uo,"matchesOnDirectiveEvent");function Bo(t,e,n,r){if(!t||!t.action)return!1;if(t.action.type==="dispatch")return Vo(e,n,t.action.name,"volt:on="+t.raw,r);if(t.action.type==="set"){const o=Io(t.action.valueExpression,r);return o.valid?(ct(t.action.path,o.value,{scope:t.action.scope,action:"directive:on:set"}),!0):!1}if(t.action.type==="toggle"){const o=bt(t.action.path,{scope:t.action.scope,fallback:!1});return ct(t.action.path,!o,{scope:t.action.scope,action:"directive:on:toggle"}),!0}return t.action.type==="delete"?Te(t.action.path,{scope:t.action.scope}):!1}i(Bo,"runOnDirectiveAction");function ut(t,e){const n=B(e,Ro());if(!n)return!1;const r=jo(v(n,Po()));if(r.length===0)return!1;const o=yt(n);let a=!1;return r.forEach(function(s){if(!Uo(s,t,e)||s.event.modifiers.self&&e.target!==n)return;const u=ko(n);s.event.modifiers.once&&u.has(s.key)||(s.event.modifiers.prevent&&e.cancelable&&e.preventDefault(),s.event.modifiers.stop&&e.stopPropagation(),Bo(s,n,o,e)&&(a=!0,s.event.modifiers.once&&u.add(s.key)))}),a}i(ut,"handleOnDirectiveEvent");function M(t){try{return new URL(t,window.location.href).toString()}catch{return String(t||"")}}i(M,"normalizeNavigationUrl");function x(t){if(typeof structuredClone=="function")try{return structuredClone(t)}catch{}if(t===null||typeof t!="object")return t;try{return JSON.parse(JSON.stringify(t))}catch{return t}}i(x,"cloneStateValue");function H(){return typeof performance<"u"&&performance&&typeof performance.now=="function"?performance.now():Date.now()}i(H,"runtimeNow");function K(t){return typeof t=="number"&&isFinite(t)?Math.round(t*100)/100:null}i(K,"roundedMetricValue");function Nn(t){if(typeof t!="string"||t==="")return 0;if(typeof TextEncoder=="function")return new TextEncoder().encode(t).length;try{let e=0;for(const n of t){const r=n.codePointAt(0);typeof r=="number"&&(r<=127?e+=1:r<=2047?e+=2:r<=65535?e+=3:e+=4)}return e}catch{return t.length}}i(Nn,"serializedTextBytes");function Et(t){if(typeof t>"u")return 0;if(typeof t=="string")return Nn(t);try{return Nn(JSON.stringify(t))}catch{return 0}}i(Et,"serializedPayloadBytes");function Ho(t){const e=t&&typeof t=="object"?t:{};return(Array.isArray(e.kinds)?e.kinds:e.kind?[e.kind]:[]).map(function(r){return typeof r=="string"?r.trim():""}).filter(function(r){return r!==""})}i(Ho,"normalizeTelemetryKinds");function Wt(t){const e=t&&typeof t=="object"?t:{},n=Ho(e),r=n.length===0?c.telemetryEntries:c.telemetryEntries.filter(function(s){return n.indexOf(s.kind)!==-1}),o=typeof e.limit=="number"&&e.limit>0?Math.floor(e.limit):null;return(o?r.slice(0,o):r.slice()).map(function(s){return x(s)})}i(Wt,"filteredTelemetryEntries");function Se(t,e){const n=t.filter(function(w){return w.kind===e}),r={};let o=0,a=0,s=0,u=0,l=0,f=0,d=0,p=0,y=0,b=0,V=0,J=0;return n.forEach(function(w){const O=w&&typeof w.outcome=="string"?w.outcome:"unknown",Q=typeof w.totalDurationMs=="number"?w.totalDurationMs:null,at=typeof w.requestPayloadBytes=="number"?w.requestPayloadBytes:null,X=typeof w.responsePayloadBytes=="number"?w.responsePayloadBytes:null,tt=typeof w.patchDurationMs=="number"?w.patchDurationMs:null;r[O]=(r[O]||0)+1,Q!==null&&(o+=Q,a+=1,s=Math.max(s,Q)),at!==null&&(u+=at,l+=1,f=Math.max(f,at)),X!==null&&(d+=X,p+=1,y=Math.max(y,X)),tt!==null&&(b+=tt,V+=1,J=Math.max(J,tt))}),{kind:e,count:n.length,outcomes:r,averageDurationMs:a>0?K(o/a):null,maxDurationMs:a>0?K(s):null,averageRequestPayloadBytes:l>0?Math.round(u/l):null,maxRequestPayloadBytes:l>0?f:null,averageResponsePayloadBytes:p>0?Math.round(d/p):null,maxResponsePayloadBytes:p>0?y:null,averagePatchDurationMs:V>0?K(b/V):null,maxPatchDurationMs:V>0?K(J):null,latest:n.length>0?x(n[0]):null}}i(Se,"summarizeTelemetryKind");function Dn(t){const e=Wt(t),n={totalEntries:e.length,maxEntries:c.telemetryMaxEntries,navigation:Se(e,"navigation"),action:Se(e,"action"),patch:Se(e,"patch")};return x(n)}i(Dn,"telemetrySummary");function we(t,e){const n=Object.assign({kind:t,sequence:c.telemetrySequence+1,recordedAt:new Date().toISOString()},x(e||{}));for(c.telemetrySequence=n.sequence,c.telemetryEntries.unshift(n);c.telemetryEntries.length>c.telemetryMaxEntries;)c.telemetryEntries.pop();return x(n)}i(we,"recordRuntimeTelemetry");function Ko(){const t=c.telemetryEntries.length;return c.telemetryEntries=[],c.telemetrySequence=0,t}i(Ko,"resetRuntimeTelemetry");function Go(){return Array.prototype.slice.call(document.querySelectorAll('[data-volt-root="true"]'))}i(Go,"activeComponentRoots");function Mn(t,e){const n=t&&typeof t.getAttribute=="function"&&t.getAttribute("data-volt-component")||"anonymous",r=me(t);return r&&r.value?n+"::"+r.strategy+":"+String(r.value):n+"::index:"+String(e)}i(Mn,"activeComponentKey");function $o(t){if(!t||typeof t!="object")return null;const e=Object.assign({},t);return delete e.rootRef,x(e)}i($o,"publicActiveComponentEntry");function Zo(t,e,n){const r=t&&typeof t.getAttribute=="function"?t.getAttribute("data-volt-snapshot"):null,o=t?Sn(t):null,a=t&&typeof t.getAttribute=="function"?t.getAttribute("data-volt-component"):null,s=me(t);return{id:Mn(t,e),index:e,component:a,endpoint:t&&typeof t.getAttribute=="function"&&t.getAttribute("data-volt-endpoint")||"/_volt/action",renderMode:t&&typeof t.getAttribute=="function"?t.getAttribute("data-volt-render-mode"):null,descriptor:s,hasSnapshot:!!r,snapshotBytes:Et(r||""),snapshotStateKeys:o&&o.state&&typeof o.state=="object"?Object.keys(o.state):[],isConnected:!!(t&&t.isConnected),flags:{loading:!!(t&&typeof t.getAttribute=="function"&&t.getAttribute("data-volt-loading")==="true"),dirty:!!(t&&typeof t.getAttribute=="function"&&t.getAttribute("data-volt-dirty")==="true"),error:!!(t&&typeof t.getAttribute=="function"&&t.getAttribute("data-volt-error")==="true"),success:!!(t&&typeof t.getAttribute=="function"&&t.getAttribute("data-volt-success")==="true")},firstSeenAt:n&&n.firstSeenAt?n.firstSeenAt:new Date().toISOString(),lastSeenAt:new Date().toISOString(),rootRef:t||null}}i(Zo,"describeActiveComponent");function xn(t,e){if(!e)return 0;let n=0;return t.forEach(function(r){r&&r.component===e&&(n+=1)}),n}i(xn,"remainingComponentCount");function Wo(t){t&&(He(t),Ke(t),Ge(t),$e(t),Ze(t),de(t),c.loadingActivatedAt.delete(t),c.successActivatedAt.delete(t))}i(Wo,"clearRuntimeRootState");function Jo(t,e,n){if(!t||typeof t!="object")return!1;const r=t.rootRef||null,o=t.component||null;if(Wo(r),o&&xn(e,o)===0){const a=c.componentRequestStates.get(o);a&&a.controller&&a.controller.abort(),c.componentRequestStates.delete(o),c.statePolicies.delete(o)}return g("volt:component-destroyed",{id:t.id||null,component:o,reason:n||"unmounted",descriptor:t.descriptor||null,remainingComponentRoots:xn(e,o),activeComponentCount:e.size},document),!0}i(Jo,"destroyUnmountedComponent");function Yo(t,e,n){t.forEach(function(r,o){if(!r||typeof r!="object")return;const a=r.rootRef||null,s=e.get(o),u=s&&typeof s=="object"&&s.rootRef||null;a&&u===a||Jo(r,e,n||"refresh")})}i(Yo,"destroyRemovedActiveComponents");function Jt(t){const e=c.activeComponents,n=new Map;return Go().forEach(function(o,a){const s=Mn(o,a);n.set(s,Zo(o,a,e.get(s)))}),Yo(e,n,t||"refresh"),c.activeComponents=n,c.activeComponentsMeta={refreshedAt:new Date().toISOString(),reason:t||"manual",count:n.size},Pn()}i(Jt,"refreshActiveComponentsRegistry");function Ct(t){const e=t&&typeof t=="object"?t:{},n=typeof e.component=="string"&&e.component.trim()!==""?e.component.trim():null;return Array.from(c.activeComponents.values()).filter(function(o){return n?o.component===n:!0}).map(function(o){return $o(o)})}i(Ct,"activeComponentsEntries");function Ee(t){const e=Ct(t),n={};return e.forEach(function(r){const o=r.component||"anonymous";n[o]||(n[o]={component:o,count:0,totalSnapshotBytes:0,loading:0,dirty:0,error:0,success:0}),n[o].count+=1,n[o].totalSnapshotBytes+=r.snapshotBytes||0,n[o].loading+=r.flags&&r.flags.loading?1:0,n[o].dirty+=r.flags&&r.flags.dirty?1:0,n[o].error+=r.flags&&r.flags.error?1:0,n[o].success+=r.flags&&r.flags.success?1:0}),{totalRoots:e.length,uniqueComponents:Object.keys(n).length,refreshedAt:c.activeComponentsMeta.refreshedAt,reason:c.activeComponentsMeta.reason,components:Object.keys(n).sort().map(function(r){return x(n[r])})}}i(Ee,"activeComponentsSummary");function Pn(t){return{entries:Ct(t),summary:Ee(t)}}i(Pn,"activeComponentsSnapshot");function T(t){return t==="shared"?"shared":"client"}i(T,"normalizeRuntimeStateScope");function Pt(t){if(typeof t!="string")return null;const e=t.trim();return e!==""?e:null}i(Pt,"normalizeRuntimeStateKey");function ht(){return c.clientStateScope||(c.clientStateScope=M(window.location.href)),c.clientStateScope}i(ht,"currentClientStateScope");function Tt(t){return T(t)==="shared"?c.sharedStateValues:c.clientStateValues}i(Tt,"runtimeStateStore");function On(t){return T(t)==="shared"?c.sharedStateSubscribers:c.clientStateSubscribers}i(On,"runtimeStateSubscriberStore");function Rn(t){return T(t)==="shared"?c.sharedStateGlobalSubscribers:c.clientStateGlobalSubscribers}i(Rn,"runtimeStateGlobalSubscribers");function Ce(t){const e={};return Tt(t).forEach(function(n,r){e[r]=x(n)}),e}i(Ce,"runtimeStateSnapshot");function Qo(t,e){const n=Pt(t);return n?Tt(e&&e.scope).has(n):!1}i(Qo,"hasRuntimeStateValue");function kn(t){return typeof t!="string"||t.trim()===""?[]:t.split(".").map(function(e){return e.trim()}).filter(function(e){return e!==""})}i(kn,"normalizeStatePathSegments");function In(t,e){let n=t;for(let r=0;r<e.length;r+=1){const o=e[r];if(Array.isArray(n)){const a=Number(o);if(!Number.isInteger(a)||a<0||a>=n.length)return{found:!1,value:null};n=n[a];continue}if(n===null||typeof n!="object"||!Object.prototype.hasOwnProperty.call(n,o))return{found:!1,value:null};n=n[o]}return{found:!0,value:n}}i(In,"resolveValueBySegments");function vt(t,e){const n=kn(e);if(n.length===0)return{found:!1,value:null};for(let r=n.length;r>=1;r-=1){const o=n.slice(0,r).join(".");if(!Qo(o,{scope:t}))continue;const a=bt(o,{scope:t}),s=In(a,n.slice(r));return{found:s.found,value:s.found?x(s.value):null}}return{found:!1,value:null}}i(vt,"runtimeStateValueByPath");function _n(t){const e=T(t&&t.scope),n=t&&t.key?t.key:null,r=On(e),o=Rn(e);n&&r.has(n)&&r.get(n).forEach(function(a){try{a(t)}catch(s){console.error("VoltStack state subscriber error:",s)}}),o.forEach(function(a){try{a(t)}catch(s){console.error("VoltStack state subscriber error:",s)}})}i(_n,"notifyRuntimeStateSubscribers");function qn(t,e,n,r,o,a){const s=Object.assign({scope:T(t),scopeId:T(t)==="client"?ht():"shared",key:e,value:x(n),previousValue:x(r),action:o||"set",snapshot:Ce(t)},a||{});g("volt:state-changed",s,document),_n(s)}i(qn,"emitRuntimeStateChanged");function Xo(t,e,n,r){const o=Object.assign({scope:T(t),scopeId:T(t)==="client"?ht():"shared",keys:Array.isArray(e)?e.slice():[],reason:n||"manual",snapshot:Ce(t)},r||{});g("volt:state-cleared",o,document),_n(o)}i(Xo,"emitRuntimeStateCleared");function bt(t,e){const n=Pt(t);if(!n)return null;const r=e&&typeof e=="object"?e:{},o=Tt(r.scope),a=Object.prototype.hasOwnProperty.call(r,"fallback")?r.fallback:null;return o.has(n)?x(o.get(n)):a}i(bt,"getRuntimeStateValue");function ct(t,e,n){const r=Pt(t);if(!r)return null;const o=n&&typeof n=="object"?n:{},a=T(o.scope),s=Tt(a),u=s.has(r)?s.get(r):null;return s.set(r,e),Ut(),qn(a,r,e,u,o.action||"set"),x(e)}i(ct,"setRuntimeStateValue");function Ln(t,e,n){const r=bt(t,n),o=Object.assign({},r&&typeof r=="object"&&!Array.isArray(r)?r:{},e&&typeof e=="object"&&!Array.isArray(e)?e:{});return ct(t,o,Object.assign({},n||{},{action:"merge"}))}i(Ln,"mergeRuntimeStateValue");function ti(t,e,n){const r=bt(t,n),o=typeof e=="function"?e(r):e;return ct(t,o,Object.assign({},n||{},{action:"update"}))}i(ti,"updateRuntimeStateValue");function Te(t,e){const n=Pt(t);if(!n)return!1;const o=T((e&&typeof e=="object"?e:{}).scope),a=Tt(o);if(!a.has(n))return!1;const s=a.get(n);return a.delete(n),Ut(),qn(o,n,null,s,"delete"),!0}i(Te,"deleteRuntimeStateValue");function Ne(t,e,n){const r=T(t),o=Tt(r),a=Array.from(o.keys());return a.length===0?!1:(o.clear(),Ut(),Xo(r,a,e,n),!0)}i(Ne,"clearRuntimeState");function ei(t,e){const n=M(t||window.location.href),r=ht();if(r===n)return!1;const o=Ne("client",e||"navigation",{previousScopeId:r,nextScopeId:n});return c.clientStateScope=n,g("volt:state-scope-changed",{scope:"client",previousScopeId:r,nextScopeId:n,cleared:o,reason:e||"navigation"},document),!0}i(ei,"transitionClientStateScope");function ni(t,e,n){if(typeof e!="function")return function(){return!1};const o=T((n&&typeof n=="object"?n:{}).scope),a=Pt(t);if(!a){const u=Rn(o);return u.add(e),function(){return u.delete(e)}}const s=On(o);return s.has(a)||s.set(a,new Set),s.get(a).add(e),function(){const u=s.get(a);if(!u)return!1;const l=u.delete(e);return u.size===0&&s.delete(a),l}}i(ni,"subscribeRuntimeState");function ri(){return{get:bt,set:ct,merge:Ln,update:ti,delete:Te,clear:i(function(t){const e=t&&typeof t=="object"?t:{};return Ne(e.scope,e.reason||"manual")},"clear"),snapshot:i(function(t){return Ce((t&&typeof t=="object"?t:{}).scope)},"snapshot"),subscribe:ni,currentScope:ht}}i(ri,"createPublicStateApi");function oi(){return Object.freeze({version:Ae,apis:Object.freeze({visit:Object.freeze({type:"function"}),prefetch:Object.freeze({type:"function"}),state:Object.freeze({type:"api",factory:"createPublicStateApi"}),components:Object.freeze({type:"api",factory:"createPublicComponentsApi"}),telemetry:Object.freeze({type:"api",factory:"createPublicTelemetryApi"})})})}i(oi,"createPublicRuntimeContract");function ii(){return{entries:Wt,latest:i(function(t){const e=Wt(Object.assign({},t||{},{limit:1}));return e.length>0?e[0]:null},"latest"),summary:Dn,snapshot:i(function(t){return{entries:Wt(t),summary:Dn(t),maxEntries:c.telemetryMaxEntries}},"snapshot"),reset:Ko,size:i(function(){return c.telemetryEntries.length},"size"),config:i(function(){return{maxEntries:c.telemetryMaxEntries}},"config")}}i(ii,"createPublicTelemetryApi");function ai(){return{entries:Ct,all:Ct,summary:Ee,snapshot:Pn,count:i(function(t){return Ct(t).length},"count"),names:i(function(){return Ee().components.map(function(t){return t.component})},"names"),find:i(function(t){const e=Ct({component:t});return e.length>0?e[0]:null},"find"),refresh:i(function(t){return Jt(t||"manual")},"refresh")}}i(ai,"createPublicComponentsApi");function G(t,e){const n=[t];e&&n.push(e);const r="volt-"+n.join("-"),o="volt:"+n.join(".");return[r,o]}i(G,"storeDirectiveNames");function Yt(t){return G("show",t)}i(Yt,"showDirectiveNames");function jn(t){return G("class",t)}i(jn,"classDirectiveNames");function Fn(t){return G("attr",t)}i(Fn,"attrDirectiveNames");function Vn(t){return G("style",t)}i(Vn,"styleDirectiveNames");function zn(t){return G("if",t)}i(zn,"ifDirectiveNames");function De(t){return G("for",t)}i(De,"forDirectiveNames");function Un(t){return G("text",t)}i(Un,"textDirectiveNames");function Bn(t){return G("html",t)}i(Bn,"htmlDirectiveNames");function Ys(){return["volt:bind","volt-bind","data-volt-bind"]}i(Ys,"bindDirectiveNames");function Hn(){return["volt:model.local","volt-model-local","data-volt-model-local"]}i(Hn,"modelLocalDirectiveNames");function Kn(){return["volt:model.sync","volt-model-sync","data-volt-model-sync"]}i(Kn,"modelSyncDirectiveNames");function Gn(){return G("portal")}i(Gn,"portalDirectiveNames");function $n(t){return G("focus",t)}i($n,"focusDirectiveNames");function si(t){return G("autofocus",t)}i(si,"autofocusDirectiveNames");function Zn(){return si("when")}i(Zn,"autofocusWhenDirectiveNames");function Wn(t){if(typeof t!="string"||t.trim()==="")return null;const e=t.trim().match(/^(!)?\s*(client|shared):([A-Za-z0-9_.-]+)$/i);return e?{negate:e[1]==="!",scope:T(e[2]),path:e[3],raw:t.trim()}:null}i(Wn,"parseStoreDirectiveExpression");function ui(t){if(typeof t!="string"||t.trim()==="")return null;const e=[];let n=0;for(;n<t.length;){const r=t[n];if(/\s/.test(r)){n+=1;continue}if(t.slice(n,n+2)==="&&"){e.push({type:"and",value:"&&"}),n+=2;continue}if(t.slice(n,n+2)==="||"){e.push({type:"or",value:"||"}),n+=2;continue}if(t.slice(n,n+3)==="==="){e.push({type:"comparison",operator:"===",value:"==="}),n+=3;continue}if(t.slice(n,n+3)==="!=="){e.push({type:"comparison",operator:"!==",value:"!=="}),n+=3;continue}if(t.slice(n,n+2)==="=="){e.push({type:"comparison",operator:"==",value:"=="}),n+=2;continue}if(t.slice(n,n+2)==="!="){e.push({type:"comparison",operator:"!=",value:"!="}),n+=2;continue}if(t.slice(n,n+2)===">="){e.push({type:"comparison",operator:">=",value:">="}),n+=2;continue}if(t.slice(n,n+2)==="<="){e.push({type:"comparison",operator:"<=",value:"<="}),n+=2;continue}if(r==="!"){e.push({type:"not",value:"!"}),n+=1;continue}if(r==="("){e.push({type:"lparen",value:"("}),n+=1;continue}if(r===")"){e.push({type:"rparen",value:")"}),n+=1;continue}if(r===">"){e.push({type:"comparison",operator:">",value:">"}),n+=1;continue}if(r==="<"){e.push({type:"comparison",operator:"<",value:"<"}),n+=1;continue}if(r==="'"||r==='"'){let l=n+1,f=!1;for(;l<t.length;){const y=t[l];if(f){f=!1,l+=1;continue}if(y==="\\"){f=!0,l+=1;continue}if(y===r)break;l+=1}if(l>=t.length||t[l]!==r)return null;const d=t.slice(n,l+1),p=xe(d);if(p===null)return null;e.push({type:"literal",value:p,raw:d}),n=l+1;continue}const o=t.slice(n).match(/^(client|shared):([A-Za-z0-9_.-]+)/i);if(o){e.push({type:"ref",value:o[0],scope:T(o[1]),path:o[2]}),n+=o[0].length;continue}const a=t.slice(n).match(/^(true|false)\b/i);if(a){e.push({type:"literal",value:a[0].toLowerCase()==="true",raw:a[0]}),n+=a[0].length;continue}const s=t.slice(n).match(/^null\b/i);if(s){e.push({type:"literal",value:null,raw:s[0]}),n+=s[0].length;continue}const u=t.slice(n).match(/^-?\d+(?:\.\d+)?\b/);if(u){e.push({type:"literal",value:Number(u[0]),raw:u[0]}),n+=u[0].length;continue}return null}return e}i(ui,"tokenizeStoreConditionExpression");function ci(t,e){const n=t[e.index];if(!n)return null;if(n.type==="literal")return e.index+=1,{type:"literal",value:n.value};if(n.type==="ref")return e.index+=1,{type:"ref",scope:n.scope,path:n.path};if(n.type==="lparen"){e.index+=1;const r=Qn(t,e);return!r||!t[e.index]||t[e.index].type!=="rparen"?null:(e.index+=1,r)}return null}i(ci,"parseStoreConditionPrimary");function Me(t,e){const n=t[e.index];if(n&&n.type==="not"){e.index+=1;const r=Me(t,e);return r?{type:"not",argument:r}:null}return ci(t,e)}i(Me,"parseStoreConditionUnary");function Jn(t,e){let n=Me(t,e);if(!n)return null;for(;t[e.index]&&t[e.index].type==="comparison";){const r=t[e.index].operator;e.index+=1;const o=Me(t,e);if(!o)return null;n={type:"comparison",operator:r,left:n,right:o}}return n}i(Jn,"parseStoreConditionComparison");function Yn(t,e){let n=Jn(t,e);if(!n)return null;for(;t[e.index]&&t[e.index].type==="and";){e.index+=1;const r=Jn(t,e);if(!r)return null;n={type:"and",left:n,right:r}}return n}i(Yn,"parseStoreConditionAnd");function Qn(t,e){let n=Yn(t,e);if(!n)return null;for(;t[e.index]&&t[e.index].type==="or";){e.index+=1;const r=Yn(t,e);if(!r)return null;n={type:"or",left:n,right:r}}return n}i(Qn,"parseStoreConditionOr");function Qt(t){const e=ui(t);if(!e||e.length===0)return null;const n={index:0},r=Qn(e,n);return!r||n.index!==e.length?null:{ast:r,raw:t.trim()}}i(Qt,"parseStoreConditionExpression");function Ot(t){if(t){if(t.type==="literal")return t.value;if(t.type==="ref"){const e=vt(t.scope,t.path);return e.found?e.value:void 0}return t.type==="comparison"?li(t.operator,Ot(t.left),Ot(t.right)):Y(t)}}i(Ot,"resolveStoreConditionNodeValue");function li(t,e,n){switch(t){case"===":return e===n;case"!==":return e!==n;case"==":return e==n;case"!=":return e!=n;case">":return e>n;case"<":return e<n;case">=":return e>=n;case"<=":return e<=n;default:return!1}}i(li,"evaluateStoreConditionComparison");function Y(t){return t?t.type==="literal"||t.type==="ref"||t.type==="comparison"?!!Ot(t):t.type==="not"?!Y(t.argument):t.type==="and"?Y(t.left)&&Y(t.right):t.type==="or"?Y(t.left)||Y(t.right):!1:!1}i(Y,"evaluateStoreConditionNode");function xe(t){if(typeof t!="string"||t.length<2)return null;const e=t[0];if(e!=="'"&&e!=='"'||t[t.length-1]!==e)return null;let n="",r=!1;for(let o=1;o<t.length-1;o+=1){const a=t[o];if(r){switch(a){case"n":n+=`
-`;break;case"r":n+="\r";break;case"t":n+="	";break;case"\\":case"'":case'"':n+=a;break;default:n+=a;break}r=!1;continue}if(a==="\\"){r=!0;continue}n+=a}return r&&(n+="\\"),n}i(xe,"parseDirectiveStringLiteral");function fi(t,e,n){return n==="??"?t.slice(e,e+2)==="??":n==="|"?t[e]==="|"&&t[e-1]!=="|"&&t[e+1]!=="|":!1}i(fi,"matchesTopLevelSplitOperator");function Rt(t,e){if(typeof t!="string"||t.trim()==="")return[];const n=[];let r="",o=0,a=null,s=!1;for(let u=0;u<t.length;u+=1){const l=t[u];if(a!==null){if(r+=l,s){s=!1;continue}if(l==="\\"){s=!0;continue}l===a&&(a=null);continue}if(l==="'"||l==='"'){a=l,r+=l;continue}if(l==="("){o+=1,r+=l;continue}if(l===")"){o=Math.max(0,o-1),r+=l;continue}if(o===0&&fi(t,u,e)){r.trim()!==""&&n.push(r.trim()),r="",u+=e.length-1;continue}r+=l}return r.trim()!==""&&n.push(r.trim()),n}i(Rt,"splitTopLevelDirectiveEntries");function Xt(t){if(typeof t!="string"||t.trim()==="")return-1;let e=0,n=null,r=!1;for(let o=0;o<t.length;o+=1){const a=t[o];if(n!==null){if(r){r=!1;continue}if(a==="\\"){r=!0;continue}a===n&&(n=null);continue}if(a==="'"||a==='"'){n=a;continue}if(a==="("){e+=1;continue}if(a===")"){e=Math.max(0,e-1);continue}if(e===0&&a==="-"&&t[o+1]===">")return o}return-1}i(Xt,"findTopLevelArrow");function di(t){if(typeof t!="string"||t.trim()==="")return null;const e=t.trim(),n=xe(e);if(n!==null)return{type:"literal",value:n,raw:e};if(/^(true|false)$/i.test(e))return{type:"literal",value:e.toLowerCase()==="true",raw:e};if(/^null$/i.test(e))return{type:"literal",value:null,raw:e};if(/^-?\d+(?:\.\d+)?$/.test(e))return{type:"literal",value:Number(e),raw:e};const r=Wn(e);return r?{type:"ref",expression:r,raw:e}:null}i(di,"parseStoreTextDirectiveSegment");function pi(t){if(typeof t!="string"||t.trim()==="")return null;const e=Rt(t,"??");if(e.length===0)return null;const n=e.map(function(r){return di(r)});return n.some(function(r){return!r})?null:{segments:n,raw:t.trim()}}i(pi,"parseStoreTextDirectiveExpression");function kt(t){const e=Qt(t);return e?Y(e.ast):!1}i(kt,"resolveStoreDirectiveActive");function Pe(t){const e=pi(t);if(!e)return{found:!1,value:null};if(e.segments.length===1&&e.segments[0]&&e.segments[0].type==="ref")return vt(e.segments[0].expression.scope,e.segments[0].expression.path);for(let n=0;n<e.segments.length;n+=1){const r=e.segments[n];if(r.type==="literal")return{found:!0,value:r.value};if(r.type==="ref"){const o=vt(r.expression.scope,r.expression.path);if(o.found&&o.value!==null&&typeof o.value<"u")return o}}return{found:!1,value:null}}i(Pe,"resolveStoreDirectiveValue");function mi(t){if(t===null||typeof t>"u")return"";if(typeof t=="object")try{return JSON.stringify(t)}catch{return""}return String(t)}i(mi,"formatStoreDirectiveTextValue");function gi(t){if(t===null||typeof t>"u")return"";if(typeof t=="string")return t;if(typeof t=="number"||typeof t=="boolean")return String(t);try{return JSON.stringify(t)}catch{return String(t)}}i(gi,"formatStoreDirectiveHtmlValue");function Oe(t){if(t===null||typeof t>"u")return"";if(typeof t=="string")return t;if(typeof t=="number"||typeof t=="boolean")return String(t);try{return JSON.stringify(t)}catch{return String(t)}}i(Oe,"formatBindDirectiveValue");function Xn(t,e){return!!(t===e||typeof t=="number"&&typeof e=="number"&&Number.isNaN(t)&&Number.isNaN(e))}i(Xn,"valuesAreSame");function yi(t){if(typeof t!="string"||t.trim()==="")return null;const e=t.trim().replace(/-([a-z])/g,function(n,r){return r.toUpperCase()});return e.toLowerCase()==="readonly"?"readOnly":e}i(yi,"normalizeBindDirectivePropertyName");function hi(t,e){return typeof e=="string"&&e.trim()!==""?e.trim().replace(/[A-Z]/g,function(n){return"-"+n.toLowerCase()}).toLowerCase():typeof t!="string"||t===""?null:t.replace(/[A-Z]/g,function(n){return"-"+n.toLowerCase()}).toLowerCase()}i(hi,"bindDirectiveReflectAttributeName");function tr(t){return["checked","disabled","hidden","required","readOnly","selected"].indexOf(t)!==-1}i(tr,"isBooleanBindDirectiveProperty");function vi(t){return!t||!t.attributes?[]:Array.from(t.attributes).map(function(e){const n=e&&e.name?e.name:"";let r=n.match(/^volt:bind:([A-Za-z0-9_-]+)$/);if(r||(r=n.match(/^volt-bind-([A-Za-z0-9_-]+)$/)),r||(r=n.match(/^data-volt-bind-([A-Za-z0-9_-]+)$/)),!r)return null;const o=r[1],a=yi(o);return a?{attributeName:n,rawProperty:o,propertyName:a,expression:e.value||"",reflectAttributeName:hi(a,o)}:null}).filter(function(e){return!!e})}i(vi,"bindDirectiveEntries");function Re(t){const e=Wn(t);return!e||e.negate?null:e}i(Re,"parseModelLocalDirectiveValue");function ke(t){if(!t||typeof t.focus!="function"||!t.isConnected||t.hidden===!0||typeof t.disabled=="boolean"&&t.disabled||t.getAttribute("aria-disabled")==="true")return!1;if(typeof window.getComputedStyle=="function"){const e=window.getComputedStyle(t);if(!e||e.display==="none"||e.visibility==="hidden")return!1}return!(typeof t.getClientRects=="function"&&t.getClientRects().length===0&&document.activeElement!==t)}i(ke,"isDirectiveFocusableElement");function bi(t){const e=ot(t);return e.portal||(e.portal={placeholder:null,selector:null}),e.portal}i(bi,"portalDirectiveState");function Ai(t){const e=ot(t);return e.html||(e.html={lastApplied:null}),e.html}i(Ai,"htmlDirectiveState");function Si(t){const e=ot(t);return e.bindings||(e.bindings={}),e.bindings}i(Si,"bindDirectiveState");function wi(t){const e=ot(t);return e.modelLocal||(e.modelLocal={baselineCaptured:!1,value:null,checked:!1,selected:!1}),e.modelLocal}i(wi,"modelLocalDirectiveState");function Ei(t){const e=wi(t);return e.baselineCaptured||(e.baselineCaptured=!0,e.value="value"in t?t.value:null,e.checked="checked"in t?!!t.checked:!1,e.selected="selected"in t?!!t.selected:!1),e}i(Ei,"ensureModelLocalBaseline");function er(t){return v(t,Hn())}i(er,"modelLocalDirectiveValue");function nr(t){return Re(t)}i(nr,"parseModelSyncDirectiveValue");function rr(t){return v(t,Kn())}i(rr,"modelSyncDirectiveValue");function Ci(t){const e=v(t,["data-volt-model-sync-update","volt-model-sync-update","volt:model.sync.update"]);if(typeof e=="string"&&e.trim()!=="")return e.trim();const n=t&&t.getAttribute?t.getAttribute("name"):null;return typeof n=="string"&&n.trim()!==""?n.trim():null}i(Ci,"modelSyncUpdateField");function or(t){!t||!c.modelSyncDebounces.has(t)||(clearTimeout(c.modelSyncDebounces.get(t)),c.modelSyncDebounces.delete(t),c.modelSyncTrackedElements.delete(t))}i(or,"clearModelSyncDirectiveDebounce");function ir(t,e){if(!t||!e)return{params:{},updates:{},shouldDispatch:!1};if(Tr(t,e).length>0)return{params:{},updates:{},shouldDispatch:!0};const r=Ci(e),o=Ie(e);if(!r||!o.valid)return{params:{},updates:{},shouldDispatch:!1};const a={};return a[r]=o.value,{params:{},updates:a,shouldDispatch:!0}}i(ir,"buildModelSyncDirectivePayload");function Ti(t,e){if(!t||!e||!ir(t,e).shouldDispatch)return!1;or(e);const r=window.setTimeout(function(){if(c.modelSyncDebounces.delete(e),c.modelSyncTrackedElements.delete(e),!e.isConnected)return;const o=yt(e)||t;if(!o||!o.isConnected)return;const a=ir(o,e);a.shouldDispatch&&sn(o,xt,a.params,a.updates,e).catch(function(s){console.error("VoltStack runtime error:",s)})},To);return c.modelSyncDebounces.set(e,r),c.modelSyncTrackedElements.add(e),!0}i(Ti,"scheduleModelSyncDirectiveDispatch");function te(t){if(!t||!t.tagName)return!1;const e=t.tagName.toLowerCase();return e==="input"||e==="textarea"||e==="select"}i(te,"elementSupportsModelLocal");function Ie(t){if(!te(t))return{valid:!1,value:null};const e=t.tagName.toLowerCase();if(e==="textarea"||e==="select")return{valid:!0,value:t.value};const n=(t.type||"text").toLowerCase();return n==="checkbox"?{valid:!0,value:!!t.checked}:n==="radio"?t.checked?{valid:!0,value:t.value}:{valid:!1,value:null}:{valid:!0,value:t.value}}i(Ie,"readModelLocalElementValue");function ar(t,e,n){if(!te(t))return;const r=Ei(t),o=t.tagName.toLowerCase();if(o==="textarea"||o==="select"){const u=n?Oe(e):r.value||"";t.value!==u&&(t.value=u);return}const a=(t.type||"text").toLowerCase();if(a==="checkbox"){const u=n?!!e:!!r.checked;!!t.checked!==u&&(t.checked=u);return}if(a==="radio"){const u=n?String(e)===String(t.value):!!r.checked;!!t.checked!==u&&(t.checked=u);return}const s=n?Oe(e):r.value||"";t.value!==s&&(t.value=s)}i(ar,"applyModelLocalElementValue");function sr(t,e){if(!te(t))return!1;const n=er(t),r=Re(n);if(!r)return!1;const o=Ie(t);if(!o.valid)return!1;const a=bt(r.path,{scope:r.scope,fallback:null});return Xn(a,o.value)?!1:(ct(r.path,o.value,{scope:r.scope,action:e||"directive:model.local"}),!0)}i(sr,"updateModelLocalDirectiveFromElement");function ur(t,e,n){if(!te(t))return!1;const r=rr(t),o=nr(r);if(!o)return!1;const a=Ie(t);if(!a.valid)return!1;const s=bt(o.path,{scope:o.scope,fallback:null}),u=!Xn(s,a.value);return u&&ct(o.path,a.value,{scope:o.scope,action:n||"directive:model.sync"}),Ti(e,t)||u}i(ur,"updateModelSyncDirectiveFromElement");function Ni(t,e){const n=Si(t),r=e.attributeName;if(!n[r]){const o=e.reflectAttributeName;n[r]={propertyName:e.propertyName,reflectAttributeName:o,hasProperty:e.propertyName in t,initialPropertyValue:e.propertyName in t?t[e.propertyName]:null,hadAttribute:!!o&&t.hasAttribute(o),initialAttributeValue:o&&t.hasAttribute(o)?t.getAttribute(o):null}}return n[r]}i(Ni,"ensureBindDirectiveBaseline");function Di(t,e){if(!t||!e)return;const n=e.propertyName,r=e.reflectAttributeName;if(n==="value"){const o=e.hadAttribute&&e.initialAttributeValue!==null?e.initialAttributeValue:typeof e.initialPropertyValue<"u"&&e.initialPropertyValue!==null?String(e.initialPropertyValue):"";"value"in t&&(t.value=o),r&&(e.hadAttribute&&e.initialAttributeValue!==null?t.setAttribute(r,e.initialAttributeValue):t.removeAttribute(r));return}if(tr(n)){n in t&&(t[n]=!1),r&&t.removeAttribute(r);return}e.hasProperty&&(e.initialPropertyValue===null||typeof e.initialPropertyValue>"u"?t[n]="":t[n]=e.initialPropertyValue),r&&(e.hadAttribute&&e.initialAttributeValue!==null?t.setAttribute(r,e.initialAttributeValue):t.removeAttribute(r))}i(Di,"restoreBindDirectiveValue");function Mi(t,e,n,r){const o=Ni(t,e),a=e.propertyName,s=e.reflectAttributeName;if(!r||n===null||typeof n>"u"){Di(t,o);return}if(tr(a)){const l=!!n;a in t&&(t[a]=l),s&&(l?t.setAttribute(s,s):t.removeAttribute(s));return}const u=Oe(n);if(a in t)t[a]=u;else if(s){t.setAttribute(s,u);return}s&&a!=="value"&&t.setAttribute(s,u)}i(Mi,"applyBindDirectiveValue");function xi(t,e){if(e&&e.placeholder&&e.placeholder.parentNode&&e.placeholder.isConnected)return e.placeholder;if(!t||!t.parentNode)return null;const n=document.createElement("span");return n.setAttribute("data-volt-portal-placeholder","true"),n.hidden=!0,n.style.display="none",t.parentNode.insertBefore(n,t),e&&(e.placeholder=n),n}i(xi,"ensurePortalPlaceholder");function cr(t,e){const n=e&&e.placeholder&&e.placeholder.parentNode?e.placeholder:null;return!t||!n||!n.parentNode||t.parentNode===n.parentNode&&t.previousSibling===n?!1:(n.parentNode.insertBefore(t,n.nextSibling),!0)}i(cr,"restorePortalElement");function lr(t){t&&N(t,Gn()).forEach(function(e){const n=v(e,Gn()),r=bi(e);if(typeof n!="string"||n.trim()===""){cr(e,r);return}r.selector=n.trim();const o=document.querySelector(r.selector);if(!o){cr(e,r);return}xi(e,r),e.parentNode!==o&&o.appendChild(e)})}i(lr,"syncPortalDirectives");function Pi(t){if(!t)return!1;let e=!1;return N(t,Bn()).forEach(function(n){const r=v(n,Bn()),o=Pe(r),a=o.found?gi(o.value):"",s=Ai(n);s.lastApplied!==a&&(n.innerHTML=a,s.lastApplied=a,e=!0)}),e}i(Pi,"syncHtmlDirectives");function Oi(t){t&&[t].concat(Array.from(t.querySelectorAll("*"))).forEach(function(e){const n=vi(e);n.length!==0&&n.forEach(function(r){const o=Pe(r.expression);Mi(e,r,o.value,o.found)})})}i(Oi,"syncBindDirectives");function Ri(t){t&&[t].concat(Array.from(t.querySelectorAll("*"))).forEach(function(e){const n=er(e),r=Re(n);if(!r)return;const o=vt(r.scope,r.path);ar(e,o.value,o.found)})}i(Ri,"syncModelLocalDirectives");function ki(t){t&&[t].concat(Array.from(t.querySelectorAll("*"))).forEach(function(e){const n=rr(e),r=nr(n);if(!r)return;const o=vt(r.scope,r.path);ar(e,o.value,o.found)})}i(ki,"syncModelSyncDirectives");function fr(t){const e=ot(t);return e.focus||(e.focus={}),e.focus}i(fr,"focusDirectiveState");function Ii(t){if(!ke(t)||document.activeElement===t)return!1;try{t.focus({preventScroll:!0})}catch{try{t.focus()}catch{return!1}}return document.activeElement===t}i(Ii,"focusElementForDirective");function _i(t){if(!t)return;let e=null;N(t,$n()).forEach(function(n){const r=v(n,$n()),o=kt(r),a=fr(n),s=a.reactive===!0;a.reactive=o,o&&!s&&ke(n)&&(e=n)}),N(t,Zn()).forEach(function(n){const r=v(n,Zn()),o=kt(r),a=fr(n),s=a.autofocusWhen===!0;a.autofocusWhen=o,o&&!s&&ke(n)&&(e=n)}),e&&Ii(e)}i(_i,"syncFocusDirectives");function qi(t){if(typeof t!="string"||t.trim()==="")return null;const e=t.trim().match(/^([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*,\s*([A-Za-z_$][A-Za-z0-9_$]*))?\s+in\s+(client|shared):([A-Za-z0-9_.-]+)$/i);return e?{itemAlias:e[1],indexAlias:e[2]||"index",scope:T(e[3]),path:e[4],raw:t.trim()}:null}i(qi,"parseForDirectiveExpression");function Li(t){if(typeof t!="string"||t.trim()==="")return null;const e=Xt(t);if(e===-1)return null;const n=Qt(t.slice(0,e).trim()),r=t.slice(e+2).trim();return!n||r===""?null:{expression:n,classValue:r,raw:t.trim()}}i(Li,"parseStoreClassDirectiveRule");function ji(t){return typeof t!="string"||t.trim()===""?[]:Rt(t,"|").map(function(e){return Li(e)}).filter(function(e){return!!e})}i(ji,"parseStoreClassDirectiveRules");function Fi(t){if(typeof t!="string"||t.trim()==="")return null;const e=Xt(t);if(e===-1)return null;const n=Qt(t.slice(0,e).trim()),r=zr(t.slice(e+2).trim());return!n||r.length===0?null:{expression:n,attributes:r,raw:t.trim()}}i(Fi,"parseStoreAttrDirectiveRule");function Vi(t){return typeof t!="string"||t.trim()===""?[]:Rt(t,"|").map(function(e){return Fi(e)}).filter(function(e){return!!e})}i(Vi,"parseStoreAttrDirectiveRules");function zi(t){if(typeof t!="string"||t.trim()==="")return null;const e=Xt(t);if(e===-1)return null;const n=Qt(t.slice(0,e).trim()),r=Ra(t.slice(e+2).trim());return!n||r.length===0?null:{expression:n,styles:r,raw:t.trim()}}i(zi,"parseStoreStyleDirectiveRule");function Ui(t){return typeof t!="string"||t.trim()===""?[]:Rt(t,"|").map(function(e){return zi(e)}).filter(function(e){return!!e})}i(Ui,"parseStoreStyleDirectiveRules");function dr(t){const e=document.createElement("template"),n="volt-"+t+"-"+String(c.directiveSequence+1);return c.directiveSequence+=1,e.setAttribute("data-volt-"+t+"-placeholder",n),e}i(dr,"createDirectivePlaceholder");function Bi(){return dr("if")}i(Bi,"createIfDirectivePlaceholder");function Hi(){return dr("for")}i(Hi,"createForDirectivePlaceholder");function Ki(t,e){!t||t.nodeType!==Node.ELEMENT_NODE||!Array.isArray(e)||e.forEach(function(n){t.removeAttribute(n)})}i(Ki,"removeDirectiveAttributes");function Gi(t,e){if(typeof t!="string"||t.trim()==="")return"";const n=t.trim(),r=[e.itemAlias,e.indexAlias];for(let o=0;o<r.length;o+=1){const a=r[o];if(a){if(n===a)return e[a];if(n.indexOf(a+".")===0){const s=In(e[a],kn(n.slice(a.length+1)));return s.found?s.value:""}}}return""}i(Gi,"resolveForInterpolationValue");function pr(t,e){return typeof t!="string"||t.indexOf("{{")===-1?t:t.replace(/\{\{\s*([^}]+)\s*\}\}/g,function(n,r){const o=Gi(r,e);if(o===null||typeof o>"u")return"";if(typeof o=="object")try{return JSON.stringify(o)}catch{return""}return String(o)})}i(pr,"interpolateForTemplateString");function $i(t,e){if(!t||t.nodeType!==Node.ELEMENT_NODE)return;[t].concat(Array.prototype.slice.call(t.querySelectorAll("*"))).forEach(function(a){a.getAttributeNames().forEach(function(s){a.setAttribute(s,pr(a.getAttribute(s)||"",e))})});const r=document.createTreeWalker(t,NodeFilter.SHOW_TEXT);let o=r.nextNode();for(;o;)o.textContent=pr(o.textContent||"",e),o=r.nextNode()}i($i,"applyForTemplateInterpolation");function Zi(t){if(!t||t.nodeType!==Node.ELEMENT_NODE)return null;if(t.__voltIfBinding)return t.__voltIfBinding;const e=Bi(),n={id:e.getAttribute("data-volt-if-placeholder"),placeholder:e,templateNode:t.cloneNode(!0),currentNode:t};return e.__voltIfBinding=n,t.__voltIfBinding=n,t.parentNode.insertBefore(e,t),n}i(Zi,"ensureIfDirectiveBinding");function Wi(t){if(!t||t.nodeType!==Node.ELEMENT_NODE)return null;if(t.__voltForBinding)return t.__voltForBinding;const e=qi(v(t,De()));if(!e||!t.parentNode)return null;const n=Hi(),r=t.cloneNode(!0);Ki(r,De());const o={id:n.getAttribute("data-volt-for-placeholder"),expression:e,placeholder:n,templateNode:r,currentNodes:[]};return n.__voltForBinding=o,t.__voltForBinding=o,t.parentNode.insertBefore(n,t),t.remove(),o}i(Wi,"ensureForDirectiveBinding");function Ji(t){if(!t||!t.placeholder||!t.templateNode)return!1;const e=kt(v(t.templateNode,zn())),n=t.currentNode&&t.currentNode.isConnected?t.currentNode:null;if(e){if(n)return n.__voltIfBinding=t,t.currentNode=n,!1;const r=t.templateNode.cloneNode(!0);return r.__voltIfBinding=t,t.currentNode=r,t.placeholder.parentNode.insertBefore(r,t.placeholder.nextSibling),!0}return n?(n.remove(),t.currentNode=null,!0):(t.currentNode=null,!1)}i(Ji,"syncIfBinding");function _e(t){if(!t)return!1;let e=!1;return N(t,zn()).forEach(function(n){Zi(n)}),N(t,["data-volt-if-placeholder"]).forEach(function(n){Ji(n.__voltIfBinding||null)&&(e=!0)}),e}i(_e,"syncIfDirectives");function Yi(t){if(!t||!t.placeholder||!t.templateNode||!t.expression)return;const e=vt(t.expression.scope,t.expression.path),n=e.found&&Array.isArray(e.value)?e.value:[],r=document.createDocumentFragment();t.currentNodes.forEach(function(o){o&&o.isConnected&&o.remove()}),t.currentNodes=[],n.forEach(function(o,a){const s=t.templateNode.cloneNode(!0),u={itemAlias:t.expression.itemAlias,indexAlias:t.expression.indexAlias};u[t.expression.itemAlias]=x(o),u[t.expression.indexAlias]=a,$i(s,u),t.currentNodes.push(s),r.appendChild(s)}),t.placeholder.parentNode.insertBefore(r,t.placeholder.nextSibling)}i(Yi,"syncForBinding");function qe(t){t&&(N(t,De()).forEach(function(e){Wi(e)}),N(t,["data-volt-for-placeholder"]).forEach(function(e){Yi(e.__voltForBinding||null)}))}i(qe,"syncForDirectives");function mr(t){t&&(N(t,Yt()).forEach(function(e){const n=v(e,Yt()),r=kt(n);le(e,"show",r,!1)}),N(t,Yt("hide")).forEach(function(e){le(e,"show",kt(v(e,Yt("hide"))),!0)}))}i(mr,"syncShowDirectives");function gr(t){t&&N(t,Un()).forEach(function(e){const n=v(e,Un()),r=Pe(n);e.textContent=r.found?mi(r.value):""})}i(gr,"syncTextDirectives");function yr(t){t&&N(t,Fn()).forEach(function(e){const n=Vi(v(e,Fn()));n.length!==0&&n.forEach(function(r){Ur(e,"store:"+r.expression.raw+"->"+r.raw,Y(r.expression.ast),r.attributes)})})}i(yr,"syncAttrDirectives");function hr(t){t&&N(t,Vn()).forEach(function(e){const n=Ui(v(e,Vn()));n.length!==0&&n.forEach(function(r){ka(e,Y(r.expression.ast),r.styles,"store:"+r.expression.raw+"->"+r.raw)})})}i(hr,"syncStyleDirectives");function Qs(){document.querySelectorAll('[data-volt-root="true"]').forEach(function(t){qe(t);let e=0;for(;_e(t)&&e<5;)e+=1;gr(t),Hr(t),yr(t),hr(t),mr(t)})}i(Qs,"syncAllStoreDirectives");const Qi=["data-volt-state-sync","volt-state-sync","volt:state-sync"],vr=["data-volt-navigation-mode","volt-navigation-mode","volt:navigation-mode"],br=["data-volt-document","volt-document","volt:document"],Ar=["data-volt-page-transition","volt-page-transition","volt:page-transition"],Sr=["data-volt-page-transition-profile","volt-page-transition-profile","volt:page-transition-profile"],wr=["data-volt-page-transition-duration","volt-page-transition-duration","volt:page-transition-duration"],Er=["data-volt-page-transition-mode","volt-page-transition-mode","volt:page-transition-mode"],Xi=["data-volt-fragment-control","volt-fragment-control","volt:fragment-control"];function ta(t){if(typeof t!="string")return null;const e=t.trim().match(/^(client|shared):([A-Za-z0-9_.-]+)\s*->\s*(params|updates)\.([A-Za-z_][A-Za-z0-9_]*)$/i);return e?{scope:T(e[1]),sourcePath:e[2],destination:e[3].toLowerCase(),field:e[4],raw:t.trim()}:null}i(ta,"parseStateSyncRuleValue");function ea(t){return typeof t!="string"||t.trim()===""?[]:t.split(",").map(function(e){return ta(e)}).filter(function(e){return e!==null})}i(ea,"parseStateSyncRules");function Cr(t){if(!t||!t.getAttribute)return[];const e=v(t,Qi);return ea(e||"")}i(Cr,"stateSyncRulesForElement");function Tr(t,e){const n=[];return Cr(t).forEach(function(r){n.push(r)}),e&&e!==t&&Cr(e).forEach(function(r){n.push(r)}),n}i(Tr,"collectStateSyncRules");function na(t,e,n,r,o){const a=Object.assign({},n||{}),s=Object.assign({},r||{}),u=Tr(t,e),l=[],f=[];return u.forEach(function(d){const p=vt(d.scope,d.sourcePath);if(!p.found){f.push({rule:d.raw,scope:d.scope,sourcePath:d.sourcePath,destination:d.destination,field:d.field,reason:"missing-source"});return}d.destination==="updates"?s[d.field]=p.value:a[d.field]=p.value,l.push({rule:d.raw,scope:d.scope,sourcePath:d.sourcePath,destination:d.destination,field:d.field,value:x(p.value)})}),(l.length>0||f.length>0)&&g("volt:state-sync",q("action",o,{applied:l,skipped:f,params:x(a),updates:x(s)}),S(t,o.component)||t||document),{params:a,updates:s,applied:l,skipped:f}}i(na,"applySelectiveStateSync");function ee(t){if(!t||!t.getAttribute)return null;const e=t.getAttribute("href");if(!e||e.startsWith("#"))return null;try{const n=new URL(e,window.location.href);return oo(n)?n.toString():null}catch{return null}}i(ee,"navigationUrlForElement");function ra(t){const e=P(t,["volt-prefetch","volt:prefetch"]);if(!e)return["auto"];const n=(e.value||"").trim().toLowerCase();return n===""?["auto"]:n.split(/[\s,|]+/).filter(function(r){return r!==""})}i(ra,"prefetchModeTokensForElement");function ne(t,e){const n=ra(t);return n.includes("none")||n.includes("off")||n.includes("false")?!1:n.includes("auto")||n.includes("all")||n.includes("eager")||n.includes("true")?!0:e==="intent"?n.includes("hover")||n.includes("focus")||n.includes("intent"):e==="viewport"?n.includes("viewport")||n.includes("visible"):e==="idle"?n.includes("idle")||n.includes("heuristic"):!1}i(ne,"linkAllowsPrefetchSource");function Nr(t){if(!t)return"";try{return new URL(t,window.location.href).toString()}catch{return String(t)}}i(Nr,"normalizeHeadAssetUrl");function re(t){return new DOMParser().parseFromString(t,"text/html")}i(re,"parseNavigationDocument");function oa(t){return typeof t!="string"||t.trim()===""?[]:t.trim().toLowerCase().split(/[\s,|;]+/).filter(function(e){return e!==""})}i(oa,"navigationCacheControlTokens");function Le(t,e){const n=t&&typeof t=="object"?t:{},r=e&&typeof e=="object"?e:{};return{mode:r.mode&&r.mode!=="default"?r.mode:n.mode||"default",ttl:r.ttl!==null&&typeof r.ttl<"u"?r.ttl:typeof n.ttl=="number"?n.ttl:null,raw:r.raw||n.raw||"",source:r.source||n.source||"default"}}i(Le,"mergeNavigationCacheControl");function lt(t,e){const n=oa(t),r={mode:"default",ttl:null,raw:typeof t=="string"?t:"",source:e||"default"};return n.forEach(function(o){if(o==="no-store"||o==="store=none"){r.mode="no-store";return}if(r.mode!=="no-store"&&(o==="reload"||o==="refresh"||o==="network-only"||o==="no-cache"||o==="revalidate"||o==="bypass")){r.mode="reload";return}if(r.mode==="default"&&(o==="invalidate"||o==="reset"||o==="refresh-cache")){r.mode="invalidate";return}const a=o.match(/^(ttl|max-age)=(.+)$/),s=o.match(/^(ttl|max-age):(.+)$/),u=a||s;if(!u)return;const l=F(u[2]);l!==null&&(r.ttl=l)}),r}i(lt,"parseNavigationCacheControl");function It(t){if(!t||typeof t.getAttribute!="function")return lt("","default");const e=P(t,["volt-cache","volt:cache","data-volt-cache"]);return e?lt(e.value,"element"):lt("","default")}i(It,"navigationCacheControlForElement");function Dr(t){if(!t||!t.head||typeof t.head.querySelector!="function")return lt("","default");for(let e=0;e<ln.length;e+=1){const n=ln[e],r=t.head.querySelector('meta[name="'+_(n)+'"]');if(r)return lt(r.getAttribute("content")||"","document")}return lt("","default")}i(Dr,"navigationCacheControlForDocument");function $(t,e){const n=typeof t=="string"?t.trim().toLowerCase():"";return n==="reload"||n==="full-reload"||n==="hard-reload"||n==="document"?{mode:"reload",raw:n,source:e||"default"}:n==="spa"||n==="soft"||n==="client"?{mode:"spa",raw:n,source:e||"default"}:{mode:"auto",raw:n,source:e||"default"}}i($,"parseNavigationMode");function Nt(t,e){const n=typeof t=="string"?t.trim().toLowerCase():"";return n==="reload"||n==="reload-only"||n==="static"||n==="non-spa"||n==="document"?{mode:"reload",raw:n,source:e||"default"}:n==="spa"||n==="interactive"||n==="reactive"?{mode:"spa",raw:n,source:e||"default"}:{mode:"auto",raw:n,source:e||"default"}}i(Nt,"parseDocumentContract");function rt(t){if(!t||typeof t.getAttribute!="function")return $("","default");const e=P(t,["volt-navigate","volt:navigate"]);if(e)return $(e.value||"",e.name);const n=P(t,vr);return n?$(n.value||"",n.name):$("","default")}i(rt,"navigationModeForElement");function oe(t){if(!t||typeof t!="object")return $("","default");if(t.head&&typeof t.head.querySelector=="function")for(let e=0;e<fn.length;e+=1){const n=fn[e],r=t.head.querySelector('meta[name="'+_(n)+'"]');if(r)return $(r.getAttribute("content")||"","document")}if(t.body&&typeof t.body.getAttribute=="function"){const e=P(t.body,vr);if(e)return $(e.value||"","body")}return $("","default")}i(oe,"navigationModeForDocument");function Mr(t){if(!t||typeof t!="object")return Nt("","default");const e=qt(t,No);if(e!==null)return Nt(e,"document");if(t.body&&typeof t.body.getAttribute=="function"){const n=P(t.body,br);if(n)return Nt(n.value||"","body")}if(t.documentElement&&typeof t.documentElement.getAttribute=="function"){const n=P(t.documentElement,br);if(n)return Nt(n.value||"","html")}return Nt("","default")}i(Mr,"documentContractForDocument");function _t(t){return(t&&t.mode?t.mode:"auto")!=="reload"}i(_t,"shouldPrefetchForNavigationMode");function ft(t,e){if(!t||typeof t.getAttribute!="function"||!Array.isArray(e))return null;for(let n=0;n<e.length;n+=1){const r=e[n];if(t.hasAttribute(r))return t.getAttribute(r)||""}return null}i(ft,"firstAttributeValue");function qt(t,e){if(!t||!t.head||typeof t.head.querySelector!="function"||!Array.isArray(e))return null;for(let n=0;n<e.length;n+=1){const r=e[n],o=t.head.querySelector('meta[name="'+_(r)+'"]');if(o)return o.getAttribute("content")||""}return null}i(qt,"firstDocumentMetaValue");function ia(t){return String(t).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}i(ia,"escapeRegExp");function ie(t,e){if(typeof t!="string"||t===""||!Array.isArray(e))return null;for(let n=0;n<e.length;n+=1){const r=ia(e[n]),o=new RegExp(`<meta[^>]*name=["']`+r+`["'][^>]*content=["']([^"']*)["'][^>]*>`,"i"),a=new RegExp(`<meta[^>]*content=["']([^"']*)["'][^>]*name=["']`+r+`["'][^>]*>`,"i"),s=t.match(o);if(s&&typeof s[1]=="string")return s[1];const u=t.match(a);if(u&&typeof u[1]=="string")return u[1]}return null}i(ie,"firstHtmlMetaValue");function aa(t){return typeof t!="string"||t.trim()===""?"out-in":t.trim().toLowerCase()==="in-out"?"in-out":"out-in"}i(aa,"normalizePageTransitionMode");function sa(t){if(typeof t!="string"||t.trim()==="")return null;const e=t.trim().toLowerCase();return Object.prototype.hasOwnProperty.call(bn,e)?e:null}i(sa,"normalizePageTransitionProfile");function ua(t){const e=sa(t);if(!e)return null;const n=bn[e];return n?Object.assign({profile:e},n):null}i(ua,"resolvePageTransitionProfile");function Lt(t,e){const n=typeof t=="string"?t:"",r=n.trim().toLowerCase(),o={name:null,duration:null,mode:"out-in",raw:n,source:e||"default",declared:r!==""};return!r||r==="none"||r==="off"||r==="false"||r==="disabled"||(o.name=r==="true"||r==="on"?"default":r),o}i(Lt,"parsePageTransition");function ca(t,e,n){const r=Object.assign({},t),o=F(e);return typeof o=="number"&&o>=0&&(r.duration=o),typeof n=="string"&&n.trim()!==""&&(r.mode=aa(n)),r}i(ca,"applyPageTransitionOptions");function je(t,e,n,r,o){const a=Lt(t||"",r),s=ua(o),u=s?{name:s.name||null,duration:typeof s.duration=="number"?s.duration:null,mode:s.mode||"out-in",raw:a.raw,source:r||"default",declared:!0,profile:s.profile}:Object.assign({},a,{profile:null});return a.declared&&(u.name=a.name,u.declared=!0),ca(u,e,n)}i(je,"createPageTransition");function la(t){const e=ft(t,Ar),n=ft(t,Sr),r=ft(t,wr),o=ft(t,Er);return je(e,r,o,"link",n)}i(la,"pageTransitionForElement");function xr(t){const e=qt(t,dn),n=qt(t,pn),r=ft(t&&t.body?t.body:null,Ar),o=ft(t&&t.body?t.body:null,Sr),a=e!==null?e:r||"",s=n!==null?n:o||"",u=qt(t,mn)||ft(t&&t.body?t.body:null,wr),l=qt(t,gn)||ft(t&&t.body?t.body:null,Er);return je(a,u,l,e!==null||n!==null?"document":r!==null||o!==null?"body":"default",s)}i(xr,"pageTransitionForDocument");function Fe(t){const e=t&&t.document?xr(t.document):Lt("","default");if(e.declared)return e;const n=ie(t&&typeof t.html=="string"?t.html:"",dn),r=ie(t&&typeof t.html=="string"?t.html:"",pn),o=ie(t&&typeof t.html=="string"?t.html:"",mn),a=ie(t&&typeof t.html=="string"?t.html:"",gn);return je(n||"",o,a,n!==null||r!==null?"document":"default",r)}i(Fe,"pageTransitionForPayload");function fa(t,e){return e&&e.declared?e:t&&t.declared?t:e||t||Lt("","default")}i(fa,"resolveNavigationPageTransition");function Pr(t){return!!(t&&typeof t.name=="string"&&t.name!=="")}i(Pr,"hasPageTransition");function da(t){if(!Pr(t))return null;const e={name:t.name};return typeof t.duration=="number"&&t.duration>=0&&(e.duration=t.duration),{type:"navigation-transition",target:"body",transition:{leave:e,enter:e},pageTransitionSource:t.source||"default",pageTransitionMode:t.mode||"out-in",pageTransitionName:t.name,pageTransitionProfile:t.profile||null}}i(da,"navigationPageTransitionEffect");async function Or(t,e,n){if(!t||!Pr(n))return!1;const r=da(n);return r?W(t,t,e,r):!1}i(Or,"runPageTransitionPhase");function pa(t){return typeof t!="string"||t.trim()===""?[]:t.trim().toLowerCase().split(/[\s,|;]+/).filter(function(e){return e!==""})}i(pa,"fragmentControlTokens");function ae(t,e){const n=pa(t),r={mode:"preserve",raw:typeof t=="string"?t:"",source:e||"default"};return n.forEach(function(o){if(o==="reset"||o==="discard"||o==="drop"||o==="no-store"||o==="none"||o==="off"||o==="false"){r.mode="reset";return}(o==="preserve"||o==="keep"||o==="on"||o==="true")&&(r.mode="preserve")}),r}i(ae,"parseFragmentControl");function ma(t){if(!t||typeof t!="object")return ae("","default");if(t.head&&typeof t.head.querySelector=="function")for(let e=0;e<yn.length;e+=1){const n=yn[e],r=t.head.querySelector('meta[name="'+_(n)+'"]');if(r)return ae(r.getAttribute("content")||"","document")}if(t.body&&typeof t.body.getAttribute=="function"){const e=P(t.body,Xi);if(e)return ae(e.value,"body")}return ae("","default")}i(ma,"fragmentControlForDocument");function Rr(t){const e=t&&t.mode?t.mode:"default";return e!=="reload"&&e!=="no-store"&&e!=="invalidate"}i(Rr,"shouldReadNavigationCache");function kr(t){return(t&&t.mode?t.mode:"default")!=="no-store"}i(kr,"shouldStoreNavigationCache");function ga(t){return(t&&t.mode?t.mode:"default")!=="no-store"}i(ga,"shouldPrefetchNavigation");function ya(t){return t&&typeof t.ttl=="number"&&t.ttl>=0?t.ttl:bo}i(ya,"navigationCacheTtlForControl");function jt(t,e){const n=[];function r(o){const a=M(o);!a||n.indexOf(a)!==-1||n.push(a)}return i(r,"pushAlias"),t&&typeof t=="object"?(Array.isArray(t.aliases)&&t.aliases.forEach(r),r(t.url),r(t.finalUrl),n):(r(t),r(e),n)}i(jt,"navigationCacheAliases");function se(){const t=[],e=new Set;return c.navigationCache.forEach(function(n){!n||!n.cacheKey||e.has(n.cacheKey)||(e.add(n.cacheKey),t.push(n))}),t}i(se,"uniqueNavigationCacheEntries");function ue(t){if(!t)return 0;let e=0;return jt(t).forEach(function(n){c.navigationCache.get(n)===t&&(c.navigationCache.delete(n),e+=1)}),e}i(ue,"deleteNavigationCacheEntry");function dt(t,e){g(t,Object.assign({cacheEntries:se().length},e||{}),document)}i(dt,"emitNavigationCacheEvent");function At(t,e,n){if(typeof t!="string"||t==="")return 0;const r=M(t),o=n&&typeof n=="object"?n:{},a=c.navigationCache.get(r),s=a?jt(a):[r],u=a?ue(a):c.navigationCache.delete(r)?1:0;return u>0&&o.silent!==!0&&dt("volt:cache-invalidate",Object.assign({url:r,aliases:s,reason:e||"manual",removed:u},o)),u}i(At,"invalidateNavigationCache");function ha(t,e){const n=se().length;return n===0?0:(c.navigationCache.clear(),dt("volt:cache-clear",Object.assign({reason:t||"manual",removed:n},e||{})),n)}i(ha,"clearNavigationCache");function Ir(t){if(!t||typeof t!="object"||typeof t.html!="string")return null;const e=re(t.html),n=t.cacheControl||Dr(e),r=t.navigationMode||oe(e),o=t.pageTransition||Fe({html:t.html,document:e});return{url:t.url,finalUrl:t.finalUrl,html:t.html,document:e,fetchedAt:t.fetchedAt,lastAccessedAt:t.lastAccessedAt,expiresAt:t.expiresAt,source:t.source||"cache",cacheKey:t.cacheKey||null,aliases:jt(t),cacheControl:n,navigationMode:r,pageTransition:o}}i(Ir,"cloneNavigationPayload");function va(){const t=Date.now();se().forEach(function(n){(!n||typeof n.expiresAt!="number"||n.expiresAt<=t)&&ue(n)});const e=se().sort(function(n,r){const o=typeof n.lastAccessedAt=="number"?n.lastAccessedAt:n.fetchedAt,a=typeof r.lastAccessedAt=="number"?r.lastAccessedAt:r.fetchedAt;return o-a});for(;e.length>Ao;){const n=e.shift();if(!n)break;ue(n)}}i(va,"pruneNavigationCache");function Ve(t){const e=M(t),n=c.navigationCache.get(e);return n?typeof n.expiresAt!="number"||n.expiresAt<=Date.now()?(ue(n),dt("volt:cache-invalidate",{url:e,aliases:jt(n),reason:"ttl"}),null):(n.lastAccessedAt=Date.now(),Ir(n)):null}i(Ve,"getCachedNavigation");function ba(t,e,n,r){if(!e||typeof e.html!="string"||e.html==="")return null;const o=M(t),a=M(e.finalUrl||o),s=Le(r,e.cacheControl&&typeof e.cacheControl=="object"?e.cacheControl:null),u=ya(s);if(!kr(s)||u<=0)return At(o,"no-store",{finalUrl:a}),a!==o&&At(a,"no-store",{requestedUrl:o}),null;const l=Date.now(),f=jt(o,a);f.forEach(function(p){At(p,"replace",{requestedUrl:o,finalUrl:a,silent:!0})});const d={cacheKey:f.join("::"),aliases:f,url:o,finalUrl:a,html:e.html,fetchedAt:l,lastAccessedAt:l,expiresAt:l+u,source:n||"prefetch",cacheControl:s,navigationMode:e.navigationMode&&typeof e.navigationMode=="object"?e.navigationMode:oe(re(e.html)),pageTransition:e.pageTransition&&typeof e.pageTransition=="object"?e.pageTransition:Fe({html:e.html,document:re(e.html)})};return f.forEach(function(p){c.navigationCache.set(p,d)}),va(),dt("volt:cache-store",{url:o,finalUrl:a,aliases:f,source:d.source,ttl:u,mode:s.mode}),Ir(d)}i(ba,"setCachedNavigation");function Aa(t){if(!t||t.nodeType!==1)return null;const e=t.tagName.toLowerCase();if(e==="link"){const n=(t.getAttribute("rel")||"").toLowerCase(),r=Nr(t.getAttribute("href")||"");return!r||n==="stylesheet"?null:n==="modulepreload"?{key:"module:"+r,rel:"modulepreload",href:r,crossOrigin:t.getAttribute("crossorigin")||null}:null}if(e==="script"){const n=Nr(t.getAttribute("src")||""),r=(t.getAttribute("type")||"").toLowerCase();return!n||r!=="module"?null:{key:"module:"+n,rel:"modulepreload",href:n,crossOrigin:t.getAttribute("crossorigin")||null}}return null}i(Aa,"preloadDescriptorFromHeadNode");function Sa(t){if(!t||!t.href||!document.head)return!1;const e=t.href;return t.as==="style"?!!document.head.querySelector('link[rel="stylesheet"][href="'+_(e)+'"]')||!!document.head.querySelector('link[rel="preload"][as="style"][href="'+_(e)+'"]'):t.rel==="modulepreload"?!!document.head.querySelector('link[rel="modulepreload"][href="'+_(e)+'"]')||!!document.head.querySelector('script[type="module"][src="'+_(e)+'"]'):t.rel==="preload"?!!document.head.querySelector('link[rel="preload"][href="'+_(e)+'"][as="'+_(t.as||"")+'"]'):!1}i(Sa,"documentAlreadyHasHeadAsset");function wa(t){if(!t||!t.key||!t.href||!document.head||c.navigationPreloadHints.has(t.key)||Sa(t))return;const e=document.createElement("link");e.setAttribute("href",t.href),e.setAttribute("rel",t.rel),e.setAttribute("data-volt-prefetch-preload",t.key),t.as&&e.setAttribute("as",t.as),t.crossOrigin&&e.setAttribute("crossorigin",t.crossOrigin),document.head.appendChild(e),c.navigationPreloadHints.add(t.key)}i(wa,"ensurePreloadHint");function _r(t,e){if(!t)return M(e);const n=M(e),r=c.navigationPrefetchElements.get(t);return r===n||(r&&ce(t),c.navigationPrefetchElements.set(t,n),c.navigationPrefetchTrackedElements.add(t),c.navigationPrefetchInterest.set(n,(c.navigationPrefetchInterest.get(n)||0)+1)),n}i(_r,"trackPrefetchInterest");function Ea(t){const e=M(t),n=c.navigationInFlight.get(e);return!n||n.source!=="prefetch"||n.retained||!n.controller?!1:(n.controller.abort(),!0)}i(Ea,"cancelPrefetch");function ce(t){if(!t)return;const e=c.navigationPrefetchElements.get(t);if(!e)return;c.navigationPrefetchElements.delete(t),c.navigationPrefetchTrackedElements.delete(t);const n=(c.navigationPrefetchInterest.get(e)||0)-1;if(n>0){c.navigationPrefetchInterest.set(e,n);return}c.navigationPrefetchInterest.delete(e),Ea(e)}i(ce,"releasePrefetchInterest");function Ca(t){!t||!t.children||Array.from(t.children).forEach(function(e){const n=Aa(e);n&&wa(n)})}i(Ca,"preloadCriticalHeadAssets");function qr(t,e,n,r){const o=M(t),a=r&&typeof r=="object"?r:{},s=a.cacheControl&&typeof a.cacheControl=="object"?a.cacheControl:lt("","default"),u=a.navigationMode&&typeof a.navigationMode=="object"?a.navigationMode:$("","default");if(c.navigationInFlight.has(o)){const y=c.navigationInFlight.get(o);if(y&&y.source==="prefetch"&&y.controller&&(s.mode==="reload"||s.mode==="invalidate"||s.mode==="no-store"))y.controller.abort(),c.navigationInFlight.delete(o);else return n!=="prefetch"&&(y.retained=!0,y.source="navigate"),y.promise.then(function(b){return kr(s)||At(o,"no-store",{finalUrl:b&&b.finalUrl?b.finalUrl:o}),b})}const l=n==="prefetch"&&typeof AbortController=="function"?new AbortController:null,f=l?l.signal:e,d={promise:null,controller:l,source:n||"navigate",retained:n!=="prefetch"},p=Zs(o,f).then(function(y){const b=Dr(y.document),V=oe(y.document),J=xr(y.document),w=Le(s,b),O=Object.assign({},y,{cacheControl:w,navigationMode:V.mode!=="auto"?V:u,pageTransition:J});return n==="prefetch"&&O.document&&O.document.head&&Ca(O.document.head),ba(o,O,n||"navigate",w)||O}).finally(function(){c.navigationInFlight.delete(o)});return d.promise=p,c.navigationInFlight.set(o,d),d.promise}i(qr,"requestNavigationPayload");function Ft(t,e){const n=M(t),r=e&&typeof e=="object"?e:{},o=r.cacheControl&&typeof r.cacheControl=="object"?r.cacheControl:lt("","default"),a=r.navigationMode&&typeof r.navigationMode=="object"?r.navigationMode:$("","default");if(!ga(o)||!_t(a))return Promise.resolve(null);if((o.mode==="reload"||o.mode==="invalidate")&&At(n,o.mode,{source:"prefetch"}),Rr(o)){const s=Ve(n);if(s)return dt("volt:cache-hit",{url:n,finalUrl:s.finalUrl,source:"prefetch",mode:o.mode}),Promise.resolve(s)}return dt("volt:cache-miss",{url:n,source:"prefetch",mode:o.mode}),qr(n,void 0,"prefetch",{cacheControl:o,navigationMode:a})}i(Ft,"prefetchPage");function Ta(t){const e=M(t);return!!Ve(e)||c.navigationInFlight.has(e)}i(Ta,"hasNavigationCacheOrFlight");function Na(t){const e=t&&typeof t=="object"?t:{},n=e.cacheControl&&typeof e.cacheControl=="object"?e.cacheControl:null,r=It(e.trigger||null);return Le(r,n)}i(Na,"navigationVisitCacheControl");function Da(){return c.navigationViewportObserver||typeof IntersectionObserver!="function"||(c.navigationViewportObserver=new IntersectionObserver(function(t){t.forEach(function(e){if(!e.isIntersecting)return;const n=e.target,r=ee(n);if(!r){c.navigationViewportObserver.unobserve(n);return}c.navigationViewportObserver.unobserve(n),Ft(r,{cacheControl:It(n),navigationMode:rt(n)}).catch(function(){return null})})},{root:null,rootMargin:"200px 0px",threshold:.01})),c.navigationViewportObserver}i(Da,"ensureNavigationViewportObserver");function ze(){c.navigationPrefetchTrackedElements.forEach(function(t){t&&t.isConnected||ce(t)}),c.modelSyncTrackedElements.forEach(function(t){t&&t.isConnected||or(t)}),c.onDirectiveTrackedElements.forEach(function(t){t&&t.isConnected||(c.onDirectiveOnce.delete(t),c.onDirectiveTrackedElements.delete(t))}),c.navigationViewportTrackedElements.forEach(function(t){t&&t.isConnected||(c.navigationViewportObserver&&c.navigationViewportObserver.unobserve(t),c.navigationViewportObserved.delete(t),c.navigationViewportTrackedElements.delete(t))}),c.navigationViewportTrackedElements.size===0&&c.navigationViewportObserver&&(c.navigationViewportObserver.disconnect(),c.navigationViewportObserver=null,c.navigationViewportObserved=new WeakSet)}i(ze,"cleanupRuntimeOrphans");function Lr(t){ze();const e=Da();!e||!t||typeof t.querySelectorAll!="function"||t.querySelectorAll(wt).forEach(function(n){!ee(n)||!ne(n,"viewport")||!_t(rt(n))||c.navigationViewportObserved.has(n)||(c.navigationViewportObserved.add(n),c.navigationViewportTrackedElements.add(n),e.observe(n))})}i(Lr,"registerViewportPrefetchTargets");function Ma(t){if(!t||typeof t.getBoundingClientRect!="function")return null;const e=t.getBoundingClientRect(),n=window.innerHeight||document.documentElement.clientHeight||0;return e.width<=0&&e.height<=0||e.bottom<-1*cn||e.top>n+cn?null:e.bottom>=0&&e.top<=n?Math.max(e.top,0):1e3+Math.max(e.top-n,0)}i(Ma,"navigationHeuristicScore");function xa(t){if(!t||typeof t.querySelectorAll!="function")return null;const e=M(window.location.href);let n=null,r=Number.POSITIVE_INFINITY;return t.querySelectorAll(wt).forEach(function(o){const a=ee(o);if(!a||!ne(o,"idle")||!_t(rt(o))||M(a)===e||Ta(a))return;const s=Ma(o);s===null||s>=r||(n=o,r=s)}),n}i(xa,"findHeuristicPrefetchCandidate");function Pa(){c.navigationHeuristicHandle!==null&&(typeof cancelIdleCallback=="function"?cancelIdleCallback(c.navigationHeuristicHandle):clearTimeout(c.navigationHeuristicHandle),c.navigationHeuristicHandle=null)}i(Pa,"cancelHeuristicPrefetch");function jr(t){ze(),Pa();const e=t&&typeof t.querySelectorAll=="function"?t:document,n=i(function(){if(c.navigationHeuristicHandle=null,document.hidden)return;const r=xa(e);if(!r)return;const o=ee(r);o&&Ft(o,{cacheControl:It(r),navigationMode:rt(r)}).catch(function(){return null})},"run");if(typeof requestIdleCallback=="function"){c.navigationHeuristicHandle=requestIdleCallback(n,{timeout:un});return}c.navigationHeuristicHandle=window.setTimeout(n,un)}i(jr,"scheduleHeuristicPrefetch");function Xs(t){return t.map(function(e){return"["+e.replace(/[:.]/g,"\\$&")+"]"}).join(", ")}i(Xs,"directiveSelector");function N(t,e){const n=[];if(!t||!Array.isArray(e)||e.length===0)return n;function r(o){return e.some(function(a){return o.hasAttribute(a)})}return i(r,"matchesNames"),typeof t.hasAttribute=="function"&&r(t)&&n.push(t),typeof t.querySelectorAll!="function"||t.querySelectorAll("*").forEach(function(o){r(o)&&n.push(o)}),n}i(N,"collectElementsWithDirectiveAttributes");function tu(t,e){const n=[];return!t||typeof t.querySelectorAll!="function"||(typeof t.matches=="function"&&t.matches(e)&&n.push(t),t.querySelectorAll(e).forEach(function(r){n.push(r)})),n}i(tu,"collectDirectiveElements");function ot(t){return t.__voltRuntimeDirectiveStore||(t.__voltRuntimeDirectiveStore={visibility:{},attributes:{},classes:{},styles:{},html:{},bindings:{},modelLocal:null,portal:{},focus:{}}),t.__voltRuntimeDirectiveStore}i(ot,"runtimeDirectiveStore");function Fr(t){return t?(c.statePolicies.has(t)||c.statePolicies.set(t,[]),c.statePolicies.get(t)):[]}i(Fr,"componentStatePolicies");function Z(t,e){const n=Array.isArray(e)?e.filter(function(a){return!!a}):e?[e]:[];let r="volt-"+t,o="volt:"+t;return n.forEach(function(a){r+="-"+a,o+="."+a}),[r,o]}i(Z,"stateDirectiveNames");function Ue(t){return typeof t!="string"||t.trim()===""?[]:t.split(",").map(function(e){return e.trim()}).filter(function(e){return e!==""})}i(Ue,"parseDirectiveList");function pt(t,e){return t?{action:t.getAttribute("data-volt-"+e+"-action")||null,target:t.getAttribute("data-volt-"+e+"-target")||null}:{action:null,target:null}}i(pt,"runtimeStateContext");function Vr(t,e){return!Array.isArray(t)||t.length===0?!0:e?t.indexOf(e)!==-1:!1}i(Vr,"matchesDirectiveScope");function Oa(t,e,n,r){const o=P(t,Z(e,"action")),a=P(t,Z(e,"target")),s=Ue(n),u=!!(r&&r.action);return{actions:o?Ue(o.value):u?s:[],targets:a?Ue(a.value):u?[]:s}}i(Oa,"stateDirectiveScope");function Vt(t,e,n,r,o){if(!n)return!1;const a=Oa(t,e,r,o);return Vr(a.actions,o.action)&&Vr(a.targets,o.target)}i(Vt,"stateDirectiveIsActive");function le(t,e,n,r){const o=e+":"+(r?"hide":"show"),a=ot(t);a.visibility[o]||(a.visibility[o]={hidden:!!t.hidden,ariaHidden:t.getAttribute("aria-hidden"),display:t.style.display||""});const s=r?n:!n,u=a.visibility[o];if(s){t.hidden=!0,t.setAttribute("aria-hidden","true"),t.style.setProperty("display","none","important");return}if(t.hidden=u.hidden,u.display===""?t.style.removeProperty("display"):t.style.display=u.display,u.ariaHidden===null){t.removeAttribute("aria-hidden");return}t.setAttribute("aria-hidden",u.ariaHidden)}i(le,"applyDirectiveVisibility");function zr(t){return typeof t!="string"||t.trim()===""?[]:t.split(",").map(function(e){const n=e.trim();if(!n)return null;const r=n.indexOf("=");return r===-1?{name:n,value:""}:{name:n.slice(0,r).trim(),value:n.slice(r+1).trim()}}).filter(function(e){return e&&e.name})}i(zr,"parseDirectiveAttributes");function Ra(t){return typeof t!="string"||t.trim()===""?[]:t.split(";").map(function(e){const n=e.trim();if(!n)return null;const r=n.indexOf(":");return r===-1?null:{name:n.slice(0,r).trim(),value:n.slice(r+1).trim()}}).filter(function(e){return e&&e.name&&e.value})}i(Ra,"parseDirectiveStyles");function Ur(t,e,n,r){if(!Array.isArray(r)||r.length===0)return;const o=e+":attr",a=ot(t);a.attributes[o]||(a.attributes[o]={}),r.forEach(function(s){if(a.attributes[o].hasOwnProperty(s.name)||(a.attributes[o][s.name]=t.hasAttribute(s.name)?t.getAttribute(s.name):null),n){t.setAttribute(s.name,s.value);return}const u=a.attributes[o][s.name];if(u===null){t.removeAttribute(s.name);return}t.setAttribute(s.name,u)})}i(Ur,"applyDirectiveAttributes");function ka(t,e,n,r){if(!Array.isArray(n)||n.length===0)return;const o=ot(t),a=r||"runtime:style";o.styles[a]||(o.styles[a]={}),n.forEach(function(s){if(Object.prototype.hasOwnProperty.call(o.styles[a],s.name)||(o.styles[a][s.name]={value:t.style.getPropertyValue(s.name),priority:t.style.getPropertyPriority(s.name)}),e){t.style.setProperty(s.name,s.value);return}const u=o.styles[a][s.name];if(!u||u.value===""){t.style.removeProperty(s.name);return}t.style.setProperty(s.name,u.value,u.priority||"")})}i(ka,"applyDirectiveStyles");function Br(t,e,n,r){if(typeof n!="string"||n.trim()==="")return;const o=ot(t),a=r||"runtime:class";o.classes[a]||(o.classes[a]={}),n.split(/\s+/).forEach(function(s){if(!s)return;Object.prototype.hasOwnProperty.call(o.classes[a],s)||(o.classes[a][s]=t.classList.contains(s));const u=o.classes[a][s];if(!e&&u){t.classList.add(s);return}t.classList.toggle(s,e)})}i(Br,"applyDirectiveClasses");function Hr(t){t&&N(t,jn()).forEach(function(e){const n=ji(v(e,jn()));n.length!==0&&n.forEach(function(r){Br(e,Y(r.expression.ast),r.classValue,"store:"+r.expression.raw+"->"+r.classValue)})})}i(Hr,"syncClassDirectives");function zt(t,e){const n=P(t,Z(e));return n?n.value:""}i(zt,"stateDirectiveShorthandValue");function F(t){if(typeof t=="number")return Number.isFinite(t)&&t>=0?Math.round(t):null;if(typeof t!="string"||t.trim()==="")return null;const n=t.trim().toLowerCase().match(/^(\d+(?:\.\d+)?)(ms|s)?$/);if(!n)return null;const r=Number.parseFloat(n[1]);if(!Number.isFinite(r)||r<0)return null;const a=(n[2]||"ms")==="s"?1e3:1;return Math.round(r*a)}i(F,"parseDirectiveTimeout");function Kr(t,e){return typeof t!="string"||t===""?!0:t===e}i(Kr,"runtimePolicyScopeMatches");function Ia(t){switch(t){case"delay":return"delay";case"timeout":return"timeout";case"debounce":return"debounce";case"min-duration":return"minDuration";default:return null}}i(Ia,"runtimePolicyValueKey");function _a(t,e,n,r){if(!t)return[];const o=t.getAttribute("data-volt-component")||null,a=Ia(n);return!o||!a?[]:Fr(o).filter(function(s){return s&&s.state===e&&Kr(s.scopeAction,r&&r.action)&&Kr(s.scopeTarget,r&&r.target)}).map(function(s){return F(s[a])}).filter(function(s){return s!==null})}i(_a,"matchingRuntimePolicyDurations");function qa(t,e){if(!t||!e||e.type!=="runtime.policy"||typeof e.state!="string"||e.state==="")return!1;const n=t.getAttribute("data-volt-component")||null;if(!n)return!1;const r={state:e.state,scopeAction:typeof e.scopeAction=="string"&&e.scopeAction!==""?e.scopeAction:null,scopeTarget:typeof e.scopeTarget=="string"&&e.scopeTarget!==""?e.scopeTarget:null,delay:F(e.delay),timeout:F(e.timeout),debounce:F(e.debounce),minDuration:F(e.minDuration)},o=["delay","timeout","debounce","minDuration"].some(function(u){return r[u]!==null}),a=[r.state,r.scopeAction||"",r.scopeTarget||""].join("|"),s=Fr(n).filter(function(u){return[u.state,u.scopeAction||"",u.scopeTarget||""].join("|")!==a});return o&&s.push(r),c.statePolicies.set(n,s),!0}i(qa,"registerRuntimePolicy");function La(t,e,n,r,o){const a=o||pt(t,e),s=Z(e,n);return N(t,s).filter(function(u){return Vt(u,e,r,zt(u,e),a)})}i(La,"matchingStateDirectiveElements");function fe(t,e,n,r){const o=La(t,e,n,!0,r).map(function(u){return F(v(u,Z(e,n)))}).filter(function(u){return u!==null}),a=_a(t,e,n,r||pt(t,e)),s=o.concat(a);return s.length===0?null:Math.min.apply(null,s)}i(fe,"resolveStateDirectiveDuration");function Be(t,e){return fe(t,e,"timeout")}i(Be,"resolveStateDirectiveTimeout");function ja(t,e,n){return fe(t,e,"delay",n)}i(ja,"resolveStateDirectiveDelay");function Gr(t,e,n){return fe(t,e,"min-duration",n)}i(Gr,"resolveStateDirectiveMinDuration");function Fa(t,e,n){return fe(t,e,"debounce",n)}i(Fa,"resolveStateDirectiveDebounce");function He(t){const e=c.loadingDelays.get(t);e!==void 0&&(window.clearTimeout(e),c.loadingDelays.delete(t))}i(He,"clearLoadingDelay");function Ke(t){const e=c.loadingMinClearDelays.get(t);e!==void 0&&(window.clearTimeout(e),c.loadingMinClearDelays.delete(t))}i(Ke,"clearLoadingMinDuration");function Ge(t){const e=c.successTimeouts.get(t);e!==void 0&&(window.clearTimeout(e),c.successTimeouts.delete(t))}i(Ge,"clearSuccessTimeout");function $e(t){const e=c.successMinClearDelays.get(t);e!==void 0&&(window.clearTimeout(e),c.successMinClearDelays.delete(t))}i($e,"clearSuccessMinDuration");function Va(t,e,n){if(!t)return;He(t);const r=n&&typeof n=="object"?n:{},o={action:r.action||null,target:it(r)},a=ja(t,"loading",o);if(a===null||a<=0){ye(t,!0,e,r);return}const s=t.getAttribute("data-volt-component")||r.component||null,u=r.requestId||null,l=window.setTimeout(function(){c.loadingDelays.delete(t);const f=S(t,s),d=An(s);!f||!d||d.requestId!==u||ye(f,!0,e,Object.assign({},r,{component:s}))},a);c.loadingDelays.set(t,l)}i(Va,"scheduleLoadingDelay");function za(t,e,n,r){if(!t)return;Ke(t);const o=t.getAttribute("data-volt-component")||n&&n.component||null,a=Object.assign({},n||{},{component:o,reason:"min-duration"}),s=window.setTimeout(function(){c.loadingMinClearDelays.delete(t);const u=S(t,o);!u||u.getAttribute("data-volt-loading")!=="true"||ye(u,!1,e,a)},r);c.loadingMinClearDelays.set(t,s)}i(za,"scheduleLoadingMinDurationClear");function Ze(t){const e=c.errorTimeouts.get(t);e!==void 0&&(window.clearTimeout(e),c.errorTimeouts.delete(t))}i(Ze,"clearErrorTimeout");function de(t){const e=c.dirtyDebounces.get(t);e!==void 0&&(window.clearTimeout(e),c.dirtyDebounces.delete(t))}i(de,"clearDirtyDebounce");function Ua(t,e){if(!t)return;Ge(t);const n=Be(t,"success");if(n===null)return;const r=t.getAttribute("data-volt-component")||e&&e.component||null,o=Object.assign({},e||{},{component:r,reason:"timeout"}),a=window.setTimeout(function(){c.successTimeouts.delete(t);const s=S(t,r);!s||s.getAttribute("data-volt-success")!=="true"||Kt(s,!1,o)},n);c.successTimeouts.set(t,a)}i(Ua,"scheduleSuccessTimeout");function Ba(t,e,n){if(!t)return;$e(t);const r=t.getAttribute("data-volt-component")||e&&e.component||null,o=Object.assign({},e||{},{component:r,reason:"min-duration"}),a=window.setTimeout(function(){c.successMinClearDelays.delete(t);const s=S(t,r);!s||s.getAttribute("data-volt-success")!=="true"||Kt(s,!1,o)},n);c.successMinClearDelays.set(t,a)}i(Ba,"scheduleSuccessMinDurationClear");function Ha(t,e){if(!t)return;Ze(t);const n=Be(t,"error");if(n===null)return;const r=t.getAttribute("data-volt-component")||e&&e.component||null,o=Object.assign({},e||{},{component:r,reason:"timeout"}),a=window.setTimeout(function(){c.errorTimeouts.delete(t);const s=S(t,r);!s||s.getAttribute("data-volt-error")!=="true"||Ht(s,!1,o)},n);c.errorTimeouts.set(t,a)}i(Ha,"scheduleErrorTimeout");function Ka(t,e){if(!t)return;de(t);const n=e&&typeof e=="object"?e:{},r={action:n.action||null,target:it(n)},o=Fa(t,"dirty",r);if(o===null||o<=0){rn(t,!0,n);return}const a=t.getAttribute("data-volt-component")||n.component||null,s=window.setTimeout(function(){c.dirtyDebounces.delete(t);const u=S(t,a);u&&rn(u,!0,Object.assign({},n,{component:a,reason:"debounce",debounce:o}))},o);c.dirtyDebounces.set(t,s)}i(Ka,"scheduleDirtyDebounce");function pe(t,e,n){const r=Z(e),o=Z(e,"hide"),a=Z(e,"class"),s=Z(e,"attr");N(t,r).forEach(function(u){le(u,e,Vt(u,e,n,zt(u,e),pt(t,e)),!1)}),N(t,o).forEach(function(u){le(u,e,Vt(u,e,n,zt(u,e),pt(t,e)),!0)}),N(t,a).forEach(function(u){Br(u,Vt(u,e,n,zt(u,e),pt(t,e)),v(u,Z(e,"class")),"state:"+e+":class")}),N(t,s).forEach(function(u){Ur(u,e,Vt(u,e,n,zt(u,e),pt(t,e)),zr(v(u,Z(e,"attr"))))})}i(pe,"syncRuntimeStateDirective");function Dt(t){if(!t)return;qe(t);let e=0;for(;_e(t)&&e<5;)e+=1;pe(t,"loading",t.getAttribute("data-volt-loading")==="true"),pe(t,"error",t.getAttribute("data-volt-error")==="true"),pe(t,"dirty",t.getAttribute("data-volt-dirty")==="true"),pe(t,"success",t.getAttribute("data-volt-success")==="true"),lr(t);let n=0;for(;Pi(t)&&n<5;){n+=1,qe(t);let r=0;for(;_e(t)&&r<5;)r+=1;lr(t)}gr(t),Ri(t),ki(t),Oi(t),Hr(t),yr(t),hr(t),mr(t),_i(t),ze()}i(Dt,"syncRuntimeStateDirectives");function Ut(){document.querySelectorAll('[data-volt-root="true"]').forEach(function(e){Dt(e)})}i(Ut,"syncAllRuntimeStateDirectives");function $r(t,e){for(let n=0;n<t.length;n+=1)if(t[n]===e)return n;return-1}i($r,"elementIndex");function Zr(t,e){return!t||!e?[]:t.querySelectorAll('[volt-model="'+e+'"], [volt\\:model="'+e+'"], [volt-model-local="'+e+'"], [volt\\:model\\.local="'+e+'"], [data-volt-model-local="'+e+'"], [volt-model-sync="'+e+'"], [volt\\:model\\.sync="'+e+'"], [data-volt-model-sync="'+e+'"]')}i(Zr,"modelDescriptorMatches");function Wr(t){if(!t||typeof t!="object")return!1;if(t.tagName==="TEXTAREA")return!0;if(t.tagName!=="INPUT")return!1;const e=(t.type||"text").toLowerCase();return["text","search","url","tel","password","email","number"].indexOf(e)!==-1}i(Wr,"isTextSelectableElement");function Ga(t,e){if(!e)return null;if(e.id)return{strategy:"id",value:e.id};const n=e.getAttribute("data-volt-target");if(n)return{strategy:"target",value:n};const r=v(e,["volt-model","volt:model"])||v(e,Hn())||v(e,Kn());if(r){const a=Zr(t,r),s=$r(a,e);if(s!==-1)return{strategy:"model",value:r,index:s}}const o=e.getAttribute("name");if(o){const a=t.querySelectorAll('[name="'+_(o)+'"]'),s=$r(a,e);if(s!==-1)return{strategy:"name",value:o,index:s}}return null}i(Ga,"buildFocusDescriptor");function me(t){if(!t)return null;if(t.id)return{strategy:"id",value:t.id};const e=t.getAttribute("data-volt-target");return e?{strategy:"target",value:e}:null}i(me,"buildStableElementDescriptor");function We(t,e){return!e||!t?null:e.strategy==="id"&&e.value?document.getElementById(e.value):e.strategy==="target"&&e.value?t.querySelector('[data-volt-target="'+e.value+'"]'):e.strategy==="model"&&e.value?Zr(t,e.value)[e.index||0]||null:e.strategy==="name"&&e.value&&t.querySelectorAll('[name="'+_(e.value)+'"]')[e.index||0]||null}i(We,"findByDescriptor");function $a(t){return Wr(t)?{start:typeof t.selectionStart=="number"?t.selectionStart:null,end:typeof t.selectionEnd=="number"?t.selectionEnd:null,direction:typeof t.selectionDirection=="string"?t.selectionDirection:"none",scrollTop:typeof t.scrollTop=="number"?t.scrollTop:null,scrollLeft:typeof t.scrollLeft=="number"?t.scrollLeft:null}:null}i($a,"captureSelectionState");function Za(t){const e=document.activeElement;if(!t||!e||!t.contains(e))return null;const n=Ga(t,e);return n?{descriptor:n,selection:$a(e)}:null}i(Za,"captureFocusState");function Wa(t,e){if(!(!t||!e||!Wr(t))){if(typeof e.start=="number"&&typeof e.end=="number"&&typeof t.setSelectionRange=="function")try{t.setSelectionRange(e.start,e.end,e.direction||"none")}catch{}typeof e.scrollTop=="number"&&(t.scrollTop=e.scrollTop),typeof e.scrollLeft=="number"&&(t.scrollLeft=e.scrollLeft)}}i(Wa,"restoreSelectionState");function Ja(t,e){if(!t||!e||!e.descriptor)return;const n=We(t,e.descriptor);!n||typeof n.focus!="function"||(n.focus({preventScroll:!0}),Wa(n,e.selection))}i(Ja,"restoreFocusState");function Ya(t){return!t||typeof t!="object"?!1:t.hasAttribute("data-volt-preserve-scroll")||t.hasAttribute("volt-preserve-scroll")||t.hasAttribute("volt:preserve-scroll")?!0:typeof t.scrollTop=="number"&&t.scrollTop!==0||typeof t.scrollLeft=="number"&&t.scrollLeft!==0}i(Ya,"isElementScrollRestorable");function Qa(t){if(!t)return[];const e=[],n=new Set;function r(o){if(!o||n.has(o)||(n.add(o),!Ya(o)))return;const a=me(o);a&&e.push({descriptor:a,scrollTop:typeof o.scrollTop=="number"?o.scrollTop:null,scrollLeft:typeof o.scrollLeft=="number"?o.scrollLeft:null})}return i(r,"addCandidate"),r(t),t.querySelectorAll("[id], [data-volt-target], [data-volt-preserve-scroll], [volt-preserve-scroll], [volt\\:preserve-scroll]").forEach(r),e}i(Qa,"captureScrollState");function Xa(t,e){!t||!Array.isArray(e)||e.forEach(function(n){if(!n||!n.descriptor)return;const r=We(t,n.descriptor);r&&(typeof n.scrollTop=="number"&&(r.scrollTop=n.scrollTop),typeof n.scrollLeft=="number"&&(r.scrollLeft=n.scrollLeft))})}i(Xa,"restoreScrollState");function g(t,e,n){const r=e&&typeof e=="object"?e:{};(n||document).dispatchEvent(new CustomEvent(t,{detail:r,bubbles:!0}))}i(g,"emitRuntimeHook");function ts(t){return new Promise(function(e){window.setTimeout(e,t)})}i(ts,"wait");function es(){return new Promise(function(t){window.requestAnimationFrame(function(){window.requestAnimationFrame(t)})})}i(es,"nextFrame");function ns(t,e,n){if(!t)return 180;const r=Je(e,n,"duration");if(typeof r=="number"&&r>=0)return r;if(e&&typeof e.transitionDuration=="number"&&e.transitionDuration>=0)return e.transitionDuration;const o=t.getAttribute("data-volt-transition-"+n+"-duration"),a=o?Number(o):NaN;if(Number.isFinite(a)&&a>=0)return a;const s=t.getAttribute("data-volt-transition-duration"),u=s?Number(s):NaN;return Number.isFinite(u)&&u>=0?u:180}i(ns,"transitionDurationFor");function Je(t,e,n){if(!t||typeof t!="object")return null;if(t.transition&&typeof t.transition=="object"&&t.transition!==null){const r=t.transition[e];if(r&&typeof r=="object"&&Object.prototype.hasOwnProperty.call(r,n))return r[n];if(n==="name"&&typeof r=="string")return r}if(t.transitions&&typeof t.transitions=="object"&&t.transitions!==null){const r=t.transitions[e];if(r&&typeof r=="object"&&Object.prototype.hasOwnProperty.call(r,n))return r[n];if(n==="name"&&typeof r=="string")return r}return null}i(Je,"transitionConfigValue");function rs(t,e,n){if(e&&e.transition===!1)return null;const r=Je(e,n,"name");if(typeof r=="string"&&r!=="")return r;if(e&&typeof e.transition=="string"&&e.transition!=="")return e.transition;if(e&&e.transition===!0)return"default";if(!t)return null;const o=t.getAttribute("data-volt-transition-"+n);if(o==="")return"default";if(o)return o;const a=t.getAttribute("data-volt-transition");return a===""?"default":a||null}i(rs,"transitionVariantFor");function os(t,e,n,r){const o=["volt-transition","volt-transition-"+n];r&&o.push("volt-transition-"+r);const a=[],s=Je(e,n,"className");if(typeof s=="string"&&s!==""&&a.push(s),t){const u=t.getAttribute("data-volt-transition-"+n+"-class");u&&a.push(u);const l=t.getAttribute("data-volt-transition-class");l&&a.push(l)}return a.forEach(function(u){u.split(/\s+/).forEach(function(l){l&&o.push(l)})}),o}i(os,"transitionClassListFor");async function W(t,e,n,r){const o=rs(e,r,n);if(!e||!n||!o)return!1;const a=ns(e,r,n),s="volt-transition-"+n+"-active",u=os(e,r,n,o),l=Ye(t,r,e,{phase:n,variant:o,duration:a,transitionSource:r&&r.pageTransitionSource?r.pageTransitionSource:null,transitionMode:r&&r.pageTransitionMode?r.pageTransitionMode:null,transitionName:r&&r.pageTransitionName?r.pageTransitionName:null});return g("volt:before-"+n,l,e),e.style.setProperty("--volt-transition-duration",a+"ms"),e.classList.add.apply(e.classList,u),await es(),e.classList.add(s),await ts(a),e.classList.remove(s),e.classList.remove.apply(e.classList,u),e.style.removeProperty("--volt-transition-duration"),g("volt:after-"+n,l,e),!0}i(W,"runElementTransition");function is(t){if(typeof t!="string"||t==="")return null;const e=document.createElement("template");return e.innerHTML=t.trim(),e.content}i(is,"fragmentFromHtml");function Ye(t,e,n,r){return Object.assign({type:e&&e.type?e.type:null,target:e&&typeof e.target=="string"?e.target:null,selector:e&&typeof e.selector=="string"?e.selector:null,component:t&&typeof t.getAttribute=="function"?t.getAttribute("data-volt-component"):null,element:n||null},r||{})}i(Ye,"effectHookDetail");function E(t,e,n,r,o,a){return g("volt:after-effect",Ye(t,e,n,Object.assign({handled:r,preventsHtmlFallback:o},a||{})),n||t||document),{handled:r,preventsHtmlFallback:o}}i(E,"createEffectResult");function as(t){const e=t&&typeof t=="object"?t:{},n=typeof e.type=="string"&&e.type!==""?e.type:"unknown",r=typeof e.action=="string"&&e.action!==""?e.action:null,o=Array.isArray(e.effects)?e.effects.length:0,a=e.usedHtmlFallback===!0,s=r===xt;return n==="navigation"?"navigation-patch":n==="action"?s?a?"model-sync-html-fallback":o>0?"model-sync-effects":"model-sync-no-op":a?"action-html-fallback":o>0?"action-effects":"action-no-op":a?"html-fallback":o>0?"effects-only":"no-op"}i(as,"classifyPatchTelemetryOutcome");async function Jr(t,e,n){const r=n&&typeof n=="object"?n:{},o=Za(t),a=Qa(t),s=H();g("volt:before-patch",Object.assign({},r,{patchStartedAt:K(s)}),t);const u=await e(),l=t&&t.isConnected?t:t&&t.getAttribute?Zt(t.getAttribute("data-volt-component")):null,f=K(H()-s);l&&(Xa(l,a),Ja(l,o)),Jt(r&&r.type?"patch:"+r.type:"patch");const d=Object.assign({},r,{patchDurationMs:f,updatedRoot:l||null,activeComponentCount:c.activeComponents.size});return we("patch",{outcome:as(r),operationType:r&&r.type?r.type:"unknown",source:r&&r.source?r.source:null,component:r&&r.component?r.component:null,action:r&&r.action?r.action:null,url:r&&r.url?r.url:null,finalUrl:r&&r.finalUrl?r.finalUrl:null,effectCount:r&&Array.isArray(r.effects)?r.effects.length:0,effects:r&&Array.isArray(r.effects)?r.effects.slice():[],usedHtmlFallback:!!(r&&r.usedHtmlFallback===!0),patchDurationMs:f,activeComponentCount:c.activeComponents.size}),g("volt:after-patch",d,l||t||document),u}i(Jr,"withPreservedUiState");function S(t,e){return t&&typeof t=="object"&&t.isConnected?t:typeof t=="string"&&t!==""?Zt(t):typeof e=="string"&&e!==""?Zt(e):null}i(S,"resolveRuntimeRoot");function Qe(t){return!!(t&&typeof t=="object"&&(t.name==="AbortError"||t.code===20))}i(Qe,"isAbortError");function Yr(t){return!t||typeof t.getAttribute!="function"?null:{tag:t.tagName?String(t.tagName).toLowerCase():null,target:t.getAttribute("data-volt-target"),action:v(t,["volt-click","volt:click","volt-submit","volt:submit"])}}i(Yr,"triggerDescriptor");function q(t,e,n){return Object.assign({type:t,component:e&&e.component?e.component:null,action:e&&e.action?e.action:null,requestId:e&&e.requestId?e.requestId:null,trigger:e&&e.trigger?e.trigger:null},n||{})}i(q,"requestHookDetail");const ss=["data-volt-request-timeout","volt-request-timeout","volt:request-timeout","data-volt-timeout","volt-timeout","volt:timeout"],us=["data-volt-request-retry","volt-request-retry","volt:request-retry","data-volt-retry","volt-retry","volt:retry"],cs=["data-volt-request-retry-delay","volt-request-retry-delay","volt:request-retry-delay","data-volt-retry-delay","volt-retry-delay","volt:retry-delay"],ls=["aborted","stale","timeout","http-error","protocol-error","network-error","unexpected-error"];function Mt(t,e){return typeof t=="string"&&ls.indexOf(t)!==-1?t:e}i(Mt,"normalizedRequestErrorKind");function fs(t){if(!t||typeof t.getAttribute!="function")return null;const e=P(t,ss);return e?F(e.value):null}i(fs,"requestTimeoutForElement");function Qr(t,e,n){const r=e&&typeof e=="object"?e:{},o=Object.prototype.hasOwnProperty.call(r,"timeout")?F(r.timeout):null;if(o!==null)return o;if(Array.isArray(n))for(let a=0;a<n.length;a+=1){const s=fs(n[a]);if(s!==null)return s}return t==="navigation"?So:Co}i(Qr,"resolveRequestTimeoutMs");function ge(t){if(typeof t=="number")return Number.isFinite(t)&&t>=0?Math.round(t):null;if(typeof t!="string")return null;const e=t.trim().toLowerCase();if(e==="")return null;if(e==="true"||e==="on"||e==="yes")return 1;if(e==="false"||e==="off"||e==="no")return 0;const n=Number.parseInt(e,10);return Number.isFinite(n)&&n>=0?n:null}i(ge,"retryAttemptsValue");function ds(t){if(!t||typeof t.getAttribute!="function")return null;const e=P(t,us);return e?ge(e.value):null}i(ds,"requestRetryAttemptsForElement");function ps(t){if(!t||typeof t.getAttribute!="function")return null;const e=P(t,cs);return e?F(e.value):null}i(ps,"requestRetryDelayForElement");function ms(t){return[408,425,429,500,502,503,504].indexOf(t)!==-1}i(ms,"requestRetryStatusAllowed");function gs(t,e,n){const o=(e&&typeof e=="object"?e:{}).retry;let a=t==="navigation"?wo:0,s=t==="navigation"?Eo:0;if(Array.isArray(n)){for(let u=0;u<n.length;u+=1){const l=ds(n[u]);if(l!==null){a=l;break}}for(let u=0;u<n.length;u+=1){const l=ps(n[u]);if(l!==null){s=l;break}}}if(typeof o=="boolean")a=o?a||1:0;else if(typeof o=="number")a=ge(o);else if(typeof o=="string"){const u=ge(o);u!==null&&(a=u)}else if(o&&typeof o=="object"){if(Object.prototype.hasOwnProperty.call(o,"attempts")){const u=ge(o.attempts);u!==null&&(a=u)}if(Object.prototype.hasOwnProperty.call(o,"delay")){const u=F(o.delay);u!==null&&(s=u)}}return(!Number.isFinite(a)||a<0)&&(a=0),(!Number.isFinite(s)||s<0)&&(s=0),{enabled:a>0,attempts:a,delayMs:s}}i(gs,"resolveRequestRetryPolicy");function ys(t,e,n){return!e||e.enabled!==!0||n>=e.attempts||!t||typeof t!="object"?!1:t.errorKind==="timeout"||t.errorKind==="network-error"?!0:t.errorKind==="http-error"&&typeof t.status=="number"&&ms(t.status)}i(ys,"shouldRetryNavigationRequest");function hs(t,e){return!t||t<=0?Promise.resolve():new Promise(function(n,r){let o=null,a=!1;function s(){o!==null&&window.clearTimeout(o),e&&typeof e.removeEventListener=="function"&&e.removeEventListener("abort",u)}i(s,"cleanup");function u(){if(a)return;a=!0,s();const l=Xe("aborted","Retry delay aborted.",{signal:e||null});l.name="AbortError",r(l)}if(i(u,"handleAbort"),e&&e.aborted){u();return}o=window.setTimeout(function(){s(),n()},t),e&&typeof e.addEventListener=="function"&&e.addEventListener("abort",u,{once:!0})})}i(hs,"waitForRetryDelay");function Xe(t,e,n){const r=new Error(typeof e=="string"&&e!==""?e:"Unexpected runtime error.");return r.voltErrorKind=Mt(t,"unexpected-error"),n&&typeof n=="object"&&Object.assign(r,n),r}i(Xe,"createRuntimeRequestError");function tn(t,e){!t||typeof t.abort!="function"||(t.signal&&typeof t.signal=="object"&&(t.signal.__voltAbortMeta=e&&typeof e=="object"?Object.assign({},e):{kind:"aborted"}),t.abort())}i(tn,"abortControllerWithMeta");function Xr(t){if(!t||typeof t!="object")return null;const e=t.__voltAbortMeta;return e&&typeof e=="object"?e:null}i(Xr,"requestAbortMeta");function to(t,e,n,r){if(n===null)return t;let o=null;const a=r&&typeof r=="object"?r:{},s=new Promise(function(u,l){o=window.setTimeout(function(){const f=a.message||"Request timed out after "+n+"ms.";e&&tn(e,{kind:"timeout",timeoutMs:n,message:f}),l(Xe("timeout",f,{timeoutMs:n}))},n)});return Promise.race([t,s]).finally(function(){o!==null&&window.clearTimeout(o)})}i(to,"withRequestTimeout");function en(t,e,n,r,o){const a=Mt(n,"unexpected-error");return q(t,e,Object.assign({ok:!1,message:typeof r=="string"&&r!==""?r:"Unexpected runtime error.",outcome:a,errorKind:a},o||{}))}i(en,"requestErrorDetail");function eo(t,e,n,r){const o=Xr(n),a=Mt(o&&o.kind?o.kind:null,"aborted");return q(t,e,Object.assign({outcome:a,errorKind:a,message:o&&o.message?o.message:a==="timeout"?"Request timed out.":"Request was aborted.",timeoutMs:o&&typeof o.timeoutMs=="number"?o.timeoutMs:null},r||{}))}i(eo,"requestAbortDetail");function no(t,e,n,r){const o=Xr(n),a=o&&o.message?o.message:"Request timed out.";return en(t,e,"timeout",a,Object.assign({timeoutMs:o&&typeof o.timeoutMs=="number"?o.timeoutMs:null},r||{}))}i(no,"timeoutErrorDetail");function vs(t,e){const n=e&&e.error&&typeof e.error=="object"?e.error:{};return n&&typeof n.kind=="string"?Mt(n.kind,"protocol-error"):e&&e.error&&typeof e.error=="object"?"protocol-error":"http-error"}i(vs,"responseErrorKind");function bs(t,e,n,r,o){const a=n&&n.error&&typeof n.error=="object"?n.error:{},s=vs(e,n);return en(t,r,s,a.message||"Request failed with status "+e.status+".",Object.assign({status:e.status,error:a},o||{}))}i(bs,"responseErrorDetail");function As(t){return!t||typeof t!="object"?"unexpected-error":typeof t.voltErrorKind=="string"?Mt(t.voltErrorKind,"unexpected-error"):typeof t.errorKind=="string"?Mt(t.errorKind,"unexpected-error"):t.name==="TypeError"?"network-error":"unexpected-error"}i(As,"exceptionErrorKind");function nn(t,e,n,r){const o=As(e);return en(t,n,o,e&&e.message?e.message:o==="network-error"?"Network request failed.":"Unexpected runtime error.",r)}i(nn,"exceptionErrorDetail");function it(t){return!t||typeof t!="object"?null:t.target?t.target:t.trigger&&t.trigger.target?t.trigger.target:null}i(it,"stateTargetValue");function ro(t){return!t||typeof t.getAttribute!="function"?null:v(t,["volt-model","volt:model"])||t.getAttribute("data-volt-target")||t.getAttribute("name")||t.id||null}i(ro,"fieldStateTarget");function Bt(t){if(t){if(t.getAttribute("data-volt-loading")==="true"){t.setAttribute("data-volt-request-status","loading"),t.setAttribute("aria-busy","true");return}if(t.getAttribute("data-volt-error")==="true"){t.setAttribute("data-volt-request-status","error"),t.setAttribute("aria-busy","false");return}if(t.getAttribute("data-volt-success")==="true"){t.setAttribute("data-volt-request-status","success"),t.setAttribute("aria-busy","false");return}if(t.getAttribute("data-volt-dirty")==="true"){t.setAttribute("data-volt-request-status","dirty"),t.setAttribute("aria-busy","false");return}t.setAttribute("data-volt-request-status","idle"),t.setAttribute("aria-busy","false")}}i(Bt,"syncRequestStatus");function ye(t,e,n,r){const o=r&&typeof r=="object"?r:{},a=S(t,o.component);if(a){const s=a.getAttribute("data-volt-loading")==="true",u=e?{action:o.action||null,target:it(o)}:pt(a,"loading"),l=s?Gr(a,"loading",u):null,f=c.loadingActivatedAt.get(a)||null,d=f===null?null:Date.now()-f,p=l!==null&&d!==null?Math.max(0,l-d):null;if(!e&&s&&p!==null&&p>0&&o.reason!=="min-duration"){za(a,n,o,p);return}Ke(a),e?c.loadingActivatedAt.set(a,Date.now()):c.loadingActivatedAt.delete(a),a.setAttribute("data-volt-loading",e?"true":"false"),e&&o.action?a.setAttribute("data-volt-loading-action",o.action):a.removeAttribute("data-volt-loading-action"),e&&o.trigger&&o.trigger.target?a.setAttribute("data-volt-loading-target",o.trigger.target):a.removeAttribute("data-volt-loading-target"),e&&o.requestId?a.setAttribute("data-volt-request-id",String(o.requestId)):a.removeAttribute("data-volt-request-id"),Bt(a),Dt(a)}n&&"disabled"in n&&(!r||r.action!==xt)&&(n.disabled=e)}i(ye,"setLoadingState");function Ht(t,e,n){const r=n&&typeof n=="object"?n:{},o=S(t,r.component);if(!o)return;const a=o.getAttribute("data-volt-error")==="true";if(Ze(o),o.setAttribute("data-volt-error",e?"true":"false"),e){r.action?o.setAttribute("data-volt-error-action",r.action):o.removeAttribute("data-volt-error-action"),r.trigger&&r.trigger.target?o.setAttribute("data-volt-error-target",r.trigger.target):o.removeAttribute("data-volt-error-target"),r.message?o.setAttribute("data-volt-error-message",String(r.message)):o.removeAttribute("data-volt-error-message"),Bt(o),Dt(o),Ha(o,r);return}o.removeAttribute("data-volt-error-message"),o.removeAttribute("data-volt-error-action"),o.removeAttribute("data-volt-error-target"),Bt(o),Dt(o),a&&g("volt:error-cleared",q("error",r,{target:it(r),active:!1,reason:r.reason||null}),o)}i(Ht,"setErrorState");function rn(t,e,n){const r=n&&typeof n=="object"?n:{},o=S(t,r.component);if(!o)return;e||de(o);const a=o.getAttribute("data-volt-dirty")==="true";if(o.setAttribute("data-volt-dirty",e?"true":"false"),e){const s=it(r);s?o.setAttribute("data-volt-dirty-target",s):o.removeAttribute("data-volt-dirty-target")}else o.removeAttribute("data-volt-dirty-target");Bt(o),Dt(o),a!==e&&g(e?"volt:dirty":"volt:clean",q("dirty",r,{target:it(r),active:e,reason:r.reason||null,debounce:r.debounce||null}),o)}i(rn,"setDirtyState");function Kt(t,e,n){const r=n&&typeof n=="object"?n:{},o=S(t,r.component);if(!o)return;const a=o.getAttribute("data-volt-success")==="true",s=e?{action:r.action||null,target:it(r)}:pt(o,"success"),u=a?Gr(o,"success",s):null,l=c.successActivatedAt.get(o)||null,f=l===null?null:Date.now()-l,d=u!==null&&f!==null?Math.max(0,u-f):null;if(!e&&a&&d!==null&&d>0&&r.reason!=="min-duration"){Ba(o,r,d);return}if(Ge(o),$e(o),e?c.successActivatedAt.set(o,Date.now()):c.successActivatedAt.delete(o),o.setAttribute("data-volt-success",e?"true":"false"),e){r.action?o.setAttribute("data-volt-success-action",r.action):o.removeAttribute("data-volt-success-action");const y=it(r);y?o.setAttribute("data-volt-success-target",y):o.removeAttribute("data-volt-success-target")}else o.removeAttribute("data-volt-success-action"),o.removeAttribute("data-volt-success-target");Bt(o),Dt(o);const p=e?Be(o,"success"):null;e&&Ua(o,r),a!==e&&g(e?"volt:success":"volt:success-cleared",q("success",r,{target:it(r),active:e,timeout:p,minDuration:u,reason:r.reason||null}),o)}i(Kt,"setSuccessState");function oo(t){return t.origin===window.location.origin}i(oo,"sameOrigin");function Ss(t,e){if(!e||t.defaultPrevented||t.button!==0||t.metaKey||t.ctrlKey||t.shiftKey||t.altKey||e.hasAttribute("download"))return!1;const n=e.getAttribute("target");if(n&&n!==""&&n.toLowerCase()!=="_self")return!1;const r=e.getAttribute("href");if(!r||r.startsWith("#"))return!1;const o=new URL(r,window.location.href);return!(!oo(o)||Mr(document).mode==="reload")}i(Ss,"shouldHandleNavigation");function io(t,e){document.documentElement.setAttribute("data-volt-navigating",t?"true":"false"),document.documentElement.setAttribute("aria-busy",t?"true":"false"),document.body&&(document.body.setAttribute("data-volt-navigating",t?"true":"false"),document.body.setAttribute("aria-busy",t?"true":"false")),e&&"disabled"in e&&(e.disabled=t)}i(io,"setNavigationState");function ws(t){const e=document.body;e.getAttributeNames().forEach(function(r){e.removeAttribute(r)}),t.getAttributeNames().forEach(function(r){e.setAttribute(r,t.getAttribute(r)||"")})}i(ws,"replaceBodyAttributes");function Es(t){return P(t,["data-volt-preserve","volt-preserve","volt:preserve"])}i(Es,"preservedFragmentAttribute");function ao(t){return P(t,["data-volt-persist","volt-persist","volt:persist"])}i(ao,"persistedFragmentAttribute");function so(t){if(!t||typeof t.getAttribute!="function")return null;const e=Es(t);if(!e)return null;const n=(e.value||"").trim();if(n!=="")return n;const r=(t.getAttribute("id")||"").trim();if(r!=="")return r;const o=(t.getAttribute("data-volt-target")||"").trim();return o!==""?o:null}i(so,"preservedFragmentKey");function uo(t){if(!t||typeof t.getAttribute!="function")return null;const e=ao(t);if(!e)return null;const n=(e.value||"").trim();if(n!=="")return n;const r=(t.getAttribute("id")||"").trim();if(r!=="")return r;const o=(t.getAttribute("data-volt-target")||"").trim();return o!==""?o:null}i(uo,"persistedFragmentKey");function co(t,e){if(!t||typeof t.querySelectorAll!="function")return[];const n=[];return typeof t.matches=="function"&&t.matches(e)&&n.push(t),t.querySelectorAll(e).forEach(function(r){n.push(r)}),n.filter(function(r){const o=r.parentElement;return!o||!o.closest(Do)})}i(co,"retainedFragmentCandidates");function lo(t){return co(t,hn).filter(function(e){return!ao(e)})}i(lo,"preservedFragmentCandidates");function fo(t){return co(t,vn)}i(fo,"persistedFragmentCandidates");function mt(t,e){return Object.assign({source:t&&t.source?t.source:"navigate",url:t&&t.url?t.url:window.location.href,finalUrl:t&&t.finalUrl?t.finalUrl:null},e||{})}i(mt,"fragmentNavigationDetail");function Cs(t,e,n,r){if(!(t instanceof Map)||t.size===0)return{preservedCount:0,discardedCount:0};let o=0;return t.forEach(function(a){o+=1,g("volt:fragment-discard",mt(e,Object.assign({key:a.key,tagName:a.tagName,reason:n},r||{})),document)}),{preservedCount:0,discardedCount:o}}i(Cs,"discardPreservedFragments");function on(t,e){if((t&&t.mode?t.mode:"preserve")==="reset")return!1;const r=e&&e.cacheControl&&typeof e.cacheControl=="object"?e.cacheControl:null;return(r&&r.mode?r.mode:"default")!=="no-store"}i(on,"shouldRestorePreservedFragments");function Ts(t,e){const n=new Map;return lo(t).forEach(function(r){const o=so(r);if(!o){g("volt:fragment-discard",mt(e,{reason:"missing-key",tagName:r.tagName?r.tagName.toLowerCase():null}),document);return}if(n.has(o)){g("volt:fragment-discard",mt(e,{key:o,reason:"duplicate-source",tagName:r.tagName?r.tagName.toLowerCase():null}),document);return}n.set(o,{key:o,tagName:r.tagName?r.tagName.toLowerCase():null,element:r})}),n}i(Ts,"capturePreservedFragments");function Ns(t,e){const n=new Map;return lo(t).forEach(function(r){const o=so(r);if(!o){g("volt:fragment-discard",mt(e,{reason:"missing-target-key",tagName:r.tagName?r.tagName.toLowerCase():null}),document);return}if(n.has(o)){g("volt:fragment-discard",mt(e,{key:o,reason:"duplicate-target",tagName:r.tagName?r.tagName.toLowerCase():null}),document);return}n.set(o,r)}),n}i(Ns,"preservedFragmentTargets");function Ds(t,e,n){if(!t||!(e instanceof Map)||e.size===0)return{preservedCount:0,discardedCount:0};const r=Ns(t,n);let o=0,a=0;return e.forEach(function(s){const u=r.get(s.key);if(!u){a+=1,g("volt:fragment-discard",mt(n,{key:s.key,tagName:s.tagName,reason:"missing-target"}),document);return}const l=u.tagName?u.tagName.toLowerCase():null;if(l!==s.tagName){a+=1,g("volt:fragment-discard",mt(n,{key:s.key,tagName:s.tagName,targetTagName:l,reason:"tag-mismatch"}),document);return}u.replaceWith(s.element),o+=1,g("volt:fragment-preserve",mt(n,{key:s.key,tagName:s.tagName}),document)}),{preservedCount:o,discardedCount:a}}i(Ds,"restorePreservedFragments");function Ms(t){const e=new Map;let n=0;return fo(t).forEach(function(r){const o=uo(r);if(!o){n+=1;return}if(e.has(o)){n+=1;return}e.set(o,{key:o,tagName:r.tagName?r.tagName.toLowerCase():null,element:r})}),e.forEach(function(r,o){c.persistentFragments.set(o,r)}),{capturedCount:e.size,discardedCount:n,registrySize:c.persistentFragments.size}}i(Ms,"capturePersistentFragments");function xs(t){const e=new Map;return fo(t).forEach(function(n){const r=uo(n);!r||e.has(r)||e.set(r,n)}),e}i(xs,"persistentFragmentTargets");function po(){const t=c.persistentFragments.size;return c.persistentFragments.clear(),{persistedCount:0,discardedCount:t,registrySize:0}}i(po,"discardPersistentFragments");function Ps(t){if(!t||!(c.persistentFragments instanceof Map)||c.persistentFragments.size===0)return{persistedCount:0,discardedCount:0,registrySize:c.persistentFragments instanceof Map?c.persistentFragments.size:0};const e=xs(t);let n=0,r=0;return e.forEach(function(o,a){const s=c.persistentFragments.get(a);if(!s)return;if((o.tagName?o.tagName.toLowerCase():null)!==s.tagName){c.persistentFragments.delete(a),r+=1;return}s.element!==o&&o.replaceWith(s.element),c.persistentFragments.set(a,{key:a,tagName:s.tagName,element:s.element}),n+=1}),{persistedCount:n,discardedCount:r,registrySize:c.persistentFragments.size}}i(Ps,"restorePersistentFragments");function Os(){if(document.body){const t=document.body.getAttribute("data-volt-layout");if(t)return t}if(document.documentElement){const t=document.documentElement.getAttribute("data-volt-layout");if(t)return t}return null}i(Os,"currentLayoutIdentity");function Rs(t){if(!t||typeof t!="object")return null;if(t.body){const e=t.body.getAttribute("data-volt-layout");if(e)return e}if(t.documentElement){const e=t.documentElement.getAttribute("data-volt-layout");if(e)return e}return null}i(Rs,"documentLayoutIdentity");function ks(t){const e=Os(),n=Rs(t);return!e&&!n?!1:e!==n}i(ks,"shouldFallbackForLayoutChange");function Is(t,e){const n={};e.getAttributeNames().forEach(function(r){n[r]=e.getAttribute(r)||""}),t.getAttributeNames().forEach(function(r){Object.prototype.hasOwnProperty.call(n,r)||t.removeAttribute(r)}),Object.keys(n).forEach(function(r){t.setAttribute(r,n[r])})}i(Is,"setElementAttributes");function _s(t){if(!t||t.nodeType!==1)return null;const e=t.getAttribute("data-volt-head-key");if(e)return"explicit:"+e;const n=t.tagName.toLowerCase();if(n==="meta")return t.hasAttribute("name")?"meta:name:"+(t.getAttribute("name")||""):t.hasAttribute("property")?"meta:property:"+(t.getAttribute("property")||""):t.hasAttribute("http-equiv")?"meta:http-equiv:"+(t.getAttribute("http-equiv")||""):null;if(n==="link"){const r=(t.getAttribute("rel")||"").toLowerCase(),o=t.getAttribute("href")||"";return!r||!o?null:"link:"+r+":"+o+":"+(t.getAttribute("as")||"")}if(n==="script"){const r=t.getAttribute("src")||"";return r?"script:"+(t.getAttribute("type")||"")+":"+r:null}if(n==="style"){const r=t.getAttribute("id")||"";if(r)return"style:id:"+r}return null}i(_s,"managedHeadNodeKey");function mo(t){if(!t||!t.children)return[];const e=[];return Array.from(t.children).forEach(function(n){const r=_s(n);r&&e.push({key:r,node:n})}),e}i(mo,"managedHeadEntries");function qs(t,e){if(!t||!e)return;Is(t,e);const n=t.tagName.toLowerCase();if(n==="script"||n==="style"){const r=e.textContent||"";t.textContent!==r&&(t.textContent=r)}}i(qs,"syncManagedHeadNode");function Ls(t){return!t||t.tagName.toLowerCase()!=="link"||(t.getAttribute("rel")||"").toLowerCase()!=="stylesheet"?Promise.resolve():new Promise(function(n){let r=!1;function o(){r||(r=!0,n())}if(i(o,"finish"),t.sheet){o();return}t.addEventListener("load",o,{once:!0}),t.addEventListener("error",o,{once:!0}),window.setTimeout(o,1500)})}i(Ls,"waitForManagedHeadNode");async function js(t){if(!t||!document.head)return;const e=mo(t),n=mo(document.head),r=new Map,o=new Map,a=[],s=e.length>0;e.forEach(function(u){r.set(u.key,u.node)}),n.forEach(function(u){o.set(u.key,u.node)}),s&&n.forEach(function(u){r.has(u.key)||u.node.remove()}),e.forEach(function(u){const l=o.get(u.key);if(l){qs(l,u.node);return}const f=u.node.cloneNode(!0);document.head.appendChild(f),a.push(Ls(f))}),a.length>0&&await Promise.all(a)}i(js,"reconcileDocumentHead");async function Fs(t,e){const n=e&&typeof e=="object"?e:{},r=ma(t),o=n.pageTransition||Lt("","default"),a={preservedCount:0,discardedCount:0,persistedCount:0,discardedPersistentCount:0,capturedPersistentCount:0,persistentRegistrySize:c.persistentFragments.size};if(t.title&&(document.title=t.title),t.head&&await js(t.head),t.body){const s=Object.assign({},n,{fragmentControl:r}),u=on(r,n)?Ms(document.body):po(),l=Ts(document.body,s);ws(t.body),document.body.innerHTML=t.body.innerHTML;const f=on(r,n)?Ps(document.body):po(),d=on(r,n)?Ds(document.body,l,s):Cs(l,s,r.mode==="reset"?"document-policy":"navigation-policy",{policyMode:r.mode,policySource:r.source,cacheMode:n.cacheControl&&n.cacheControl.mode?n.cacheControl.mode:"default"});a.preservedCount=d.preservedCount,a.discardedCount=d.discardedCount,a.persistedCount=f.persistedCount,a.discardedPersistentCount=u.discardedCount+f.discardedCount,a.capturedPersistentCount=u.capturedCount||0,a.persistentRegistrySize=f.registrySize||0,Ut(),Jt(n.type?n.type:"navigation"),Lr(document),jr(document),await Or(document.body,"enter",o)}return a}i(Fs,"applyDocumentPayload");function an(t,e){if(!e||typeof e!="object")return null;if(e.target==="root"||e.target==="self")return t;if(typeof e.selector=="string"&&e.selector!=="")return document.querySelector(e.selector);if(typeof e.target!="string"||e.target==="")return null;const n=_(e.target),r=t?t.querySelector("#"+n)||t.querySelector('[data-volt-target="'+e.target+'"]'):null;return r||document.getElementById(e.target)||document.querySelector('[data-volt-target="'+e.target+'"]')}i(an,"resolveEffectTarget");function Vs(t,e){const n=t.name||t.event;if(!n)return;(e||document).dispatchEvent(new CustomEvent(n,{detail:t.payload||t.detail||{},bubbles:!0}))}i(Vs,"dispatchRuntimeEvent");function zs(t,e,n){if(!e)return null;const r=typeof n.html=="string"?n.html:n.value;if(typeof r!="string")return null;const o=me(e);if(n.outer===!0||n.mode==="outer"||e===document.body||e.hasAttribute("data-volt-root")){if(e.outerHTML=r,e===document.body)return document.body;if(e.hasAttribute("data-volt-root")){const a=e.getAttribute("data-volt-component");return a?Zt(a):null}return o?We(t||document.body,o):null}return e.innerHTML=r,e}i(zs,"applyHtmlReplace");function Us(t,e){if(!t)return;const n=e.class||e.className||e.value;if(!(typeof n!="string"||n==="")){if(typeof e.force=="boolean"){t.classList.toggle(n,e.force);return}t.classList.toggle(n)}}i(Us,"applyClassToggle");function Bs(t,e){if(t){if(e.styles&&typeof e.styles=="object"){Object.keys(e.styles).forEach(function(n){if(e.styles[n]===null){t.style.removeProperty(n);return}t.style.setProperty(n,String(e.styles[n]))});return}if(typeof e.property=="string"){if(e.value===null){t.style.removeProperty(e.property);return}typeof e.value<"u"&&t.style.setProperty(e.property,String(e.value))}}}i(Bs,"applyStyleSet");function go(t,e){return!e||typeof e!="object"?null:typeof e.parentTarget=="string"&&e.parentTarget!==""?an(t,{target:e.parentTarget}):an(t,e)}i(go,"resolveContainerTarget");function yo(t,e){const n=go(t,e),r=is(e.html);if(!n||typeof e.html!="string"||!r)return[];const a=Array.from(r.childNodes).filter(function(s){return s.nodeType===1});if(typeof e.beforeSelector=="string"&&e.beforeSelector!==""){const s=document.querySelector(e.beforeSelector);if(s)return s.parentNode.insertBefore(r,s),a}return(e.position||"beforeend")==="afterbegin"&&n.firstChild?(n.insertBefore(r,n.firstChild),a):(n.appendChild(r),a)}i(yo,"applyDomInsert");function Hs(t,e,n){const r=go(t,n);if(!e||!r)return!1;if(typeof n.beforeSelector=="string"&&n.beforeSelector!==""){const o=document.querySelector(n.beforeSelector);if(o&&o.parentNode===r)return r.insertBefore(e,o),!0}return r.appendChild(e),!0}i(Hs,"applyDomMove");function ho(t,e,n){if(!(!t||typeof e!="string")){if(e==="value"&&"value"in t){t.value=n;return}if(e==="checked"&&"checked"in t){t.checked=n!==null;return}if(e==="selected"&&"selected"in t){t.selected=n!==null;return}e==="disabled"&&"disabled"in t&&(t.disabled=n!==null)}}i(ho,"syncAttributeProperty");function Ks(t,e){const n=e.behavior==="smooth"?"smooth":"auto";if(t&&typeof t.scrollIntoView=="function"){t.scrollIntoView({behavior:n,block:e.block||"start",inline:e.inline||"nearest"});return}window.scrollTo({top:typeof e.top=="number"?e.top:0,left:typeof e.left=="number"?e.left:0,behavior:n})}i(Ks,"applyScroll");async function Gs(t,e){if(!e||typeof e.type!="string")return{handled:!1,preventsHtmlFallback:!1};const n=an(t,e);switch(g("volt:before-effect",Ye(t,e,n),n||t||document),e.type){case"text.update":if(n&&typeof e.value<"u")return n.textContent=String(e.value),await W(t,n,"update",e),E(t,e,n,!0,!0);break;case"html.replace":{const r=zs(t,n,e);return r&&await W(t,r,e.outer===!0||e.mode==="outer"?"enter":"update",e),E(t,e,r||n,!!n,!!n)}case"dom.append":if(n&&typeof e.html=="string"){const r=yo(t,Object.assign({},e,{beforeSelector:null,position:e.position||"beforeend"}));for(let o=0;o<r.length;o+=1)await W(t,r[o],"enter",e);return E(t,e,n,!0,!0,{insertedCount:r.length})}break;case"dom.insert":{const r=yo(t,e);if(r.length>0){for(let o=0;o<r.length;o+=1)await W(t,r[o],"enter",e);return E(t,e,n,!0,!0,{insertedCount:r.length})}}break;case"dom.remove":if(n)return await W(t,n,"leave",e),n.remove(),E(t,e,n,!0,!0);break;case"dom.move":if(Hs(t,n,e))return await W(t,n,"move",e),E(t,e,n,!0,!0);break;case"attribute.set":if(n&&typeof e.name=="string"){const r=typeof e.value>"u"?"":String(e.value);return n.setAttribute(e.name,r),ho(n,e.name,r),await W(t,n,"update",e),E(t,e,n,!0,!0)}break;case"attribute.remove":if(n&&typeof e.name=="string")return n.removeAttribute(e.name),ho(n,e.name,null),await W(t,n,"update",e),E(t,e,n,!0,!0);break;case"class.toggle":return Us(n,e),n&&await W(t,n,"update",e),E(t,e,n,!!n,!!n);case"style.set":return Bs(n,e),n&&await W(t,n,"update",e),E(t,e,n,!!n,!!n);case"focus":if(n&&typeof n.focus=="function")return n.focus(),E(t,e,n,!0,!1);break;case"blur":if(n&&typeof n.blur=="function")return n.blur(),E(t,e,n,!0,!1);break;case"scroll":return Ks(n,e),E(t,e,n,!0,!1);case"dispatch.event":return Vs(e,n),E(t,e,n,!0,!1);case"runtime.policy":{const r=t&&t.getAttribute?t.getAttribute("data-volt-component"):null,o=S(t,r)||t;return E(o,e,o,qa(o,e),!1)}case"state.set":if(typeof e.key=="string"&&e.key!=="")return ct(e.key,e.value,{scope:e.scope,action:"effect"}),E(t,e,n,!0,!1);break;case"state.merge":if(typeof e.key=="string"&&e.key!=="")return Ln(e.key,e.value,{scope:e.scope}),E(t,e,n,!0,!1);break;case"state.delete":if(typeof e.key=="string"&&e.key!=="")return Te(e.key,{scope:e.scope}),E(t,e,n,!0,!1);break;case"state.clear":return Ne(e.scope,e.reason||"effect"),E(t,e,n,!0,!1);case"navigate":if(typeof e.url=="string"&&e.url!=="")return await he(e.url,{historyMode:e.replace?"replace":"push",preserveScroll:!!e.preserveScroll}),E(t,e,n,!0,!0);break;default:return E(t,e,n,!1,!1)}return E(t,e,n,!1,!1)}i(Gs,"applyEffect");async function $s(t,e){if(!Array.isArray(e)||e.length===0)return{handled:!1,preventsHtmlFallback:!1};let n=!1,r=!1;for(let o=0;o<e.length;o+=1){const a=await Gs(t,e[o]);n=a.handled||n,r=a.preventsHtmlFallback||r}return{handled:n,preventsHtmlFallback:r}}i($s,"applyEffects");async function Zs(t,e){const n=await fetch(t,{method:"GET",headers:{"X-Requested-With":"VoltStack","X-Volt-Navigate":"true"},credentials:"same-origin",signal:e});if(!n.ok)throw Xe("http-error","Navigation request failed with status "+n.status+".",{status:n.status,ok:!1,url:t});const r=await n.text();return{html:r,document:re(r),finalUrl:n.url||t}}i(Zs,"requestPage");async function he(t,e){const n=e||{},r=M(t),o=Na(n),a=n.navigationMode&&typeof n.navigationMode=="object"?n.navigationMode:$("","default"),s=c.navigationRequestId+1;c.navigationRequestId=s;const u=c.navigationController,l=typeof AbortController=="function"?new AbortController:null,f={requestId:s,trigger:Yr(n.trigger||null)},d=H();let p=r,y=0,b=0,V=null,J=null,w=!1,O=a.mode,Q=null,at=null,X=0,tt=0,gt=0,et=0;const nt=Qr("navigation",n,[n.trigger||null,document.body,document.documentElement]),z=gs("navigation",n,[n.trigger||null,document.body,document.documentElement]);let I=0,L=null,R=null,j=null;c.navigationController=l,u&&tn(u,{kind:"aborted",message:"Navigation request was superseded by a newer visit."}),io(!0,n.trigger||null),g("volt:request-start",q("navigation",f,{url:r,historyMode:n.historyMode||"push",cacheMode:o.mode,navigationMode:a.mode,timeoutMs:nt,retryAttempts:z.attempts,retryDelayMs:z.delayMs}),document);let C="success",h=null;try{(o.mode==="reload"||o.mode==="invalidate")&&At(r,o.mode,{source:"navigate"});const D=Rr(o)?Ve(r):null;D?(w=!0,dt("volt:cache-hit",{url:r,finalUrl:D.finalUrl,source:"navigate",mode:o.mode})):dt("volt:cache-miss",{url:r,source:"navigate",mode:o.mode});const m=D||await async function(){let be=0;for(;;)try{return await to(qr(r,l?l.signal:void 0,"navigate",{cacheControl:o,navigationMode:a}),l,nt,{message:"Navigation request timed out after "+nt+"ms."})}catch(St){if(Qe(St))throw St;const $t=nn("navigation",St,f,{url:r,finalUrl:p,status:St&&typeof St.status=="number"?St.status:null,retryAttempt:be+1});if(!ys($t,z,be))throw St;I=be+1,g("volt:request-retry",q("navigation",f,{url:r,finalUrl:p,retryAttempt:I,retryAttempts:z.attempts,retryDelayMs:z.delayMs,errorKind:$t.errorKind,message:$t.message,status:typeof $t.status=="number"?$t.status:null}),document),await hs(z.delayMs,l?l.signal:null),be+=1}}();if(p=m&&m.finalUrl?m.finalUrl:r,b=Et(m&&m.html?m.html:""),y=b,J=w?0:K(H()-d),c.navigationRequestId!==s){C="stale",L="stale",g("volt:request-stale",q("navigation",f,{url:r,finalUrl:p,outcome:C}),document);return}const st=m.document?oe(m.document):m.navigationMode&&typeof m.navigationMode=="object"?m.navigationMode:a,A=st.mode!=="auto"?st:m.navigationMode&&typeof m.navigationMode=="object"?m.navigationMode:a,Gt=m.document?Mr(m.document):Nt("","default"),ve=m.document||m&&typeof m.html=="string"?Fe(m):m.pageTransition&&typeof m.pageTransition=="object"?m.pageTransition:Lt("","default");if(O=A&&A.mode?A.mode:a.mode,Q=Gt.mode,ks(m.document)&&(C="layout-fallback",h="layout-mismatch",n.fallback!==!1)){window.location.assign(m.finalUrl);return}if(Gt.mode==="reload"&&(C="document-fallback",h="document-reload-only",n.fallback!==!1)){window.location.assign(m.finalUrl);return}if(A&&A.mode==="reload"&&(C="policy-reload",h="document-policy-reload",n.fallback!==!1)){window.location.assign(m.finalUrl);return}const k=fa(n.pageTransition,ve);at=k.name,g("volt:before-navigate",{url:r,finalUrl:p,navigationMode:O,pageTransition:k.name,pageTransitionSource:k.source||"default",pageTransitionMode:k.mode||"out-in",pageTransitionDuration:typeof k.duration=="number"?k.duration:null,pageTransitionProfile:k.profile||null},document),k.mode==="out-in"&&await Or(document.body,"leave",k);const Ws=H(),U=await Jr(document.body,async function(){return Fs(m.document,{source:"navigate",url:r,finalUrl:p,cacheControl:m.cacheControl,pageTransition:k})},{type:"navigation",url:r,finalUrl:p});V=K(H()-Ws),X=U&&typeof U.preservedCount=="number"?U.preservedCount:0,tt=U&&typeof U.discardedCount=="number"?U.discardedCount:0,gt=U&&typeof U.persistedCount=="number"?U.persistedCount:0,et=U&&typeof U.persistentRegistrySize=="number"?U.persistentRegistrySize:0,n.historyMode==="replace"?window.history.replaceState({},"",p):n.updateHistory!==!1&&window.history.pushState({},"",p),n.preserveScroll!==!0&&window.scrollTo(0,0),ei(p,"navigation"),g("volt:navigated",{url:r,finalUrl:p,historyMode:n.historyMode||"push",navigationMode:O,pageTransition:k.name,pageTransitionSource:k.source||"default",pageTransitionMode:k.mode||"out-in",pageTransitionDuration:typeof k.duration=="number"?k.duration:null,pageTransitionProfile:k.profile||null,preservedFragments:X,discardedFragments:tt,persistedFragments:gt,persistentFragmentRegistrySize:et},document)}catch(D){if(Qe(D)){const st=eo("navigation",f,l?l.signal:null,{url:r,finalUrl:p});if(st.errorKind==="timeout"){const A=no("navigation",f,l?l.signal:null,{url:r,finalUrl:p});if(C="timeout",L=A.errorKind,R=A.message,h=n.fallback!==!1?"request-timeout":null,g("volt:request-error",A,document),n.fallback!==!1){window.location.assign(r);return}throw D}C="aborted",L=st.errorKind,R=st.message,g("volt:request-abort",st,document);return}const m=nn("navigation",D,f,{url:r,finalUrl:p,status:D&&typeof D.status=="number"?D.status:null});if(C=m.errorKind,L=m.errorKind,R=m.message,j=m&&typeof m.status=="number"?m.status:null,h=n.fallback!==!1?"request-error":null,g("volt:request-error",m,document),n.fallback!==!1){window.location.assign(r);return}throw D}finally{c.navigationController===l&&(c.navigationController=null),c.navigationRequestId===s&&io(!1,n.trigger||null);const D=q("navigation",f,{url:r,finalUrl:p,outcome:C,fallbackReason:h,cacheMode:o.mode,cacheHit:w,navigationMode:O,documentContract:Q,pageTransition:at,timeoutMs:nt,retryCount:I,retryAttempts:z.attempts,retryDelayMs:z.delayMs,networkDurationMs:J,patchDurationMs:V,totalDurationMs:K(H()-d),status:j,errorKind:L,message:R,requestPayloadBytes:0,responsePayloadBytes:y,htmlBytes:b,preservedFragments:X,discardedFragments:tt,persistedFragments:gt,persistentFragmentRegistrySize:et}),m=we("navigation",D);g("volt:request-finish",Object.assign({},D,{telemetrySequence:m.sequence}),document)}}i(he,"visit");async function sn(t,e,n,r,o){const a=t.getAttribute("data-volt-snapshot"),s=t.getAttribute("data-volt-component"),u=t.getAttribute("data-volt-endpoint")||"/_volt/action",l=t.getAttribute("data-volt-csrf");if(!a||!s||!e)return;const f=An(s),d=f&&f.controller?f.controller:null,p=f?f.requestId+1:1,y=typeof AbortController=="function"?new AbortController:null,b={component:s,action:e,requestId:p,trigger:Yr(o)},V=H();let J=0,w=0,O=0,Q=0,at=null,X=0,tt=!1;const gt=Qr("action",null,[o||null,t]);let et=null,nt=null,z=null;const I=na(t,o,n,r,b);f&&(f.requestId=p,f.controller=y),d&&tn(d,{kind:"aborted",message:"Action request was superseded by a newer request."}),de(t),Ht(s,!1,b),Kt(s,!1,Object.assign({},b,{reason:"request"})),o&&"disabled"in o&&e!==xt&&(o.disabled=!0),Va(t,o,b),g("volt:request-start",q("action",b,{selectiveSyncAppliedCount:Array.isArray(I.applied)?I.applied.length:0,selectiveSyncSkippedCount:Array.isArray(I.skipped)?I.skipped.length:0,timeoutMs:gt}),S(t,s)||document);let L="success";try{const R={component:s,action:e,params:I.params,updates:I.updates,snapshot:JSON.parse(a)},j=JSON.stringify(R);J=Et(j);const C=await to(fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"VoltStack","X-CSRF-TOKEN":l||""},credentials:"same-origin",signal:y?y.signal:void 0,body:j}),y,gt,{message:"Action request timed out after "+gt+"ms."});let h=null;try{h=await C.json()}catch{h=null}if(w=Et(h),O=Et(h&&h.html?h.html:""),Q=Et(h&&h.snapshot?h.snapshot:null),X=Array.isArray(h&&h.effects)?h.effects.length:0,f&&f.requestId!==p){L="stale",et="stale",g("volt:request-stale",q("action",b,{status:C.status,outcome:L}),S(t,s)||document);return}if(!C.ok){const A=bs("action",C,h,b);L=A.errorKind,et=A.errorKind,nt=A.message,z=C.status,Ht(s,!0,A),g("volt:request-error",A,S(t,s)||document);return}const D={type:"action",component:s,action:e,effects:Array.isArray(h.effects)?h.effects.map(function(A){return A&&A.type?A.type:null}).filter(function(A){return A!==null}):[],usedHtmlFallback:!1},m=S(t,s)||t,st=H();await Jr(m,async function(){const A=S(t,s)||t,Gt=await $s(A,h.effects);!Gt.preventsHtmlFallback&&h.html&&A.isConnected&&!(e===xt&&Array.isArray(h.effects)&&h.effects.length===0)&&(D.usedHtmlFallback=!0,A.outerHTML=h.html);const ve=S(A,s);return h.snapshot&&ve&&ve.setAttribute("data-volt-snapshot",JSON.stringify(h.snapshot)),Gt},D),at=K(H()-st),tt=D.usedHtmlFallback===!0,rn(s,!1,b),Kt(s,!0,b)}catch(R){if(Qe(R)){const C=eo("action",b,y?y.signal:null);if(C.errorKind==="timeout"){const h=no("action",b,y?y.signal:null);L="timeout",et=h.errorKind,nt=h.message,Ht(s,!0,h),g("volt:request-error",h,S(t,s)||document);return}L="aborted",et=C.errorKind,nt=C.message,g("volt:request-abort",C,S(t,s)||document);return}const j=nn("action",R,b);throw L=j.errorKind,et=j.errorKind,nt=j.message,z=R&&typeof R.status=="number"?R.status:null,Ht(s,!0,j),g("volt:request-error",j,S(t,s)||document),R}finally{f&&f.requestId===p&&(f.controller=null,He(S(t,s)||t),ye(s,!1,o,b));const R=q("action",b,{outcome:L,errorKind:et,message:nt,status:z,timeoutMs:gt,requestPayloadBytes:J,responsePayloadBytes:w,htmlBytes:O,snapshotBytes:Q,patchDurationMs:at,totalDurationMs:K(H()-V),effectCount:X,usedHtmlFallback:tt,selectiveSyncAppliedCount:Array.isArray(I.applied)?I.applied.length:0,selectiveSyncSkippedCount:Array.isArray(I.skipped)?I.skipped.length:0}),j=we("action",R);g("volt:request-finish",Object.assign({},R,{telemetrySequence:j.sequence}),S(t,s)||document)}}i(sn,"dispatchAction"),document.addEventListener("input",function(t){ut("input",t);const e=B(t,"input, textarea, select");if(!e)return;const n=yt(e);if(!n)return;const r=n.getAttribute("data-volt-component"),o=Sn(n),a=v(e,["volt-model","volt:model"]);o&&o.state&&a&&(o.state[a]=e.type==="checkbox"?!!e.checked:e.value,n.setAttribute("data-volt-snapshot",JSON.stringify(o))),sr(e,"directive:model.local:input"),ur(e,n,"directive:model.sync:input"),Ka(n,{component:r,target:ro(e)}),Kt(n,!1,{component:r,target:ro(e)})}),document.addEventListener("click",function(t){ut("click",t);const e=B(t,"[volt-click], [volt\\:click]");if(e){const l=yt(e);if(!l)return;t.preventDefault();const f=v(e,["volt-params","volt:params"]);sn(l,v(e,["volt-click","volt:click"]),f?JSON.parse(f):{},wn(l),e).catch(function(d){console.error("VoltStack runtime error:",d)});return}const n=B(t,"[volt-dispatch], [volt\\:dispatch]");n&&zo(n,yt(n),v(n,xo()),t);const r=B(t,"a[volt-navigate], a[volt\\:navigate]");if(!Ss(t,r))return;const o=new URL(r.href,window.location.href),a=rt(r);if(a.mode==="reload")return;t.preventDefault();const s=r.hasAttribute("volt-preserve-scroll")||r.hasAttribute("volt:preserve-scroll"),u=r.hasAttribute("volt-replace")||r.hasAttribute("volt:replace");he(o.toString(),{trigger:r,preserveScroll:s,historyMode:u?"replace":"push",navigationMode:a,pageTransition:la(r)}).catch(function(l){console.error("VoltStack navigation error:",l)})}),document.addEventListener("pointerenter",function(t){const e=B(t,wt);if(!e||!e.href||!ne(e,"intent")||!_t(rt(e)))return;const n=_r(e,e.href);Ft(n,{cacheControl:It(e),navigationMode:rt(e)}).catch(function(){return null})},!0),document.addEventListener("pointerleave",function(t){const e=B(t,wt);e&&ce(e)},!0),document.addEventListener("focusin",function(t){ut("focus",t);const e=B(t,wt);if(!e||!e.href||!ne(e,"intent")||!_t(rt(e)))return;const n=_r(e,e.href);Ft(n,{cacheControl:It(e),navigationMode:rt(e)}).catch(function(){return null})}),document.addEventListener("volt:navigation-cache-invalidate",function(t){const e=t&&t.detail&&typeof t.detail=="object"?t.detail:{};if(typeof e.url=="string"&&e.url!==""){At(e.url,e.reason||"event",{source:e.source||"event"});return}ha(e.reason||"event",{source:e.source||"event"})}),document.addEventListener("focusout",function(t){ut("blur",t);const e=B(t,wt);e&&ce(e)}),document.addEventListener("submit",function(t){ut("submit",t);const e=B(t,"form[volt-submit], form[volt\\:submit]");if(!e)return;const n=yt(e);n&&(t.preventDefault(),sn(n,v(e,["volt-submit","volt:submit"]),Mo(e),wn(n),e).catch(function(r){console.error("VoltStack runtime error:",r)}))}),document.addEventListener("change",function(t){ut("change",t);const e=B(t,"input, textarea, select");if(!e)return;const n=yt(e);sr(e,"directive:model.local:change"),ur(e,n,"directive:model.sync:change")}),document.addEventListener("keydown",function(t){ut("keydown",t)}),document.addEventListener("keyup",function(t){ut("keyup",t)}),window.addEventListener("popstate",function(){he(window.location.href,{updateHistory:!1,historyMode:"replace",preserveScroll:!1,fallback:!1}).catch(function(t){console.error("VoltStack navigation error:",t),window.location.reload()})}),c.clientStateScope=M(window.location.href),window.Volt=window.Volt&&typeof window.Volt=="object"?window.Volt:{},window.Volt.contract=oi(),window.Volt.visit=function(t,e){return he(t,e||{})},window.Volt.prefetch=function(t,e){return Ft(t,e||{})},window.Volt.state=ri(),window.Volt.components=ai(),window.Volt.telemetry=ii();function vo(){Ut(),Jt("boot"),Lr(document),jr(document)}i(vo,"bootRuntimeDocumentFeatures"),document.readyState==="loading"&&document.addEventListener("DOMContentLoaded",vo,{once:!0}),vo()})();
+// Generated file. Do not edit directly.
+// Source: frontend/runtime/src/*.js
+// Rebuild: php tools/build-runtime.php
+(function () {
+  if (typeof window !== "undefined" && window.__voltRuntimeBooted === true) {
+    return;
+  }
+
+  if (typeof window !== "undefined") {
+    window.__voltRuntimeBooted = true;
+  }
+
+  const runtime = {
+    navigationRequestId: 0,
+    navigationController: null,
+    navigationCache: new Map(),
+    navigationInFlight: new Map(),
+    persistentFragments: new Map(),
+    navigationPreloadHints: new Set(),
+    navigationPrefetchInterest: new Map(),
+    navigationPrefetchElements: new WeakMap(),
+    navigationViewportObserver: null,
+    navigationViewportObserved: new WeakSet(),
+    navigationHeuristicHandle: null,
+    componentRequestStates: new Map(),
+    statePolicies: new Map(),
+    loadingDelays: new Map(),
+    loadingActivatedAt: new Map(),
+    loadingMinClearDelays: new Map(),
+    successTimeouts: new Map(),
+    successActivatedAt: new Map(),
+    successMinClearDelays: new Map(),
+    errorTimeouts: new Map(),
+    dirtyDebounces: new Map(),
+    modelSyncDebounces: new WeakMap(),
+    modelSyncTrackedElements: new Set(),
+    clientStateScope: null,
+    clientStateValues: new Map(),
+    sharedStateValues: new Map(),
+    clientStateSubscribers: new Map(),
+    sharedStateSubscribers: new Map(),
+    clientStateGlobalSubscribers: new Set(),
+    sharedStateGlobalSubscribers: new Set(),
+    directiveSequence: 0,
+    onDirectiveOnce: new WeakMap(),
+    onDirectiveTrackedElements: new Set(),
+    activeComponents: new Map(),
+    activeComponentsMeta: {
+      refreshedAt: null,
+      reason: "boot",
+      count: 0,
+    },
+    navigationPrefetchTrackedElements: new Set(),
+    navigationViewportTrackedElements: new Set(),
+    telemetryEntries: [],
+    telemetryMaxEntries: 60,
+    telemetrySequence: 0,
+  };
+  const VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION = 1;
+
+  const NAVIGATION_CACHE_TTL = 5000;
+  const NAVIGATION_CACHE_MAX_ENTRIES = 10;
+  const NAVIGATION_REQUEST_TIMEOUT = 8000;
+  const NAVIGATION_REQUEST_RETRY_ATTEMPTS = 1;
+  const NAVIGATION_REQUEST_RETRY_DELAY = 180;
+  const NAVIGATION_HEURISTIC_DELAY = 180;
+  const NAVIGATION_HEURISTIC_VIEWPORT_MARGIN = 240;
+  const ACTION_REQUEST_TIMEOUT = 8000;
+  const MODEL_SYNC_INTERNAL_ACTION = "__volt_sync__";
+  const MODEL_SYNC_DEBOUNCE = 220;
+  const NAVIGATION_PREFETCH_SELECTOR =
+    "a[volt-navigate], a[volt\\:navigate], a[volt-prefetch], a[volt\\:prefetch]";
+  const NAVIGATION_CACHE_CONTROL_META_NAMES = [
+    "volt-cache-control",
+    "volt:navigation-cache",
+  ];
+  const NAVIGATION_MODE_META_NAMES = [
+    "volt-navigation-mode",
+    "volt:navigation-mode",
+  ];
+  const DOCUMENT_CONTRACT_META_NAMES = ["volt-document", "volt:document"];
+  const NAVIGATION_PAGE_TRANSITION_META_NAMES = [
+    "volt-page-transition",
+    "volt:page-transition",
+  ];
+  const NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES = [
+    "volt-page-transition-profile",
+    "volt:page-transition-profile",
+  ];
+  const NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES = [
+    "volt-page-transition-duration",
+    "volt:page-transition-duration",
+  ];
+  const NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES = [
+    "volt-page-transition-mode",
+    "volt:page-transition-mode",
+  ];
+  const NAVIGATION_FRAGMENT_CONTROL_META_NAMES = [
+    "volt-fragment-control",
+    "volt:fragment-cache",
+  ];
+  const NAVIGATION_FRAGMENT_SELECTOR =
+    "[data-volt-preserve], [volt-preserve], [volt\\:preserve]";
+  const NAVIGATION_PERSIST_SELECTOR =
+    "[data-volt-persist], [volt-persist], [volt\\:persist]";
+  const NAVIGATION_RETAINED_SELECTOR =
+    NAVIGATION_FRAGMENT_SELECTOR + ", " + NAVIGATION_PERSIST_SELECTOR;
+  const PAGE_TRANSITION_PROFILES = Object.freeze({
+    soft: Object.freeze({
+      name: "fade",
+      duration: 220,
+      mode: "out-in",
+    }),
+    gentle: Object.freeze({
+      name: "fade",
+      duration: 320,
+      mode: "out-in",
+    }),
+    crisp: Object.freeze({
+      name: "fade",
+      duration: 160,
+      mode: "out-in",
+    }),
+    classic: Object.freeze({
+      name: "default",
+      duration: 180,
+      mode: "out-in",
+    }),
+  });
+
+  function componentRequestState(component) {
+    if (!component) {
+      return null;
+    }
+
+    if (!runtime.componentRequestStates.has(component)) {
+      runtime.componentRequestStates.set(component, {
+        requestId: 0,
+        controller: null,
+      });
+    }
+
+    return runtime.componentRequestStates.get(component);
+  }
+
+  function findRoot(element) {
+    return element.closest('[data-volt-root="true"]');
+  }
+
+  function findRootByComponent(componentName) {
+    const roots = document.querySelectorAll('[data-volt-root="true"]');
+
+    for (let index = 0; index < roots.length; index += 1) {
+      if (roots[index].getAttribute("data-volt-component") === componentName) {
+        return roots[index];
+      }
+    }
+
+    return null;
+  }
+
+  function readSnapshot(root) {
+    const snapshot = root.getAttribute("data-volt-snapshot");
+
+    return snapshot ? JSON.parse(snapshot) : null;
+  }
+
+  function collectModelUpdates(root) {
+    const updates = {};
+
+    root
+      .querySelectorAll("[volt-model], [volt\\:model]")
+      .forEach(function (element) {
+        const key = directiveValue(element, ["volt-model", "volt:model"]);
+
+        if (!key) {
+          return;
+        }
+
+        if (element.type === "checkbox") {
+          updates[key] = !!element.checked;
+          return;
+        }
+
+        updates[key] = element.value;
+      });
+
+    return updates;
+  }
+
+  function collectFormData(form) {
+    const data = {};
+    const formData = new FormData(form);
+
+    formData.forEach(function (value, key) {
+      if (typeof value === "string") {
+        data[key] = value;
+      }
+    });
+
+    return data;
+  }
+
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") {
+      return window.CSS.escape(value);
+    }
+
+    return String(value).replace(/[^a-zA-Z0-9\-_]/g, "\\$&");
+  }
+
+  function directiveValue(element, names) {
+    for (let index = 0; index < names.length; index += 1) {
+      const value = element.getAttribute(names[index]);
+
+      if (value !== null && value !== "") {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  function closestFromEventTarget(event, selector) {
+    return event && event.target instanceof Element
+      ? event.target.closest(selector)
+      : null;
+  }
+
+  function directiveAttribute(element, names) {
+    for (let index = 0; index < names.length; index += 1) {
+      if (element.hasAttribute(names[index])) {
+        return {
+          name: names[index],
+          value: element.getAttribute(names[index]) || "",
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function dispatchDirectiveNames() {
+    return ["volt-dispatch", "volt:dispatch"];
+  }
+
+  function onDirectiveNames() {
+    return ["volt-on", "volt:on"];
+  }
+
+  function parseDispatchDirectiveEvents(value) {
+    if (typeof value !== "string") {
+      return [];
+    }
+
+    return value
+      .split("|")
+      .map(function (entry) {
+        return entry.trim();
+      })
+      .filter(function (entry) {
+        return /^[A-Za-z][A-Za-z0-9:._-]*$/.test(entry);
+      });
+  }
+
+  function onDirectiveSelector() {
+    return "[volt-on], [volt\\:on]";
+  }
+
+  function normalizeOnDirectiveKeyFilter(key) {
+    const normalized = String(key || "").trim().toLowerCase();
+
+    if (normalized === "esc") {
+      return "escape";
+    }
+
+    if (normalized === "spacebar" || normalized === " ") {
+      return "space";
+    }
+
+    return normalized;
+  }
+
+  function onDirectiveOnceStore(element) {
+    if (!runtime.onDirectiveOnce.has(element)) {
+      runtime.onDirectiveOnce.set(element, new Set());
+    }
+
+    runtime.onDirectiveTrackedElements.add(element);
+
+    return runtime.onDirectiveOnce.get(element);
+  }
+
+  function onDirectiveActionValue(rawValue, event) {
+    const trimmed = typeof rawValue === "string" ? rawValue.trim() : "";
+
+    if (trimmed === "") {
+      return {
+        valid: false,
+        value: null,
+      };
+    }
+
+    if (trimmed === "$event.target.value") {
+      return {
+        valid: true,
+        value:
+          event && event.target && "value" in event.target
+            ? event.target.value
+            : undefined,
+      };
+    }
+
+    if (trimmed === "$event.target.checked") {
+      return {
+        valid: true,
+        value:
+          event && event.target && "checked" in event.target
+            ? !!event.target.checked
+            : undefined,
+      };
+    }
+
+    const stringLiteral = parseDirectiveStringLiteral(trimmed);
+
+    if (stringLiteral !== null) {
+      return {
+        valid: true,
+        value: stringLiteral,
+      };
+    }
+
+    if (/^(true|false)$/i.test(trimmed)) {
+      return {
+        valid: true,
+        value: trimmed.toLowerCase() === "true",
+      };
+    }
+
+    if (/^null$/i.test(trimmed)) {
+      return {
+        valid: true,
+        value: null,
+      };
+    }
+
+    if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+      return {
+        valid: true,
+        value: Number(trimmed),
+      };
+    }
+
+    return {
+      valid: false,
+      value: null,
+    };
+  }
+
+  function parseOnDirectiveEventSpec(rawValue) {
+    if (typeof rawValue !== "string" || rawValue.trim() === "") {
+      return null;
+    }
+
+    const segments = rawValue
+      .trim()
+      .split(".")
+      .map(function (segment) {
+        return segment.trim().toLowerCase();
+      })
+      .filter(function (segment) {
+        return segment !== "";
+      });
+
+    if (segments.length === 0) {
+      return null;
+    }
+
+    const eventName = segments[0];
+    const supportedEvents = [
+      "click",
+      "input",
+      "change",
+      "submit",
+      "focus",
+      "blur",
+      "keydown",
+      "keyup",
+    ];
+
+    if (supportedEvents.indexOf(eventName) === -1) {
+      return null;
+    }
+
+    const modifiers = {
+      prevent: false,
+      stop: false,
+      once: false,
+      self: false,
+    };
+    let keyFilter = null;
+
+    for (let index = 1; index < segments.length; index += 1) {
+      const segment = segments[index];
+
+      if (Object.prototype.hasOwnProperty.call(modifiers, segment)) {
+        modifiers[segment] = true;
+        continue;
+      }
+
+      if ((eventName === "keydown" || eventName === "keyup") && !keyFilter) {
+        keyFilter = normalizeOnDirectiveKeyFilter(segment);
+        continue;
+      }
+
+      return null;
+    }
+
+    return {
+      name: eventName,
+      modifiers: modifiers,
+      keyFilter: keyFilter,
+      raw: rawValue.trim(),
+    };
+  }
+
+  function parseOnDirectiveAction(rawValue) {
+    if (typeof rawValue !== "string" || rawValue.trim() === "") {
+      return null;
+    }
+
+    const trimmed = rawValue.trim();
+    const dispatchMatches = trimmed.match(/^dispatch:([A-Za-z][A-Za-z0-9:._-]*)$/);
+
+    if (dispatchMatches) {
+      return {
+        type: "dispatch",
+        name: dispatchMatches[1],
+        raw: trimmed,
+      };
+    }
+
+    const toggleMatches = trimmed.match(
+      /^state:toggle\s+(client|shared):([A-Za-z0-9_.-]+)$/i,
+    );
+
+    if (toggleMatches) {
+      return {
+        type: "toggle",
+        scope: normalizeRuntimeStateScope(toggleMatches[1]),
+        path: toggleMatches[2],
+        raw: trimmed,
+      };
+    }
+
+    const deleteMatches = trimmed.match(
+      /^state:delete\s+(client|shared):([A-Za-z0-9_.-]+)$/i,
+    );
+
+    if (deleteMatches) {
+      return {
+        type: "delete",
+        scope: normalizeRuntimeStateScope(deleteMatches[1]),
+        path: deleteMatches[2],
+        raw: trimmed,
+      };
+    }
+
+    const setMatches = trimmed.match(
+      /^state:set\s+(client|shared):([A-Za-z0-9_.-]+)\s*=\s*(.+)$/i,
+    );
+
+    if (setMatches) {
+      return {
+        type: "set",
+        scope: normalizeRuntimeStateScope(setMatches[1]),
+        path: setMatches[2],
+        valueExpression: setMatches[3].trim(),
+        raw: trimmed,
+      };
+    }
+
+    return null;
+  }
+
+  function parseOnDirectiveRule(value, index) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const separator = findTopLevelArrow(value);
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const eventSpec = parseOnDirectiveEventSpec(value.slice(0, separator).trim());
+    const action = parseOnDirectiveAction(value.slice(separator + 2).trim());
+
+    if (!eventSpec || !action) {
+      return null;
+    }
+
+    return {
+      key: String(index) + ":" + value.trim(),
+      event: eventSpec,
+      action: action,
+      raw: value.trim(),
+    };
+  }
+
+  function parseOnDirectiveRules(value) {
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry, index) {
+        return parseOnDirectiveRule(entry, index);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function dispatchDirectiveDisabled(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return true;
+    }
+
+    if ("disabled" in element && !!element.disabled) {
+      return true;
+    }
+
+    return (
+      (element.getAttribute("aria-disabled") || "").toLowerCase() === "true"
+    );
+  }
+
+  function dispatchDirectiveScopeId(root) {
+    if (!root || typeof root.getAttribute !== "function") {
+      return currentClientStateScope();
+    }
+
+    return (
+      root.getAttribute("data-volt-component") ||
+      root.getAttribute("data-volt-scope-id") ||
+      currentClientStateScope()
+    );
+  }
+
+  function dispatchDirectiveDetail(root, trigger, directive, originalEvent) {
+    return {
+      sourceElement: trigger,
+      directive: directive,
+      scopeId: dispatchDirectiveScopeId(root),
+      clientScope: currentClientStateScope(),
+      sharedScope: "shared",
+      component:
+        root && typeof root.getAttribute === "function"
+          ? root.getAttribute("data-volt-component") || null
+          : null,
+      originalEvent: originalEvent,
+    };
+  }
+
+  function emitNamedDispatchDirectiveEvent(
+    trigger,
+    root,
+    name,
+    directive,
+    originalEvent,
+  ) {
+    if (!trigger || !name || dispatchDirectiveDisabled(trigger)) {
+      return false;
+    }
+
+    trigger.dispatchEvent(
+      new CustomEvent(name, {
+        detail: dispatchDirectiveDetail(
+          root,
+          trigger,
+          directive || "dispatch:" + name,
+          originalEvent,
+        ),
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    return true;
+  }
+
+  function emitDispatchDirective(trigger, root, directiveAttributeValue, event) {
+    const events = parseDispatchDirectiveEvents(directiveAttributeValue);
+
+    if (!trigger || events.length === 0 || dispatchDirectiveDisabled(trigger)) {
+      return false;
+    }
+
+    const detail = dispatchDirectiveDetail(
+      root,
+      trigger,
+      directiveAttributeValue,
+      event,
+    );
+
+    events.forEach(function (name) {
+      trigger.dispatchEvent(
+        new CustomEvent(name, {
+          detail: detail,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    return true;
+  }
+
+  function matchesOnDirectiveEvent(rule, eventName, event) {
+    if (!rule || !rule.event || rule.event.name !== eventName) {
+      return false;
+    }
+
+    if (
+      (eventName === "keydown" || eventName === "keyup") &&
+      rule.event.keyFilter
+    ) {
+      return (
+        normalizeOnDirectiveKeyFilter(event && event.key) ===
+        rule.event.keyFilter
+      );
+    }
+
+    return true;
+  }
+
+  function runOnDirectiveAction(rule, trigger, root, event) {
+    if (!rule || !rule.action) {
+      return false;
+    }
+
+    if (rule.action.type === "dispatch") {
+      return emitNamedDispatchDirectiveEvent(
+        trigger,
+        root,
+        rule.action.name,
+        "volt:on=" + rule.raw,
+        event,
+      );
+    }
+
+    if (rule.action.type === "set") {
+      const resolved = onDirectiveActionValue(rule.action.valueExpression, event);
+
+      if (!resolved.valid) {
+        return false;
+      }
+
+      setRuntimeStateValue(rule.action.path, resolved.value, {
+        scope: rule.action.scope,
+        action: "directive:on:set",
+      });
+      return true;
+    }
+
+    if (rule.action.type === "toggle") {
+      const current = getRuntimeStateValue(rule.action.path, {
+        scope: rule.action.scope,
+        fallback: false,
+      });
+      setRuntimeStateValue(rule.action.path, !current, {
+        scope: rule.action.scope,
+        action: "directive:on:toggle",
+      });
+      return true;
+    }
+
+    if (rule.action.type === "delete") {
+      return deleteRuntimeStateValue(rule.action.path, {
+        scope: rule.action.scope,
+      });
+    }
+
+    return false;
+  }
+
+  function handleOnDirectiveEvent(eventName, event) {
+    const trigger = closestFromEventTarget(event, onDirectiveSelector());
+
+    if (!trigger) {
+      return false;
+    }
+
+    const rules = parseOnDirectiveRules(directiveValue(trigger, onDirectiveNames()));
+
+    if (rules.length === 0) {
+      return false;
+    }
+
+    const root = findRoot(trigger);
+    let handled = false;
+
+    rules.forEach(function (rule) {
+      if (!matchesOnDirectiveEvent(rule, eventName, event)) {
+        return;
+      }
+
+      if (rule.event.modifiers.self && event.target !== trigger) {
+        return;
+      }
+
+      const onceStore = onDirectiveOnceStore(trigger);
+
+      if (rule.event.modifiers.once && onceStore.has(rule.key)) {
+        return;
+      }
+
+      if (rule.event.modifiers.prevent && event.cancelable) {
+        event.preventDefault();
+      }
+
+      if (rule.event.modifiers.stop) {
+        event.stopPropagation();
+      }
+
+      if (runOnDirectiveAction(rule, trigger, root, event)) {
+        handled = true;
+
+        if (rule.event.modifiers.once) {
+          onceStore.add(rule.key);
+        }
+      }
+    });
+
+    return handled;
+  }
+
+  function normalizeNavigationUrl(url) {
+    try {
+      return new URL(url, window.location.href).toString();
+    } catch (error) {
+      return String(url || "");
+    }
+  }
+
+  function cloneStateValue(value) {
+    if (typeof structuredClone === "function") {
+      try {
+        return structuredClone(value);
+      } catch (error) {}
+    }
+
+    if (value === null || typeof value !== "object") {
+      return value;
+    }
+
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+      return value;
+    }
+  }
+
+  function runtimeNow() {
+    if (
+      typeof performance !== "undefined" &&
+      performance &&
+      typeof performance.now === "function"
+    ) {
+      return performance.now();
+    }
+
+    return Date.now();
+  }
+
+  function roundedMetricValue(value) {
+    return typeof value === "number" && isFinite(value)
+      ? Math.round(value * 100) / 100
+      : null;
+  }
+
+  function serializedTextBytes(value) {
+    if (typeof value !== "string" || value === "") {
+      return 0;
+    }
+
+    if (typeof TextEncoder === "function") {
+      return new TextEncoder().encode(value).length;
+    }
+
+    try {
+      let bytes = 0;
+
+      for (const character of value) {
+        const codePoint = character.codePointAt(0);
+
+        if (typeof codePoint !== "number") {
+          continue;
+        }
+
+        if (codePoint <= 0x7f) {
+          bytes += 1;
+        } else if (codePoint <= 0x7ff) {
+          bytes += 2;
+        } else if (codePoint <= 0xffff) {
+          bytes += 3;
+        } else {
+          bytes += 4;
+        }
+      }
+
+      return bytes;
+    } catch (error) {
+      return value.length;
+    }
+  }
+
+  function serializedPayloadBytes(value) {
+    if (typeof value === "undefined") {
+      return 0;
+    }
+
+    if (typeof value === "string") {
+      return serializedTextBytes(value);
+    }
+
+    try {
+      return serializedTextBytes(JSON.stringify(value));
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  function normalizeTelemetryKinds(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const candidates = Array.isArray(settings.kinds)
+      ? settings.kinds
+      : settings.kind
+        ? [settings.kind]
+        : [];
+
+    return candidates
+      .map(function (kind) {
+        return typeof kind === "string" ? kind.trim() : "";
+      })
+      .filter(function (kind) {
+        return kind !== "";
+      });
+  }
+
+  function filteredTelemetryEntries(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const kinds = normalizeTelemetryKinds(settings);
+    const filtered =
+      kinds.length === 0
+        ? runtime.telemetryEntries
+        : runtime.telemetryEntries.filter(function (entry) {
+            return kinds.indexOf(entry.kind) !== -1;
+          });
+    const limit =
+      typeof settings.limit === "number" && settings.limit > 0
+        ? Math.floor(settings.limit)
+        : null;
+    const entries = limit ? filtered.slice(0, limit) : filtered.slice();
+
+    return entries.map(function (entry) {
+      return cloneStateValue(entry);
+    });
+  }
+
+  function summarizeTelemetryKind(entries, kind) {
+    const filtered = entries.filter(function (entry) {
+      return entry.kind === kind;
+    });
+    const outcomes = {};
+    let totalDurationMs = 0;
+    let durationSamples = 0;
+    let maxDurationMs = 0;
+    let totalRequestPayloadBytes = 0;
+    let requestPayloadSamples = 0;
+    let maxRequestPayloadBytes = 0;
+    let totalResponsePayloadBytes = 0;
+    let responsePayloadSamples = 0;
+    let maxResponsePayloadBytes = 0;
+    let totalPatchDurationMs = 0;
+    let patchSamples = 0;
+    let maxPatchDurationMs = 0;
+
+    filtered.forEach(function (entry) {
+      const outcome =
+        entry && typeof entry.outcome === "string" ? entry.outcome : "unknown";
+      const totalDuration =
+        typeof entry.totalDurationMs === "number" ? entry.totalDurationMs : null;
+      const requestPayload =
+        typeof entry.requestPayloadBytes === "number"
+          ? entry.requestPayloadBytes
+          : null;
+      const responsePayload =
+        typeof entry.responsePayloadBytes === "number"
+          ? entry.responsePayloadBytes
+          : null;
+      const patchDuration =
+        typeof entry.patchDurationMs === "number" ? entry.patchDurationMs : null;
+
+      outcomes[outcome] = (outcomes[outcome] || 0) + 1;
+
+      if (totalDuration !== null) {
+        totalDurationMs += totalDuration;
+        durationSamples += 1;
+        maxDurationMs = Math.max(maxDurationMs, totalDuration);
+      }
+
+      if (requestPayload !== null) {
+        totalRequestPayloadBytes += requestPayload;
+        requestPayloadSamples += 1;
+        maxRequestPayloadBytes = Math.max(maxRequestPayloadBytes, requestPayload);
+      }
+
+      if (responsePayload !== null) {
+        totalResponsePayloadBytes += responsePayload;
+        responsePayloadSamples += 1;
+        maxResponsePayloadBytes = Math.max(
+          maxResponsePayloadBytes,
+          responsePayload,
+        );
+      }
+
+      if (patchDuration !== null) {
+        totalPatchDurationMs += patchDuration;
+        patchSamples += 1;
+        maxPatchDurationMs = Math.max(maxPatchDurationMs, patchDuration);
+      }
+    });
+
+    return {
+      kind: kind,
+      count: filtered.length,
+      outcomes: outcomes,
+      averageDurationMs:
+        durationSamples > 0
+          ? roundedMetricValue(totalDurationMs / durationSamples)
+          : null,
+      maxDurationMs:
+        durationSamples > 0 ? roundedMetricValue(maxDurationMs) : null,
+      averageRequestPayloadBytes:
+        requestPayloadSamples > 0
+          ? Math.round(totalRequestPayloadBytes / requestPayloadSamples)
+          : null,
+      maxRequestPayloadBytes:
+        requestPayloadSamples > 0 ? maxRequestPayloadBytes : null,
+      averageResponsePayloadBytes:
+        responsePayloadSamples > 0
+          ? Math.round(totalResponsePayloadBytes / responsePayloadSamples)
+          : null,
+      maxResponsePayloadBytes:
+        responsePayloadSamples > 0 ? maxResponsePayloadBytes : null,
+      averagePatchDurationMs:
+        patchSamples > 0
+          ? roundedMetricValue(totalPatchDurationMs / patchSamples)
+          : null,
+      maxPatchDurationMs:
+        patchSamples > 0 ? roundedMetricValue(maxPatchDurationMs) : null,
+      latest:
+        filtered.length > 0 ? cloneStateValue(filtered[0]) : null,
+    };
+  }
+
+  function telemetrySummary(options) {
+    const entries = filteredTelemetryEntries(options);
+    const summary = {
+      totalEntries: entries.length,
+      maxEntries: runtime.telemetryMaxEntries,
+      navigation: summarizeTelemetryKind(entries, "navigation"),
+      action: summarizeTelemetryKind(entries, "action"),
+      patch: summarizeTelemetryKind(entries, "patch"),
+    };
+
+    return cloneStateValue(summary);
+  }
+
+  function recordRuntimeTelemetry(kind, detail) {
+    const entry = Object.assign(
+      {
+        kind: kind,
+        sequence: runtime.telemetrySequence + 1,
+        recordedAt: new Date().toISOString(),
+      },
+      cloneStateValue(detail || {}),
+    );
+
+    runtime.telemetrySequence = entry.sequence;
+    runtime.telemetryEntries.unshift(entry);
+
+    while (runtime.telemetryEntries.length > runtime.telemetryMaxEntries) {
+      runtime.telemetryEntries.pop();
+    }
+
+    return cloneStateValue(entry);
+  }
+
+  function resetRuntimeTelemetry() {
+    const cleared = runtime.telemetryEntries.length;
+
+    runtime.telemetryEntries = [];
+    runtime.telemetrySequence = 0;
+
+    return cleared;
+  }
+
+  function activeComponentRoots() {
+    return Array.prototype.slice.call(
+      document.querySelectorAll('[data-volt-root="true"]'),
+    );
+  }
+
+  function activeComponentKey(root, index) {
+    const component =
+      root && typeof root.getAttribute === "function"
+        ? root.getAttribute("data-volt-component") || "anonymous"
+        : "anonymous";
+    const descriptor = buildStableElementDescriptor(root);
+
+    if (descriptor && descriptor.value) {
+      return (
+        component +
+        "::" +
+        descriptor.strategy +
+        ":" +
+        String(descriptor.value)
+      );
+    }
+
+    return component + "::index:" + String(index);
+  }
+
+  function publicActiveComponentEntry(entry) {
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+
+    const sanitized = Object.assign({}, entry);
+    delete sanitized.rootRef;
+
+    return cloneStateValue(sanitized);
+  }
+
+  function describeActiveComponent(root, index, previousEntry) {
+    const snapshotAttribute =
+      root && typeof root.getAttribute === "function"
+        ? root.getAttribute("data-volt-snapshot")
+        : null;
+    const snapshot = root ? readSnapshot(root) : null;
+    const component =
+      root && typeof root.getAttribute === "function"
+        ? root.getAttribute("data-volt-component")
+        : null;
+    const descriptor = buildStableElementDescriptor(root);
+
+    return {
+      id: activeComponentKey(root, index),
+      index: index,
+      component: component,
+      endpoint:
+        root && typeof root.getAttribute === "function"
+          ? root.getAttribute("data-volt-endpoint") || "/_volt/action"
+          : "/_volt/action",
+      renderMode:
+        root && typeof root.getAttribute === "function"
+          ? root.getAttribute("data-volt-render-mode")
+          : null,
+      descriptor: descriptor,
+      hasSnapshot: !!snapshotAttribute,
+      snapshotBytes: serializedPayloadBytes(snapshotAttribute || ""),
+      snapshotStateKeys:
+        snapshot && snapshot.state && typeof snapshot.state === "object"
+          ? Object.keys(snapshot.state)
+          : [],
+      isConnected: !!(root && root.isConnected),
+      flags: {
+        loading:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-loading") === "true"
+          ),
+        dirty:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-dirty") === "true"
+          ),
+        error:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-error") === "true"
+          ),
+        success:
+          !!(
+            root &&
+            typeof root.getAttribute === "function" &&
+            root.getAttribute("data-volt-success") === "true"
+          ),
+      },
+      firstSeenAt:
+        previousEntry && previousEntry.firstSeenAt
+          ? previousEntry.firstSeenAt
+          : new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+      rootRef: root || null,
+    };
+  }
+
+  function remainingComponentCount(entries, component) {
+    if (!component) {
+      return 0;
+    }
+
+    let count = 0;
+
+    entries.forEach(function (entry) {
+      if (entry && entry.component === component) {
+        count += 1;
+      }
+    });
+
+    return count;
+  }
+
+  function clearRuntimeRootState(root) {
+    if (!root) {
+      return;
+    }
+
+    clearLoadingDelay(root);
+    clearLoadingMinDuration(root);
+    clearSuccessTimeout(root);
+    clearSuccessMinDuration(root);
+    clearErrorTimeout(root);
+    clearDirtyDebounce(root);
+    runtime.loadingActivatedAt.delete(root);
+    runtime.successActivatedAt.delete(root);
+  }
+
+  function destroyUnmountedComponent(entry, remainingEntries, reason) {
+    if (!entry || typeof entry !== "object") {
+      return false;
+    }
+
+    const root = entry.rootRef || null;
+    const component = entry.component || null;
+
+    clearRuntimeRootState(root);
+
+    if (component && remainingComponentCount(remainingEntries, component) === 0) {
+      const requestState = runtime.componentRequestStates.get(component);
+
+      if (requestState && requestState.controller) {
+        requestState.controller.abort();
+      }
+
+      runtime.componentRequestStates.delete(component);
+      runtime.statePolicies.delete(component);
+    }
+
+    emitRuntimeHook(
+      "volt:component-destroyed",
+      {
+        id: entry.id || null,
+        component: component,
+        reason: reason || "unmounted",
+        descriptor: entry.descriptor || null,
+        remainingComponentRoots: remainingComponentCount(
+          remainingEntries,
+          component,
+        ),
+        activeComponentCount: remainingEntries.size,
+      },
+      document,
+    );
+
+    return true;
+  }
+
+  function destroyRemovedActiveComponents(previousEntries, nextEntries, reason) {
+    previousEntries.forEach(function (entry, key) {
+      if (!entry || typeof entry !== "object") {
+        return;
+      }
+
+      const previousRoot = entry.rootRef || null;
+      const nextEntry = nextEntries.get(key);
+      const nextRoot =
+        nextEntry && typeof nextEntry === "object" ? nextEntry.rootRef || null : null;
+
+      if (previousRoot && nextRoot === previousRoot) {
+        return;
+      }
+
+      destroyUnmountedComponent(entry, nextEntries, reason || "refresh");
+    });
+  }
+
+  function refreshActiveComponentsRegistry(reason) {
+    const previous = runtime.activeComponents;
+    const next = new Map();
+    const roots = activeComponentRoots();
+
+    roots.forEach(function (root, index) {
+      const key = activeComponentKey(root, index);
+      next.set(key, describeActiveComponent(root, index, previous.get(key)));
+    });
+
+    destroyRemovedActiveComponents(previous, next, reason || "refresh");
+    runtime.activeComponents = next;
+    runtime.activeComponentsMeta = {
+      refreshedAt: new Date().toISOString(),
+      reason: reason || "manual",
+      count: next.size,
+    };
+
+    return activeComponentsSnapshot();
+  }
+
+  function activeComponentsEntries(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const componentFilter =
+      typeof settings.component === "string" && settings.component.trim() !== ""
+        ? settings.component.trim()
+        : null;
+    const entries = Array.from(runtime.activeComponents.values()).filter(
+      function (entry) {
+        return componentFilter ? entry.component === componentFilter : true;
+      },
+    );
+
+    return entries.map(function (entry) {
+      return publicActiveComponentEntry(entry);
+    });
+  }
+
+  function activeComponentsSummary(options) {
+    const entries = activeComponentsEntries(options);
+    const components = {};
+
+    entries.forEach(function (entry) {
+      const name = entry.component || "anonymous";
+
+      if (!components[name]) {
+        components[name] = {
+          component: name,
+          count: 0,
+          totalSnapshotBytes: 0,
+          loading: 0,
+          dirty: 0,
+          error: 0,
+          success: 0,
+        };
+      }
+
+      components[name].count += 1;
+      components[name].totalSnapshotBytes += entry.snapshotBytes || 0;
+      components[name].loading += entry.flags && entry.flags.loading ? 1 : 0;
+      components[name].dirty += entry.flags && entry.flags.dirty ? 1 : 0;
+      components[name].error += entry.flags && entry.flags.error ? 1 : 0;
+      components[name].success += entry.flags && entry.flags.success ? 1 : 0;
+    });
+
+    return {
+      totalRoots: entries.length,
+      uniqueComponents: Object.keys(components).length,
+      refreshedAt: runtime.activeComponentsMeta.refreshedAt,
+      reason: runtime.activeComponentsMeta.reason,
+      components: Object.keys(components)
+        .sort()
+        .map(function (name) {
+          return cloneStateValue(components[name]);
+        }),
+    };
+  }
+
+  function activeComponentsSnapshot(options) {
+    return {
+      entries: activeComponentsEntries(options),
+      summary: activeComponentsSummary(options),
+    };
+  }
+
+  function normalizeRuntimeStateScope(scope) {
+    return scope === "shared" ? "shared" : "client";
+  }
+
+  function normalizeRuntimeStateKey(key) {
+    if (typeof key !== "string") {
+      return null;
+    }
+
+    const normalized = key.trim();
+    return normalized !== "" ? normalized : null;
+  }
+
+  function currentClientStateScope() {
+    if (!runtime.clientStateScope) {
+      runtime.clientStateScope = normalizeNavigationUrl(window.location.href);
+    }
+
+    return runtime.clientStateScope;
+  }
+
+  function runtimeStateStore(scope) {
+    return normalizeRuntimeStateScope(scope) === "shared"
+      ? runtime.sharedStateValues
+      : runtime.clientStateValues;
+  }
+
+  function runtimeStateSubscriberStore(scope) {
+    return normalizeRuntimeStateScope(scope) === "shared"
+      ? runtime.sharedStateSubscribers
+      : runtime.clientStateSubscribers;
+  }
+
+  function runtimeStateGlobalSubscribers(scope) {
+    return normalizeRuntimeStateScope(scope) === "shared"
+      ? runtime.sharedStateGlobalSubscribers
+      : runtime.clientStateGlobalSubscribers;
+  }
+
+  function runtimeStateSnapshot(scope) {
+    const snapshot = {};
+
+    runtimeStateStore(scope).forEach(function (value, key) {
+      snapshot[key] = cloneStateValue(value);
+    });
+
+    return snapshot;
+  }
+
+  function hasRuntimeStateValue(key, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return false;
+    }
+
+    return runtimeStateStore(options && options.scope).has(normalizedKey);
+  }
+
+  function normalizeStatePathSegments(path) {
+    if (typeof path !== "string" || path.trim() === "") {
+      return [];
+    }
+
+    return path
+      .split(".")
+      .map(function (segment) {
+        return segment.trim();
+      })
+      .filter(function (segment) {
+        return segment !== "";
+      });
+  }
+
+  function resolveValueBySegments(value, segments) {
+    let current = value;
+
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index];
+
+      if (Array.isArray(current)) {
+        const numericIndex = Number(segment);
+
+        if (
+          !Number.isInteger(numericIndex) ||
+          numericIndex < 0 ||
+          numericIndex >= current.length
+        ) {
+          return {
+            found: false,
+            value: null,
+          };
+        }
+
+        current = current[numericIndex];
+        continue;
+      }
+
+      if (
+        current === null ||
+        typeof current !== "object" ||
+        !Object.prototype.hasOwnProperty.call(current, segment)
+      ) {
+        return {
+          found: false,
+          value: null,
+        };
+      }
+
+      current = current[segment];
+    }
+
+    return {
+      found: true,
+      value: current,
+    };
+  }
+
+  function runtimeStateValueByPath(scope, path) {
+    const segments = normalizeStatePathSegments(path);
+
+    if (segments.length === 0) {
+      return {
+        found: false,
+        value: null,
+      };
+    }
+
+    for (let length = segments.length; length >= 1; length -= 1) {
+      const stateKey = segments.slice(0, length).join(".");
+
+      if (
+        !hasRuntimeStateValue(stateKey, {
+          scope: scope,
+        })
+      ) {
+        continue;
+      }
+
+      const value = getRuntimeStateValue(stateKey, {
+        scope: scope,
+      });
+      const nested = resolveValueBySegments(value, segments.slice(length));
+
+      return {
+        found: nested.found,
+        value: nested.found ? cloneStateValue(nested.value) : null,
+      };
+    }
+
+    return {
+      found: false,
+      value: null,
+    };
+  }
+
+  function notifyRuntimeStateSubscribers(detail) {
+    const scope = normalizeRuntimeStateScope(detail && detail.scope);
+    const key = detail && detail.key ? detail.key : null;
+    const subscriberStore = runtimeStateSubscriberStore(scope);
+    const globalSubscribers = runtimeStateGlobalSubscribers(scope);
+
+    if (key && subscriberStore.has(key)) {
+      subscriberStore.get(key).forEach(function (listener) {
+        try {
+          listener(detail);
+        } catch (error) {
+          console.error("VoltStack state subscriber error:", error);
+        }
+      });
+    }
+
+    globalSubscribers.forEach(function (listener) {
+      try {
+        listener(detail);
+      } catch (error) {
+        console.error("VoltStack state subscriber error:", error);
+      }
+    });
+  }
+
+  function emitRuntimeStateChanged(
+    scope,
+    key,
+    value,
+    previousValue,
+    action,
+    extra,
+  ) {
+    const detail = Object.assign(
+      {
+        scope: normalizeRuntimeStateScope(scope),
+        scopeId:
+          normalizeRuntimeStateScope(scope) === "client"
+            ? currentClientStateScope()
+            : "shared",
+        key: key,
+        value: cloneStateValue(value),
+        previousValue: cloneStateValue(previousValue),
+        action: action || "set",
+        snapshot: runtimeStateSnapshot(scope),
+      },
+      extra || {},
+    );
+
+    emitRuntimeHook("volt:state-changed", detail, document);
+    notifyRuntimeStateSubscribers(detail);
+  }
+
+  function emitRuntimeStateCleared(scope, keys, reason, extra) {
+    const detail = Object.assign(
+      {
+        scope: normalizeRuntimeStateScope(scope),
+        scopeId:
+          normalizeRuntimeStateScope(scope) === "client"
+            ? currentClientStateScope()
+            : "shared",
+        keys: Array.isArray(keys) ? keys.slice() : [],
+        reason: reason || "manual",
+        snapshot: runtimeStateSnapshot(scope),
+      },
+      extra || {},
+    );
+
+    emitRuntimeHook("volt:state-cleared", detail, document);
+    notifyRuntimeStateSubscribers(detail);
+  }
+
+  function getRuntimeStateValue(key, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return null;
+    }
+
+    const settings = options && typeof options === "object" ? options : {};
+    const store = runtimeStateStore(settings.scope);
+    const fallback = Object.prototype.hasOwnProperty.call(settings, "fallback")
+      ? settings.fallback
+      : null;
+
+    return store.has(normalizedKey)
+      ? cloneStateValue(store.get(normalizedKey))
+      : fallback;
+  }
+
+  function setRuntimeStateValue(key, value, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return null;
+    }
+
+    const settings = options && typeof options === "object" ? options : {};
+    const scope = normalizeRuntimeStateScope(settings.scope);
+    const store = runtimeStateStore(scope);
+    const previousValue = store.has(normalizedKey)
+      ? store.get(normalizedKey)
+      : null;
+
+    store.set(normalizedKey, value);
+    syncAllRuntimeStateDirectives();
+    emitRuntimeStateChanged(
+      scope,
+      normalizedKey,
+      value,
+      previousValue,
+      settings.action || "set",
+    );
+    return cloneStateValue(value);
+  }
+
+  function mergeRuntimeStateValue(key, value, options) {
+    const current = getRuntimeStateValue(key, options);
+    const nextValue = Object.assign(
+      {},
+      current && typeof current === "object" && !Array.isArray(current)
+        ? current
+        : {},
+      value && typeof value === "object" && !Array.isArray(value) ? value : {},
+    );
+
+    return setRuntimeStateValue(
+      key,
+      nextValue,
+      Object.assign({}, options || {}, {
+        action: "merge",
+      }),
+    );
+  }
+
+  function updateRuntimeStateValue(key, updater, options) {
+    const current = getRuntimeStateValue(key, options);
+    const nextValue =
+      typeof updater === "function" ? updater(current) : updater;
+
+    return setRuntimeStateValue(
+      key,
+      nextValue,
+      Object.assign({}, options || {}, {
+        action: "update",
+      }),
+    );
+  }
+
+  function deleteRuntimeStateValue(key, options) {
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      return false;
+    }
+
+    const settings = options && typeof options === "object" ? options : {};
+    const scope = normalizeRuntimeStateScope(settings.scope);
+    const store = runtimeStateStore(scope);
+
+    if (!store.has(normalizedKey)) {
+      return false;
+    }
+
+    const previousValue = store.get(normalizedKey);
+    store.delete(normalizedKey);
+    syncAllRuntimeStateDirectives();
+    emitRuntimeStateChanged(
+      scope,
+      normalizedKey,
+      null,
+      previousValue,
+      "delete",
+    );
+    return true;
+  }
+
+  function clearRuntimeState(scope, reason, extra) {
+    const normalizedScope = normalizeRuntimeStateScope(scope);
+    const store = runtimeStateStore(normalizedScope);
+    const keys = Array.from(store.keys());
+
+    if (keys.length === 0) {
+      return false;
+    }
+
+    store.clear();
+    syncAllRuntimeStateDirectives();
+    emitRuntimeStateCleared(normalizedScope, keys, reason, extra);
+    return true;
+  }
+
+  function transitionClientStateScope(nextUrl, reason) {
+    const nextScope = normalizeNavigationUrl(nextUrl || window.location.href);
+    const previousScope = currentClientStateScope();
+
+    if (previousScope === nextScope) {
+      return false;
+    }
+
+    const hadValues = clearRuntimeState("client", reason || "navigation", {
+      previousScopeId: previousScope,
+      nextScopeId: nextScope,
+    });
+
+    runtime.clientStateScope = nextScope;
+
+    emitRuntimeHook(
+      "volt:state-scope-changed",
+      {
+        scope: "client",
+        previousScopeId: previousScope,
+        nextScopeId: nextScope,
+        cleared: hadValues,
+        reason: reason || "navigation",
+      },
+      document,
+    );
+
+    return true;
+  }
+
+  function subscribeRuntimeState(key, listener, options) {
+    if (typeof listener !== "function") {
+      return function () {
+        return false;
+      };
+    }
+
+    const settings = options && typeof options === "object" ? options : {};
+    const scope = normalizeRuntimeStateScope(settings.scope);
+    const normalizedKey = normalizeRuntimeStateKey(key);
+
+    if (!normalizedKey) {
+      const listeners = runtimeStateGlobalSubscribers(scope);
+      listeners.add(listener);
+
+      return function () {
+        return listeners.delete(listener);
+      };
+    }
+
+    const subscriberStore = runtimeStateSubscriberStore(scope);
+
+    if (!subscriberStore.has(normalizedKey)) {
+      subscriberStore.set(normalizedKey, new Set());
+    }
+
+    subscriberStore.get(normalizedKey).add(listener);
+
+    return function () {
+      const listeners = subscriberStore.get(normalizedKey);
+
+      if (!listeners) {
+        return false;
+      }
+
+      const deleted = listeners.delete(listener);
+
+      if (listeners.size === 0) {
+        subscriberStore.delete(normalizedKey);
+      }
+
+      return deleted;
+    };
+  }
+
+  function createPublicStateApi() {
+    return {
+      get: getRuntimeStateValue,
+      set: setRuntimeStateValue,
+      merge: mergeRuntimeStateValue,
+      update: updateRuntimeStateValue,
+      delete: deleteRuntimeStateValue,
+      clear: function (options) {
+        const settings = options && typeof options === "object" ? options : {};
+        return clearRuntimeState(settings.scope, settings.reason || "manual");
+      },
+      snapshot: function (options) {
+        const settings = options && typeof options === "object" ? options : {};
+        return runtimeStateSnapshot(settings.scope);
+      },
+      subscribe: subscribeRuntimeState,
+      currentScope: currentClientStateScope,
+    };
+  }
+
+  function createPublicRuntimeContract() {
+    return Object.freeze({
+      version: VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION,
+      apis: Object.freeze({
+        visit: Object.freeze({
+          type: "function",
+        }),
+        prefetch: Object.freeze({
+          type: "function",
+        }),
+        state: Object.freeze({
+          type: "api",
+          factory: "createPublicStateApi",
+        }),
+        components: Object.freeze({
+          type: "api",
+          factory: "createPublicComponentsApi",
+        }),
+        telemetry: Object.freeze({
+          type: "api",
+          factory: "createPublicTelemetryApi",
+        }),
+      }),
+    });
+  }
+
+  function createPublicTelemetryApi() {
+    return {
+      entries: filteredTelemetryEntries,
+      latest: function (options) {
+        const entries = filteredTelemetryEntries(
+          Object.assign({}, options || {}, {
+            limit: 1,
+          }),
+        );
+
+        return entries.length > 0 ? entries[0] : null;
+      },
+      summary: telemetrySummary,
+      snapshot: function (options) {
+        return {
+          entries: filteredTelemetryEntries(options),
+          summary: telemetrySummary(options),
+          maxEntries: runtime.telemetryMaxEntries,
+        };
+      },
+      reset: resetRuntimeTelemetry,
+      size: function () {
+        return runtime.telemetryEntries.length;
+      },
+      config: function () {
+        return {
+          maxEntries: runtime.telemetryMaxEntries,
+        };
+      },
+    };
+  }
+
+  function createPublicComponentsApi() {
+    return {
+      entries: activeComponentsEntries,
+      all: activeComponentsEntries,
+      summary: activeComponentsSummary,
+      snapshot: activeComponentsSnapshot,
+      count: function (options) {
+        return activeComponentsEntries(options).length;
+      },
+      names: function () {
+        return activeComponentsSummary().components.map(function (entry) {
+          return entry.component;
+        });
+      },
+      find: function (componentName) {
+        const entries = activeComponentsEntries({
+          component: componentName,
+        });
+
+        return entries.length > 0 ? entries[0] : null;
+      },
+      refresh: function (reason) {
+        return refreshActiveComponentsRegistry(reason || "manual");
+      },
+    };
+  }
+
+  function storeDirectiveNames(state, suffix) {
+    const parts = [state];
+
+    if (suffix) {
+      parts.push(suffix);
+    }
+
+    const dashed = "volt-" + parts.join("-");
+    const colon = "volt:" + parts.join(".");
+
+    return [dashed, colon];
+  }
+
+  function showDirectiveNames(suffix) {
+    return storeDirectiveNames("show", suffix);
+  }
+
+  function classDirectiveNames(suffix) {
+    return storeDirectiveNames("class", suffix);
+  }
+
+  function attrDirectiveNames(suffix) {
+    return storeDirectiveNames("attr", suffix);
+  }
+
+  function styleDirectiveNames(suffix) {
+    return storeDirectiveNames("style", suffix);
+  }
+
+  function ifDirectiveNames(suffix) {
+    return storeDirectiveNames("if", suffix);
+  }
+
+  function forDirectiveNames(suffix) {
+    return storeDirectiveNames("for", suffix);
+  }
+
+  function textDirectiveNames(suffix) {
+    return storeDirectiveNames("text", suffix);
+  }
+
+  function htmlDirectiveNames(suffix) {
+    return storeDirectiveNames("html", suffix);
+  }
+
+  function bindDirectiveNames() {
+    return ["volt:bind", "volt-bind", "data-volt-bind"];
+  }
+
+  function modelLocalDirectiveNames() {
+    return [
+      "volt:model.local",
+      "volt-model-local",
+      "data-volt-model-local",
+    ];
+  }
+
+  function modelSyncDirectiveNames() {
+    return [
+      "volt:model.sync",
+      "volt-model-sync",
+      "data-volt-model-sync",
+    ];
+  }
+
+  function portalDirectiveNames() {
+    return storeDirectiveNames("portal");
+  }
+
+  function focusDirectiveNames(suffix) {
+    return storeDirectiveNames("focus", suffix);
+  }
+
+  function autofocusDirectiveNames(suffix) {
+    return storeDirectiveNames("autofocus", suffix);
+  }
+
+  function autofocusWhenDirectiveNames() {
+    return autofocusDirectiveNames("when");
+  }
+
+  function parseStoreDirectiveExpression(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const matches = value
+      .trim()
+      .match(/^(!)?\s*(client|shared):([A-Za-z0-9_.-]+)$/i);
+
+    if (!matches) {
+      return null;
+    }
+
+    return {
+      negate: matches[1] === "!",
+      scope: normalizeRuntimeStateScope(matches[2]),
+      path: matches[3],
+      raw: value.trim(),
+    };
+  }
+
+  function tokenizeStoreConditionExpression(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const tokens = [];
+    let index = 0;
+
+    while (index < value.length) {
+      const character = value[index];
+
+      if (/\s/.test(character)) {
+        index += 1;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "&&") {
+        tokens.push({
+          type: "and",
+          value: "&&",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "||") {
+        tokens.push({
+          type: "or",
+          value: "||",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 3) === "===") {
+        tokens.push({
+          type: "comparison",
+          operator: "===",
+          value: "===",
+        });
+        index += 3;
+        continue;
+      }
+
+      if (value.slice(index, index + 3) === "!==") {
+        tokens.push({
+          type: "comparison",
+          operator: "!==",
+          value: "!==",
+        });
+        index += 3;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "==") {
+        tokens.push({
+          type: "comparison",
+          operator: "==",
+          value: "==",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "!=") {
+        tokens.push({
+          type: "comparison",
+          operator: "!=",
+          value: "!=",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === ">=") {
+        tokens.push({
+          type: "comparison",
+          operator: ">=",
+          value: ">=",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (value.slice(index, index + 2) === "<=") {
+        tokens.push({
+          type: "comparison",
+          operator: "<=",
+          value: "<=",
+        });
+        index += 2;
+        continue;
+      }
+
+      if (character === "!") {
+        tokens.push({
+          type: "not",
+          value: "!",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === "(") {
+        tokens.push({
+          type: "lparen",
+          value: "(",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === ")") {
+        tokens.push({
+          type: "rparen",
+          value: ")",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === ">") {
+        tokens.push({
+          type: "comparison",
+          operator: ">",
+          value: ">",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === "<") {
+        tokens.push({
+          type: "comparison",
+          operator: "<",
+          value: "<",
+        });
+        index += 1;
+        continue;
+      }
+
+      if (character === "'" || character === '"') {
+        let endIndex = index + 1;
+        let escaping = false;
+
+        while (endIndex < value.length) {
+          const currentCharacter = value[endIndex];
+
+          if (escaping) {
+            escaping = false;
+            endIndex += 1;
+            continue;
+          }
+
+          if (currentCharacter === "\\") {
+            escaping = true;
+            endIndex += 1;
+            continue;
+          }
+
+          if (currentCharacter === character) {
+            break;
+          }
+
+          endIndex += 1;
+        }
+
+        if (endIndex >= value.length || value[endIndex] !== character) {
+          return null;
+        }
+
+        const rawLiteral = value.slice(index, endIndex + 1);
+        const parsedLiteral = parseDirectiveStringLiteral(rawLiteral);
+
+        if (parsedLiteral === null) {
+          return null;
+        }
+
+        tokens.push({
+          type: "literal",
+          value: parsedLiteral,
+          raw: rawLiteral,
+        });
+        index = endIndex + 1;
+        continue;
+      }
+
+      const referenceMatches = value
+        .slice(index)
+        .match(/^(client|shared):([A-Za-z0-9_.-]+)/i);
+
+      if (referenceMatches) {
+        tokens.push({
+          type: "ref",
+          value: referenceMatches[0],
+          scope: normalizeRuntimeStateScope(referenceMatches[1]),
+          path: referenceMatches[2],
+        });
+        index += referenceMatches[0].length;
+        continue;
+      }
+
+      const literalMatches = value.slice(index).match(/^(true|false)\b/i);
+
+      if (literalMatches) {
+        tokens.push({
+          type: "literal",
+          value: literalMatches[0].toLowerCase() === "true",
+          raw: literalMatches[0],
+        });
+        index += literalMatches[0].length;
+        continue;
+      }
+
+      const nullMatches = value.slice(index).match(/^null\b/i);
+
+      if (nullMatches) {
+        tokens.push({
+          type: "literal",
+          value: null,
+          raw: nullMatches[0],
+        });
+        index += nullMatches[0].length;
+        continue;
+      }
+
+      const numberMatches = value.slice(index).match(/^-?\d+(?:\.\d+)?\b/);
+
+      if (numberMatches) {
+        tokens.push({
+          type: "literal",
+          value: Number(numberMatches[0]),
+          raw: numberMatches[0],
+        });
+        index += numberMatches[0].length;
+        continue;
+      }
+
+      return null;
+    }
+
+    return tokens;
+  }
+
+  function parseStoreConditionPrimary(tokens, state) {
+    const token = tokens[state.index];
+
+    if (!token) {
+      return null;
+    }
+
+    if (token.type === "literal") {
+      state.index += 1;
+      return {
+        type: "literal",
+        value: token.value,
+      };
+    }
+
+    if (token.type === "ref") {
+      state.index += 1;
+      return {
+        type: "ref",
+        scope: token.scope,
+        path: token.path,
+      };
+    }
+
+    if (token.type === "lparen") {
+      state.index += 1;
+      const expression = parseStoreConditionOr(tokens, state);
+
+      if (
+        !expression ||
+        !tokens[state.index] ||
+        tokens[state.index].type !== "rparen"
+      ) {
+        return null;
+      }
+
+      state.index += 1;
+      return expression;
+    }
+
+    return null;
+  }
+
+  function parseStoreConditionUnary(tokens, state) {
+    const token = tokens[state.index];
+
+    if (token && token.type === "not") {
+      state.index += 1;
+      const argument = parseStoreConditionUnary(tokens, state);
+
+      if (!argument) {
+        return null;
+      }
+
+      return {
+        type: "not",
+        argument: argument,
+      };
+    }
+
+    return parseStoreConditionPrimary(tokens, state);
+  }
+
+  function parseStoreConditionComparison(tokens, state) {
+    let left = parseStoreConditionUnary(tokens, state);
+
+    if (!left) {
+      return null;
+    }
+
+    while (
+      tokens[state.index] &&
+      tokens[state.index].type === "comparison"
+    ) {
+      const operator = tokens[state.index].operator;
+      state.index += 1;
+      const right = parseStoreConditionUnary(tokens, state);
+
+      if (!right) {
+        return null;
+      }
+
+      left = {
+        type: "comparison",
+        operator: operator,
+        left: left,
+        right: right,
+      };
+    }
+
+    return left;
+  }
+
+  function parseStoreConditionAnd(tokens, state) {
+    let left = parseStoreConditionComparison(tokens, state);
+
+    if (!left) {
+      return null;
+    }
+
+    while (tokens[state.index] && tokens[state.index].type === "and") {
+      state.index += 1;
+      const right = parseStoreConditionComparison(tokens, state);
+
+      if (!right) {
+        return null;
+      }
+
+      left = {
+        type: "and",
+        left: left,
+        right: right,
+      };
+    }
+
+    return left;
+  }
+
+  function parseStoreConditionOr(tokens, state) {
+    let left = parseStoreConditionAnd(tokens, state);
+
+    if (!left) {
+      return null;
+    }
+
+    while (tokens[state.index] && tokens[state.index].type === "or") {
+      state.index += 1;
+      const right = parseStoreConditionAnd(tokens, state);
+
+      if (!right) {
+        return null;
+      }
+
+      left = {
+        type: "or",
+        left: left,
+        right: right,
+      };
+    }
+
+    return left;
+  }
+
+  function parseStoreConditionExpression(value) {
+    const tokens = tokenizeStoreConditionExpression(value);
+
+    if (!tokens || tokens.length === 0) {
+      return null;
+    }
+
+    const state = {
+      index: 0,
+    };
+    const ast = parseStoreConditionOr(tokens, state);
+
+    if (!ast || state.index !== tokens.length) {
+      return null;
+    }
+
+    return {
+      ast: ast,
+      raw: value.trim(),
+    };
+  }
+
+  function resolveStoreConditionNodeValue(node) {
+    if (!node) {
+      return undefined;
+    }
+
+    if (node.type === "literal") {
+      return node.value;
+    }
+
+    if (node.type === "ref") {
+      const result = runtimeStateValueByPath(node.scope, node.path);
+      return result.found ? result.value : undefined;
+    }
+
+    if (node.type === "comparison") {
+      return evaluateStoreConditionComparison(
+        node.operator,
+        resolveStoreConditionNodeValue(node.left),
+        resolveStoreConditionNodeValue(node.right),
+      );
+    }
+
+    return evaluateStoreConditionNode(node);
+  }
+
+  function evaluateStoreConditionComparison(operator, leftValue, rightValue) {
+    switch (operator) {
+      case "===":
+        return leftValue === rightValue;
+      case "!==":
+        return leftValue !== rightValue;
+      case "==":
+        return leftValue == rightValue;
+      case "!=":
+        return leftValue != rightValue;
+      case ">":
+        return leftValue > rightValue;
+      case "<":
+        return leftValue < rightValue;
+      case ">=":
+        return leftValue >= rightValue;
+      case "<=":
+        return leftValue <= rightValue;
+      default:
+        return false;
+    }
+  }
+
+  function evaluateStoreConditionNode(node) {
+    if (!node) {
+      return false;
+    }
+
+    if (node.type === "literal") {
+      return !!resolveStoreConditionNodeValue(node);
+    }
+
+    if (node.type === "ref") {
+      return !!resolveStoreConditionNodeValue(node);
+    }
+
+    if (node.type === "comparison") {
+      return !!resolveStoreConditionNodeValue(node);
+    }
+
+    if (node.type === "not") {
+      return !evaluateStoreConditionNode(node.argument);
+    }
+
+    if (node.type === "and") {
+      return (
+        evaluateStoreConditionNode(node.left) &&
+        evaluateStoreConditionNode(node.right)
+      );
+    }
+
+    if (node.type === "or") {
+      return (
+        evaluateStoreConditionNode(node.left) ||
+        evaluateStoreConditionNode(node.right)
+      );
+    }
+
+    return false;
+  }
+
+  function parseDirectiveStringLiteral(value) {
+    if (typeof value !== "string" || value.length < 2) {
+      return null;
+    }
+
+    const quote = value[0];
+
+    if ((quote !== "'" && quote !== '"') || value[value.length - 1] !== quote) {
+      return null;
+    }
+
+    let result = "";
+    let escaping = false;
+
+    for (let index = 1; index < value.length - 1; index += 1) {
+      const character = value[index];
+
+      if (escaping) {
+        switch (character) {
+          case "n":
+            result += "\n";
+            break;
+          case "r":
+            result += "\r";
+            break;
+          case "t":
+            result += "\t";
+            break;
+          case "\\":
+          case "'":
+          case '"':
+            result += character;
+            break;
+          default:
+            result += character;
+            break;
+        }
+
+        escaping = false;
+        continue;
+      }
+
+      if (character === "\\") {
+        escaping = true;
+        continue;
+      }
+
+      result += character;
+    }
+
+    if (escaping) {
+      result += "\\";
+    }
+
+    return result;
+  }
+
+  function matchesTopLevelSplitOperator(value, index, operator) {
+    if (operator === "??") {
+      return value.slice(index, index + 2) === "??";
+    }
+
+    if (operator === "|") {
+      return (
+        value[index] === "|" &&
+        value[index - 1] !== "|" &&
+        value[index + 1] !== "|"
+      );
+    }
+
+    return false;
+  }
+
+  function splitTopLevelDirectiveEntries(value, operator) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    const entries = [];
+    let current = "";
+    let depth = 0;
+    let quote = null;
+    let escaping = false;
+
+    for (let index = 0; index < value.length; index += 1) {
+      const character = value[index];
+
+      if (quote !== null) {
+        current += character;
+
+        if (escaping) {
+          escaping = false;
+          continue;
+        }
+
+        if (character === "\\") {
+          escaping = true;
+          continue;
+        }
+
+        if (character === quote) {
+          quote = null;
+        }
+
+        continue;
+      }
+
+      if (character === "'" || character === '"') {
+        quote = character;
+        current += character;
+        continue;
+      }
+
+      if (character === "(") {
+        depth += 1;
+        current += character;
+        continue;
+      }
+
+      if (character === ")") {
+        depth = Math.max(0, depth - 1);
+        current += character;
+        continue;
+      }
+
+      if (depth === 0 && matchesTopLevelSplitOperator(value, index, operator)) {
+        if (current.trim() !== "") {
+          entries.push(current.trim());
+        }
+
+        current = "";
+        index += operator.length - 1;
+        continue;
+      }
+
+      current += character;
+    }
+
+    if (current.trim() !== "") {
+      entries.push(current.trim());
+    }
+
+    return entries;
+  }
+
+  function findTopLevelArrow(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return -1;
+    }
+
+    let depth = 0;
+    let quote = null;
+    let escaping = false;
+
+    for (let index = 0; index < value.length; index += 1) {
+      const character = value[index];
+
+      if (quote !== null) {
+        if (escaping) {
+          escaping = false;
+          continue;
+        }
+
+        if (character === "\\") {
+          escaping = true;
+          continue;
+        }
+
+        if (character === quote) {
+          quote = null;
+        }
+
+        continue;
+      }
+
+      if (character === "'" || character === '"') {
+        quote = character;
+        continue;
+      }
+
+      if (character === "(") {
+        depth += 1;
+        continue;
+      }
+
+      if (character === ")") {
+        depth = Math.max(0, depth - 1);
+        continue;
+      }
+
+      if (depth === 0 && character === "-" && value[index + 1] === ">") {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
+  function parseStoreTextDirectiveSegment(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    const literal = parseDirectiveStringLiteral(trimmed);
+
+    if (literal !== null) {
+      return {
+        type: "literal",
+        value: literal,
+        raw: trimmed,
+      };
+    }
+
+    if (/^(true|false)$/i.test(trimmed)) {
+      return {
+        type: "literal",
+        value: trimmed.toLowerCase() === "true",
+        raw: trimmed,
+      };
+    }
+
+    if (/^null$/i.test(trimmed)) {
+      return {
+        type: "literal",
+        value: null,
+        raw: trimmed,
+      };
+    }
+
+    if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+      return {
+        type: "literal",
+        value: Number(trimmed),
+        raw: trimmed,
+      };
+    }
+
+    const expression = parseStoreDirectiveExpression(trimmed);
+
+    if (!expression) {
+      return null;
+    }
+
+    return {
+      type: "ref",
+      expression: expression,
+      raw: trimmed,
+    };
+  }
+
+  function parseStoreTextDirectiveExpression(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const entries = splitTopLevelDirectiveEntries(value, "??");
+
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const segments = entries.map(function (entry) {
+      return parseStoreTextDirectiveSegment(entry);
+    });
+
+    if (
+      segments.some(function (segment) {
+        return !segment;
+      })
+    ) {
+      return null;
+    }
+
+    return {
+      segments: segments,
+      raw: value.trim(),
+    };
+  }
+
+  function resolveStoreDirectiveActive(value) {
+    const expression = parseStoreConditionExpression(value);
+
+    if (!expression) {
+      return false;
+    }
+
+    return evaluateStoreConditionNode(expression.ast);
+  }
+
+  function resolveStoreDirectiveValue(value) {
+    const expression = parseStoreTextDirectiveExpression(value);
+
+    if (!expression) {
+      return {
+        found: false,
+        value: null,
+      };
+    }
+
+    if (
+      expression.segments.length === 1 &&
+      expression.segments[0] &&
+      expression.segments[0].type === "ref"
+    ) {
+      return runtimeStateValueByPath(
+        expression.segments[0].expression.scope,
+        expression.segments[0].expression.path,
+      );
+    }
+
+    for (let index = 0; index < expression.segments.length; index += 1) {
+      const segment = expression.segments[index];
+
+      if (segment.type === "literal") {
+        return {
+          found: true,
+          value: segment.value,
+        };
+      }
+
+      if (segment.type === "ref") {
+        const result = runtimeStateValueByPath(
+          segment.expression.scope,
+          segment.expression.path,
+        );
+
+        if (
+          result.found &&
+          result.value !== null &&
+          typeof result.value !== "undefined"
+        ) {
+          return result;
+        }
+      }
+    }
+
+    return {
+      found: false,
+      value: null,
+    };
+  }
+
+  function formatStoreDirectiveTextValue(value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
+    }
+
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value);
+      } catch (error) {
+        return "";
+      }
+    }
+
+    return String(value);
+  }
+
+  function formatStoreDirectiveHtmlValue(value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
+    }
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  function formatBindDirectiveValue(value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
+    }
+
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch (error) {
+      return String(value);
+    }
+  }
+
+  function valuesAreSame(left, right) {
+    if (left === right) {
+      return true;
+    }
+
+    if (
+      typeof left === "number" &&
+      typeof right === "number" &&
+      Number.isNaN(left) &&
+      Number.isNaN(right)
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function normalizeBindDirectivePropertyName(name) {
+    if (typeof name !== "string" || name.trim() === "") {
+      return null;
+    }
+
+    const normalized = name
+      .trim()
+      .replace(/-([a-z])/g, function (_, character) {
+        return character.toUpperCase();
+      });
+
+    if (normalized.toLowerCase() === "readonly") {
+      return "readOnly";
+    }
+
+    return normalized;
+  }
+
+  function bindDirectiveReflectAttributeName(propertyName, rawName) {
+    if (typeof rawName === "string" && rawName.trim() !== "") {
+      return rawName
+        .trim()
+        .replace(/[A-Z]/g, function (character) {
+          return "-" + character.toLowerCase();
+        })
+        .toLowerCase();
+    }
+
+    if (typeof propertyName !== "string" || propertyName === "") {
+      return null;
+    }
+
+    return propertyName
+      .replace(/[A-Z]/g, function (character) {
+        return "-" + character.toLowerCase();
+      })
+      .toLowerCase();
+  }
+
+  function isBooleanBindDirectiveProperty(propertyName) {
+    return [
+      "checked",
+      "disabled",
+      "hidden",
+      "required",
+      "readOnly",
+      "selected",
+    ].indexOf(propertyName) !== -1;
+  }
+
+  function bindDirectiveEntries(element) {
+    if (!element || !element.attributes) {
+      return [];
+    }
+
+    return Array.from(element.attributes)
+      .map(function (attribute) {
+        const name = attribute && attribute.name ? attribute.name : "";
+        let match = name.match(/^volt:bind:([A-Za-z0-9_-]+)$/);
+
+        if (!match) {
+          match = name.match(/^volt-bind-([A-Za-z0-9_-]+)$/);
+        }
+
+        if (!match) {
+          match = name.match(/^data-volt-bind-([A-Za-z0-9_-]+)$/);
+        }
+
+        if (!match) {
+          return null;
+        }
+
+        const rawProperty = match[1];
+        const propertyName = normalizeBindDirectivePropertyName(rawProperty);
+
+        if (!propertyName) {
+          return null;
+        }
+
+        return {
+          attributeName: name,
+          rawProperty: rawProperty,
+          propertyName: propertyName,
+          expression: attribute.value || "",
+          reflectAttributeName: bindDirectiveReflectAttributeName(
+            propertyName,
+            rawProperty,
+          ),
+        };
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function parseModelLocalDirectiveValue(value) {
+    const expression = parseStoreDirectiveExpression(value);
+
+    if (!expression || expression.negate) {
+      return null;
+    }
+
+    return expression;
+  }
+
+  function isDirectiveFocusableElement(element) {
+    if (
+      !element ||
+      typeof element.focus !== "function" ||
+      !element.isConnected ||
+      element.hidden === true
+    ) {
+      return false;
+    }
+
+    if (
+      (typeof element.disabled === "boolean" && element.disabled) ||
+      element.getAttribute("aria-disabled") === "true"
+    ) {
+      return false;
+    }
+
+    if (typeof window.getComputedStyle === "function") {
+      const styles = window.getComputedStyle(element);
+
+      if (
+        !styles ||
+        styles.display === "none" ||
+        styles.visibility === "hidden"
+      ) {
+        return false;
+      }
+    }
+
+    if (
+      typeof element.getClientRects === "function" &&
+      element.getClientRects().length === 0 &&
+      document.activeElement !== element
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function portalDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.portal) {
+      store.portal = {
+        placeholder: null,
+        selector: null,
+      };
+    }
+
+    return store.portal;
+  }
+
+  function htmlDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.html) {
+      store.html = {
+        lastApplied: null,
+      };
+    }
+
+    return store.html;
+  }
+
+  function bindDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.bindings) {
+      store.bindings = {};
+    }
+
+    return store.bindings;
+  }
+
+  function modelLocalDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.modelLocal) {
+      store.modelLocal = {
+        baselineCaptured: false,
+        value: null,
+        checked: false,
+        selected: false,
+      };
+    }
+
+    return store.modelLocal;
+  }
+
+  function ensureModelLocalBaseline(element) {
+    const state = modelLocalDirectiveState(element);
+
+    if (state.baselineCaptured) {
+      return state;
+    }
+
+    state.baselineCaptured = true;
+    state.value = "value" in element ? element.value : null;
+    state.checked = "checked" in element ? !!element.checked : false;
+    state.selected = "selected" in element ? !!element.selected : false;
+    return state;
+  }
+
+  function modelLocalDirectiveValue(element) {
+    return directiveValue(element, modelLocalDirectiveNames());
+  }
+
+  function parseModelSyncDirectiveValue(value) {
+    return parseModelLocalDirectiveValue(value);
+  }
+
+  function modelSyncDirectiveValue(element) {
+    return directiveValue(element, modelSyncDirectiveNames());
+  }
+
+  function modelSyncUpdateField(element) {
+    const explicit = directiveValue(element, [
+      "data-volt-model-sync-update",
+      "volt-model-sync-update",
+      "volt:model.sync.update",
+    ]);
+
+    if (typeof explicit === "string" && explicit.trim() !== "") {
+      return explicit.trim();
+    }
+
+    const name = element && element.getAttribute ? element.getAttribute("name") : null;
+
+    return typeof name === "string" && name.trim() !== "" ? name.trim() : null;
+  }
+
+  function clearModelSyncDirectiveDebounce(element) {
+    if (!element || !runtime.modelSyncDebounces.has(element)) {
+      return;
+    }
+
+    clearTimeout(runtime.modelSyncDebounces.get(element));
+    runtime.modelSyncDebounces.delete(element);
+    runtime.modelSyncTrackedElements.delete(element);
+  }
+
+  function buildModelSyncDirectivePayload(root, element) {
+    if (!root || !element) {
+      return {
+        params: {},
+        updates: {},
+        shouldDispatch: false,
+      };
+    }
+
+    const rules = collectStateSyncRules(root, element);
+
+    if (rules.length > 0) {
+      return {
+        params: {},
+        updates: {},
+        shouldDispatch: true,
+      };
+    }
+
+    const updateField = modelSyncUpdateField(element);
+    const next = readModelLocalElementValue(element);
+
+    if (!updateField || !next.valid) {
+      return {
+        params: {},
+        updates: {},
+        shouldDispatch: false,
+      };
+    }
+
+    const updates = {};
+
+    updates[updateField] = next.value;
+
+    return {
+      params: {},
+      updates: updates,
+      shouldDispatch: true,
+    };
+  }
+
+  function scheduleModelSyncDirectiveDispatch(root, element) {
+    if (!root || !element) {
+      return false;
+    }
+
+    const payload = buildModelSyncDirectivePayload(root, element);
+
+    if (!payload.shouldDispatch) {
+      return false;
+    }
+
+    clearModelSyncDirectiveDebounce(element);
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.modelSyncDebounces.delete(element);
+      runtime.modelSyncTrackedElements.delete(element);
+
+      if (!element.isConnected) {
+        return;
+      }
+
+      const activeRoot = findRoot(element) || root;
+
+      if (!activeRoot || !activeRoot.isConnected) {
+        return;
+      }
+
+      const nextPayload = buildModelSyncDirectivePayload(activeRoot, element);
+
+      if (!nextPayload.shouldDispatch) {
+        return;
+      }
+
+      dispatchAction(
+        activeRoot,
+        MODEL_SYNC_INTERNAL_ACTION,
+        nextPayload.params,
+        nextPayload.updates,
+        element,
+      ).catch(function (error) {
+        console.error("VoltStack runtime error:", error);
+      });
+    }, MODEL_SYNC_DEBOUNCE);
+
+    runtime.modelSyncDebounces.set(element, timeoutId);
+    runtime.modelSyncTrackedElements.add(element);
+    return true;
+  }
+
+  function elementSupportsModelLocal(element) {
+    if (!element || !element.tagName) {
+      return false;
+    }
+
+    const tagName = element.tagName.toLowerCase();
+
+    return tagName === "input" || tagName === "textarea" || tagName === "select";
+  }
+
+  function readModelLocalElementValue(element) {
+    if (!elementSupportsModelLocal(element)) {
+      return {
+        valid: false,
+        value: null,
+      };
+    }
+
+    const tagName = element.tagName.toLowerCase();
+
+    if (tagName === "textarea" || tagName === "select") {
+      return {
+        valid: true,
+        value: element.value,
+      };
+    }
+
+    const type = (element.type || "text").toLowerCase();
+
+    if (type === "checkbox") {
+      return {
+        valid: true,
+        value: !!element.checked,
+      };
+    }
+
+    if (type === "radio") {
+      if (!element.checked) {
+        return {
+          valid: false,
+          value: null,
+        };
+      }
+
+      return {
+        valid: true,
+        value: element.value,
+      };
+    }
+
+    return {
+      valid: true,
+      value: element.value,
+    };
+  }
+
+  function applyModelLocalElementValue(element, value, found) {
+    if (!elementSupportsModelLocal(element)) {
+      return;
+    }
+
+    const state = ensureModelLocalBaseline(element);
+    const tagName = element.tagName.toLowerCase();
+
+    if (tagName === "textarea" || tagName === "select") {
+      const nextValue = found ? formatBindDirectiveValue(value) : state.value || "";
+
+      if (element.value !== nextValue) {
+        element.value = nextValue;
+      }
+
+      return;
+    }
+
+    const type = (element.type || "text").toLowerCase();
+
+    if (type === "checkbox") {
+      const nextChecked = found ? !!value : !!state.checked;
+
+      if (!!element.checked !== nextChecked) {
+        element.checked = nextChecked;
+      }
+
+      return;
+    }
+
+    if (type === "radio") {
+      const nextChecked = found ? String(value) === String(element.value) : !!state.checked;
+
+      if (!!element.checked !== nextChecked) {
+        element.checked = nextChecked;
+      }
+
+      return;
+    }
+
+    const nextValue = found ? formatBindDirectiveValue(value) : state.value || "";
+
+    if (element.value !== nextValue) {
+      element.value = nextValue;
+    }
+  }
+
+  function updateModelLocalDirectiveFromElement(element, sourceAction) {
+    if (!elementSupportsModelLocal(element)) {
+      return false;
+    }
+
+    const modelValue = modelLocalDirectiveValue(element);
+    const expression = parseModelLocalDirectiveValue(modelValue);
+
+    if (!expression) {
+      return false;
+    }
+
+    const next = readModelLocalElementValue(element);
+
+    if (!next.valid) {
+      return false;
+    }
+
+    const current = getRuntimeStateValue(expression.path, {
+      scope: expression.scope,
+      fallback: null,
+    });
+
+    if (valuesAreSame(current, next.value)) {
+      return false;
+    }
+
+    setRuntimeStateValue(expression.path, next.value, {
+      scope: expression.scope,
+      action: sourceAction || "directive:model.local",
+    });
+
+    return true;
+  }
+
+  function updateModelSyncDirectiveFromElement(element, root, sourceAction) {
+    if (!elementSupportsModelLocal(element)) {
+      return false;
+    }
+
+    const modelValue = modelSyncDirectiveValue(element);
+    const expression = parseModelSyncDirectiveValue(modelValue);
+
+    if (!expression) {
+      return false;
+    }
+
+    const next = readModelLocalElementValue(element);
+
+    if (!next.valid) {
+      return false;
+    }
+
+    const current = getRuntimeStateValue(expression.path, {
+      scope: expression.scope,
+      fallback: null,
+    });
+    const changed = !valuesAreSame(current, next.value);
+
+    if (changed) {
+      setRuntimeStateValue(expression.path, next.value, {
+        scope: expression.scope,
+        action: sourceAction || "directive:model.sync",
+      });
+    }
+
+    return scheduleModelSyncDirectiveDispatch(root, element) || changed;
+  }
+
+  function ensureBindDirectiveBaseline(element, entry) {
+    const bindings = bindDirectiveState(element);
+    const key = entry.attributeName;
+
+    if (!bindings[key]) {
+      const reflectAttributeName = entry.reflectAttributeName;
+
+      bindings[key] = {
+        propertyName: entry.propertyName,
+        reflectAttributeName: reflectAttributeName,
+        hasProperty: entry.propertyName in element,
+        initialPropertyValue:
+          entry.propertyName in element ? element[entry.propertyName] : null,
+        hadAttribute:
+          !!reflectAttributeName && element.hasAttribute(reflectAttributeName),
+        initialAttributeValue:
+          reflectAttributeName && element.hasAttribute(reflectAttributeName)
+            ? element.getAttribute(reflectAttributeName)
+            : null,
+      };
+    }
+
+    return bindings[key];
+  }
+
+  function restoreBindDirectiveValue(element, binding) {
+    if (!element || !binding) {
+      return;
+    }
+
+    const propertyName = binding.propertyName;
+    const reflectAttributeName = binding.reflectAttributeName;
+
+    if (propertyName === "value") {
+      const value =
+        binding.hadAttribute && binding.initialAttributeValue !== null
+          ? binding.initialAttributeValue
+          : typeof binding.initialPropertyValue !== "undefined" &&
+              binding.initialPropertyValue !== null
+            ? String(binding.initialPropertyValue)
+            : "";
+
+      if ("value" in element) {
+        element.value = value;
+      }
+
+      if (reflectAttributeName) {
+        if (binding.hadAttribute && binding.initialAttributeValue !== null) {
+          element.setAttribute(reflectAttributeName, binding.initialAttributeValue);
+        } else {
+          element.removeAttribute(reflectAttributeName);
+        }
+      }
+
+      return;
+    }
+
+    if (isBooleanBindDirectiveProperty(propertyName)) {
+      if (propertyName in element) {
+        element[propertyName] = false;
+      }
+
+      if (reflectAttributeName) {
+        element.removeAttribute(reflectAttributeName);
+      }
+
+      return;
+    }
+
+    if (binding.hasProperty) {
+      if (
+        binding.initialPropertyValue === null ||
+        typeof binding.initialPropertyValue === "undefined"
+      ) {
+        element[propertyName] = "";
+      } else {
+        element[propertyName] = binding.initialPropertyValue;
+      }
+    }
+
+    if (reflectAttributeName) {
+      if (binding.hadAttribute && binding.initialAttributeValue !== null) {
+        element.setAttribute(reflectAttributeName, binding.initialAttributeValue);
+      } else {
+        element.removeAttribute(reflectAttributeName);
+      }
+    }
+  }
+
+  function applyBindDirectiveValue(element, entry, value, found) {
+    const binding = ensureBindDirectiveBaseline(element, entry);
+    const propertyName = entry.propertyName;
+    const reflectAttributeName = entry.reflectAttributeName;
+
+    if (!found || value === null || typeof value === "undefined") {
+      restoreBindDirectiveValue(element, binding);
+      return;
+    }
+
+    if (isBooleanBindDirectiveProperty(propertyName)) {
+      const nextValue = !!value;
+
+      if (propertyName in element) {
+        element[propertyName] = nextValue;
+      }
+
+      if (reflectAttributeName) {
+        if (nextValue) {
+          element.setAttribute(reflectAttributeName, reflectAttributeName);
+        } else {
+          element.removeAttribute(reflectAttributeName);
+        }
+      }
+
+      return;
+    }
+
+    const nextValue = formatBindDirectiveValue(value);
+
+    if (propertyName in element) {
+      element[propertyName] = nextValue;
+    } else if (reflectAttributeName) {
+      element.setAttribute(reflectAttributeName, nextValue);
+      return;
+    }
+
+    if (reflectAttributeName && propertyName !== "value") {
+      element.setAttribute(reflectAttributeName, nextValue);
+    }
+  }
+
+  function ensurePortalPlaceholder(element, state) {
+    if (
+      state &&
+      state.placeholder &&
+      state.placeholder.parentNode &&
+      state.placeholder.isConnected
+    ) {
+      return state.placeholder;
+    }
+
+    if (!element || !element.parentNode) {
+      return null;
+    }
+
+    const placeholder = document.createElement("span");
+
+    placeholder.setAttribute("data-volt-portal-placeholder", "true");
+    placeholder.hidden = true;
+    placeholder.style.display = "none";
+    element.parentNode.insertBefore(placeholder, element);
+
+    if (state) {
+      state.placeholder = placeholder;
+    }
+
+    return placeholder;
+  }
+
+  function restorePortalElement(element, state) {
+    const placeholder =
+      state && state.placeholder && state.placeholder.parentNode
+        ? state.placeholder
+        : null;
+
+    if (!element || !placeholder || !placeholder.parentNode) {
+      return false;
+    }
+
+    if (
+      element.parentNode === placeholder.parentNode &&
+      element.previousSibling === placeholder
+    ) {
+      return false;
+    }
+
+    placeholder.parentNode.insertBefore(element, placeholder.nextSibling);
+    return true;
+  }
+
+  function syncPortalDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, portalDirectiveNames()).forEach(
+      function (element) {
+        const selector = directiveValue(element, portalDirectiveNames());
+        const state = portalDirectiveState(element);
+
+        if (typeof selector !== "string" || selector.trim() === "") {
+          restorePortalElement(element, state);
+          return;
+        }
+
+        state.selector = selector.trim();
+
+        const target = document.querySelector(state.selector);
+
+        if (!target) {
+          restorePortalElement(element, state);
+          return;
+        }
+
+        ensurePortalPlaceholder(element, state);
+
+        if (element.parentNode !== target) {
+          target.appendChild(element);
+        }
+      },
+    );
+  }
+
+  function syncHtmlDirectives(root) {
+    if (!root) {
+      return false;
+    }
+
+    let changed = false;
+
+    collectElementsWithDirectiveAttributes(root, htmlDirectiveNames()).forEach(
+      function (element) {
+        const directive = directiveValue(element, htmlDirectiveNames());
+        const result = resolveStoreDirectiveValue(directive);
+        const nextHtml = result.found
+          ? formatStoreDirectiveHtmlValue(result.value)
+          : "";
+        const state = htmlDirectiveState(element);
+
+        if (state.lastApplied === nextHtml) {
+          return;
+        }
+
+        element.innerHTML = nextHtml;
+        state.lastApplied = nextHtml;
+        changed = true;
+      },
+    );
+
+    return changed;
+  }
+
+  function syncBindDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    [root]
+      .concat(Array.from(root.querySelectorAll("*")))
+      .forEach(function (element) {
+      const entries = bindDirectiveEntries(element);
+
+      if (entries.length === 0) {
+        return;
+      }
+
+      entries.forEach(function (entry) {
+        const result = resolveStoreDirectiveValue(entry.expression);
+
+        applyBindDirectiveValue(element, entry, result.value, result.found);
+      });
+      });
+  }
+
+  function syncModelLocalDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    [root]
+      .concat(Array.from(root.querySelectorAll("*")))
+      .forEach(function (element) {
+        const value = modelLocalDirectiveValue(element);
+        const expression = parseModelLocalDirectiveValue(value);
+
+        if (!expression) {
+          return;
+        }
+
+        const result = runtimeStateValueByPath(expression.scope, expression.path);
+
+        applyModelLocalElementValue(element, result.value, result.found);
+      });
+  }
+
+  function syncModelSyncDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    [root]
+      .concat(Array.from(root.querySelectorAll("*")))
+      .forEach(function (element) {
+        const value = modelSyncDirectiveValue(element);
+        const expression = parseModelSyncDirectiveValue(value);
+
+        if (!expression) {
+          return;
+        }
+
+        const result = runtimeStateValueByPath(expression.scope, expression.path);
+
+        applyModelLocalElementValue(element, result.value, result.found);
+      });
+  }
+
+  function focusDirectiveState(element) {
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.focus) {
+      store.focus = {};
+    }
+
+    return store.focus;
+  }
+
+  function focusElementForDirective(element) {
+    if (
+      !isDirectiveFocusableElement(element) ||
+      document.activeElement === element
+    ) {
+      return false;
+    }
+
+    try {
+      element.focus({
+        preventScroll: true,
+      });
+    } catch (error) {
+      try {
+        element.focus();
+      } catch (innerError) {
+        return false;
+      }
+    }
+
+    return document.activeElement === element;
+  }
+
+  function syncFocusDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    let candidate = null;
+
+    collectElementsWithDirectiveAttributes(root, focusDirectiveNames()).forEach(
+      function (element) {
+        const directive = directiveValue(element, focusDirectiveNames());
+        const active = resolveStoreDirectiveActive(directive);
+        const state = focusDirectiveState(element);
+        const previous = state.reactive === true;
+
+        state.reactive = active;
+
+        if (active && !previous && isDirectiveFocusableElement(element)) {
+          candidate = element;
+        }
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(
+      root,
+      autofocusWhenDirectiveNames(),
+    ).forEach(function (element) {
+      const directive = directiveValue(element, autofocusWhenDirectiveNames());
+      const active = resolveStoreDirectiveActive(directive);
+      const state = focusDirectiveState(element);
+      const previous = state.autofocusWhen === true;
+
+      state.autofocusWhen = active;
+
+      if (active && !previous && isDirectiveFocusableElement(element)) {
+        candidate = element;
+      }
+    });
+
+    if (candidate) {
+      focusElementForDirective(candidate);
+    }
+  }
+
+  function parseForDirectiveExpression(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const matches = value
+      .trim()
+      .match(
+        /^([A-Za-z_$][A-Za-z0-9_$]*)(?:\s*,\s*([A-Za-z_$][A-Za-z0-9_$]*))?\s+in\s+(client|shared):([A-Za-z0-9_.-]+)$/i,
+      );
+
+    if (!matches) {
+      return null;
+    }
+
+    return {
+      itemAlias: matches[1],
+      indexAlias: matches[2] || "index",
+      scope: normalizeRuntimeStateScope(matches[3]),
+      path: matches[4],
+      raw: value.trim(),
+    };
+  }
+
+  function parseStoreClassDirectiveRule(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const separator = findTopLevelArrow(value);
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const expression = parseStoreConditionExpression(
+      value.slice(0, separator).trim(),
+    );
+    const classValue = value.slice(separator + 2).trim();
+
+    if (!expression || classValue === "") {
+      return null;
+    }
+
+    return {
+      expression: expression,
+      classValue: classValue,
+      raw: value.trim(),
+    };
+  }
+
+  function parseStoreClassDirectiveRules(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry) {
+        return parseStoreClassDirectiveRule(entry);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function parseStoreAttrDirectiveRule(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const separator = findTopLevelArrow(value);
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const expression = parseStoreConditionExpression(
+      value.slice(0, separator).trim(),
+    );
+    const attributes = parseDirectiveAttributes(
+      value.slice(separator + 2).trim(),
+    );
+
+    if (!expression || attributes.length === 0) {
+      return null;
+    }
+
+    return {
+      expression: expression,
+      attributes: attributes,
+      raw: value.trim(),
+    };
+  }
+
+  function parseStoreAttrDirectiveRules(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry) {
+        return parseStoreAttrDirectiveRule(entry);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function parseStoreStyleDirectiveRule(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const separator = findTopLevelArrow(value);
+
+    if (separator === -1) {
+      return null;
+    }
+
+    const expression = parseStoreConditionExpression(
+      value.slice(0, separator).trim(),
+    );
+    const styles = parseDirectiveStyles(value.slice(separator + 2).trim());
+
+    if (!expression || styles.length === 0) {
+      return null;
+    }
+
+    return {
+      expression: expression,
+      styles: styles,
+      raw: value.trim(),
+    };
+  }
+
+  function parseStoreStyleDirectiveRules(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return splitTopLevelDirectiveEntries(value, "|")
+      .map(function (entry) {
+        return parseStoreStyleDirectiveRule(entry);
+      })
+      .filter(function (entry) {
+        return !!entry;
+      });
+  }
+
+  function createDirectivePlaceholder(type) {
+    const placeholder = document.createElement("template");
+    const id = "volt-" + type + "-" + String(runtime.directiveSequence + 1);
+
+    runtime.directiveSequence += 1;
+    placeholder.setAttribute("data-volt-" + type + "-placeholder", id);
+
+    return placeholder;
+  }
+
+  function createIfDirectivePlaceholder() {
+    return createDirectivePlaceholder("if");
+  }
+
+  function createForDirectivePlaceholder() {
+    return createDirectivePlaceholder("for");
+  }
+
+  function removeDirectiveAttributes(element, names) {
+    if (
+      !element ||
+      element.nodeType !== Node.ELEMENT_NODE ||
+      !Array.isArray(names)
+    ) {
+      return;
+    }
+
+    names.forEach(function (name) {
+      element.removeAttribute(name);
+    });
+  }
+
+  function resolveForInterpolationValue(expression, context) {
+    if (typeof expression !== "string" || expression.trim() === "") {
+      return "";
+    }
+
+    const normalized = expression.trim();
+    const aliases = [context.itemAlias, context.indexAlias];
+
+    for (let index = 0; index < aliases.length; index += 1) {
+      const alias = aliases[index];
+
+      if (!alias) {
+        continue;
+      }
+
+      if (normalized === alias) {
+        return context[alias];
+      }
+
+      if (normalized.indexOf(alias + ".") === 0) {
+        const nested = resolveValueBySegments(
+          context[alias],
+          normalizeStatePathSegments(normalized.slice(alias.length + 1)),
+        );
+        return nested.found ? nested.value : "";
+      }
+    }
+
+    return "";
+  }
+
+  function interpolateForTemplateString(template, context) {
+    if (typeof template !== "string" || template.indexOf("{{") === -1) {
+      return template;
+    }
+
+    return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, function (_, expression) {
+      const value = resolveForInterpolationValue(expression, context);
+
+      if (value === null || typeof value === "undefined") {
+        return "";
+      }
+
+      if (typeof value === "object") {
+        try {
+          return JSON.stringify(value);
+        } catch (error) {
+          return "";
+        }
+      }
+
+      return String(value);
+    });
+  }
+
+  function applyForTemplateInterpolation(node, context) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    const elements = [node].concat(
+      Array.prototype.slice.call(node.querySelectorAll("*")),
+    );
+
+    elements.forEach(function (element) {
+      element.getAttributeNames().forEach(function (name) {
+        element.setAttribute(
+          name,
+          interpolateForTemplateString(
+            element.getAttribute(name) || "",
+            context,
+          ),
+        );
+      });
+    });
+
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    let textNode = walker.nextNode();
+
+    while (textNode) {
+      textNode.textContent = interpolateForTemplateString(
+        textNode.textContent || "",
+        context,
+      );
+      textNode = walker.nextNode();
+    }
+  }
+
+  function ensureIfDirectiveBinding(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+      return null;
+    }
+
+    if (element.__voltIfBinding) {
+      return element.__voltIfBinding;
+    }
+
+    const placeholder = createIfDirectivePlaceholder();
+    const binding = {
+      id: placeholder.getAttribute("data-volt-if-placeholder"),
+      placeholder: placeholder,
+      templateNode: element.cloneNode(true),
+      currentNode: element,
+    };
+
+    placeholder.__voltIfBinding = binding;
+    element.__voltIfBinding = binding;
+    element.parentNode.insertBefore(placeholder, element);
+    return binding;
+  }
+
+  function ensureForDirectiveBinding(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+      return null;
+    }
+
+    if (element.__voltForBinding) {
+      return element.__voltForBinding;
+    }
+
+    const expression = parseForDirectiveExpression(
+      directiveValue(element, forDirectiveNames()),
+    );
+
+    if (!expression || !element.parentNode) {
+      return null;
+    }
+
+    const placeholder = createForDirectivePlaceholder();
+    const templateNode = element.cloneNode(true);
+    removeDirectiveAttributes(templateNode, forDirectiveNames());
+
+    const binding = {
+      id: placeholder.getAttribute("data-volt-for-placeholder"),
+      expression: expression,
+      placeholder: placeholder,
+      templateNode: templateNode,
+      currentNodes: [],
+    };
+
+    placeholder.__voltForBinding = binding;
+    element.__voltForBinding = binding;
+    element.parentNode.insertBefore(placeholder, element);
+    element.remove();
+
+    return binding;
+  }
+
+  function syncIfBinding(binding) {
+    if (!binding || !binding.placeholder || !binding.templateNode) {
+      return false;
+    }
+
+    const active = resolveStoreDirectiveActive(
+      directiveValue(binding.templateNode, ifDirectiveNames()),
+    );
+    const currentNode =
+      binding.currentNode && binding.currentNode.isConnected
+        ? binding.currentNode
+        : null;
+
+    if (active) {
+      if (currentNode) {
+        currentNode.__voltIfBinding = binding;
+        binding.currentNode = currentNode;
+        return false;
+      }
+
+      const nextNode = binding.templateNode.cloneNode(true);
+      nextNode.__voltIfBinding = binding;
+      binding.currentNode = nextNode;
+      binding.placeholder.parentNode.insertBefore(
+        nextNode,
+        binding.placeholder.nextSibling,
+      );
+      return true;
+    }
+
+    if (!currentNode) {
+      binding.currentNode = null;
+      return false;
+    }
+
+    currentNode.remove();
+    binding.currentNode = null;
+    return true;
+  }
+
+  function syncIfDirectives(root) {
+    if (!root) {
+      return false;
+    }
+
+    let mutated = false;
+
+    collectElementsWithDirectiveAttributes(root, ifDirectiveNames()).forEach(
+      function (element) {
+        ensureIfDirectiveBinding(element);
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(root, [
+      "data-volt-if-placeholder",
+    ]).forEach(function (placeholder) {
+      if (syncIfBinding(placeholder.__voltIfBinding || null)) {
+        mutated = true;
+      }
+    });
+
+    return mutated;
+  }
+
+  function syncForBinding(binding) {
+    if (
+      !binding ||
+      !binding.placeholder ||
+      !binding.templateNode ||
+      !binding.expression
+    ) {
+      return;
+    }
+
+    const result = runtimeStateValueByPath(
+      binding.expression.scope,
+      binding.expression.path,
+    );
+    const items =
+      result.found && Array.isArray(result.value) ? result.value : [];
+    const fragment = document.createDocumentFragment();
+
+    binding.currentNodes.forEach(function (node) {
+      if (node && node.isConnected) {
+        node.remove();
+      }
+    });
+
+    binding.currentNodes = [];
+
+    items.forEach(function (item, index) {
+      const node = binding.templateNode.cloneNode(true);
+      const context = {
+        itemAlias: binding.expression.itemAlias,
+        indexAlias: binding.expression.indexAlias,
+      };
+
+      context[binding.expression.itemAlias] = cloneStateValue(item);
+      context[binding.expression.indexAlias] = index;
+
+      applyForTemplateInterpolation(node, context);
+      binding.currentNodes.push(node);
+      fragment.appendChild(node);
+    });
+
+    binding.placeholder.parentNode.insertBefore(
+      fragment,
+      binding.placeholder.nextSibling,
+    );
+  }
+
+  function syncForDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, forDirectiveNames()).forEach(
+      function (element) {
+        ensureForDirectiveBinding(element);
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(root, [
+      "data-volt-for-placeholder",
+    ]).forEach(function (placeholder) {
+      syncForBinding(placeholder.__voltForBinding || null);
+    });
+  }
+
+  function syncShowDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, showDirectiveNames()).forEach(
+      function (element) {
+        const directive = directiveValue(element, showDirectiveNames());
+        const active = resolveStoreDirectiveActive(directive);
+
+        applyDirectiveVisibility(
+          element,
+          "show",
+          active,
+          false,
+        );
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(
+      root,
+      showDirectiveNames("hide"),
+    ).forEach(function (element) {
+      applyDirectiveVisibility(
+        element,
+        "show",
+        resolveStoreDirectiveActive(
+          directiveValue(element, showDirectiveNames("hide")),
+        ),
+        true,
+      );
+    });
+  }
+
+  function syncTextDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, textDirectiveNames()).forEach(
+      function (element) {
+        const directive = directiveValue(element, textDirectiveNames());
+        const result = resolveStoreDirectiveValue(directive);
+        element.textContent = result.found
+          ? formatStoreDirectiveTextValue(result.value)
+          : "";
+      },
+    );
+  }
+
+  function syncAttrDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, attrDirectiveNames()).forEach(
+      function (element) {
+        const directives = parseStoreAttrDirectiveRules(
+          directiveValue(element, attrDirectiveNames()),
+        );
+
+        if (directives.length === 0) {
+          return;
+        }
+
+        directives.forEach(function (directive) {
+          applyDirectiveAttributes(
+            element,
+            "store:" + directive.expression.raw + "->" + directive.raw,
+            evaluateStoreConditionNode(directive.expression.ast),
+            directive.attributes,
+          );
+        });
+      },
+    );
+  }
+
+  function syncStyleDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, styleDirectiveNames()).forEach(
+      function (element) {
+        const directives = parseStoreStyleDirectiveRules(
+          directiveValue(element, styleDirectiveNames()),
+        );
+
+        if (directives.length === 0) {
+          return;
+        }
+
+        directives.forEach(function (directive) {
+          applyDirectiveStyles(
+            element,
+            evaluateStoreConditionNode(directive.expression.ast),
+            directive.styles,
+            "store:" + directive.expression.raw + "->" + directive.raw,
+          );
+        });
+      },
+    );
+  }
+
+  function syncAllStoreDirectives() {
+    document
+      .querySelectorAll('[data-volt-root="true"]')
+      .forEach(function (root) {
+        syncForDirectives(root);
+
+        let iterations = 0;
+
+        while (syncIfDirectives(root) && iterations < 5) {
+          iterations += 1;
+        }
+
+        syncTextDirectives(root);
+        syncClassDirectives(root);
+        syncAttrDirectives(root);
+        syncStyleDirectives(root);
+        syncShowDirectives(root);
+      });
+  }
+
+  const STATE_SYNC_ATTRIBUTE_NAMES = [
+    "data-volt-state-sync",
+    "volt-state-sync",
+    "volt:state-sync",
+  ];
+  const NAVIGATION_MODE_ATTRIBUTE_NAMES = [
+    "data-volt-navigation-mode",
+    "volt-navigation-mode",
+    "volt:navigation-mode",
+  ];
+  const DOCUMENT_CONTRACT_ATTRIBUTE_NAMES = [
+    "data-volt-document",
+    "volt-document",
+    "volt:document",
+  ];
+  const HYDRATE_ATTRIBUTE_NAMES = [
+    "data-volt-hydrate",
+    "volt-hydrate",
+    "volt:hydrate",
+  ];
+  const HYDRATE_STRATEGY_ATTRIBUTE_NAMES = [
+    "data-volt-hydrate-strategy",
+    "volt-hydrate-strategy",
+    "volt:hydrate-strategy",
+  ];
+  const HYDRATE_DIRTY_STATE_ATTRIBUTE_NAMES = [
+    "data-volt-hydrate-dirty-state",
+    "volt-hydrate-dirty-state",
+    "volt:hydrate-dirty-state",
+  ];
+  const PAGE_TRANSITION_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition",
+    "volt-page-transition",
+    "volt:page-transition",
+  ];
+  const PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition-profile",
+    "volt-page-transition-profile",
+    "volt:page-transition-profile",
+  ];
+  const PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition-duration",
+    "volt-page-transition-duration",
+    "volt:page-transition-duration",
+  ];
+  const PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES = [
+    "data-volt-page-transition-mode",
+    "volt-page-transition-mode",
+    "volt:page-transition-mode",
+  ];
+  const HYDRATE_META_NAMES = ["volt-hydrate", "volt:hydrate"];
+  const HYDRATE_STRATEGY_META_NAMES = [
+    "volt-hydrate-strategy",
+    "volt:hydrate-strategy",
+  ];
+  const HYDRATE_DIRTY_STATE_META_NAMES = [
+    "volt-hydrate-dirty-state",
+    "volt:hydrate-dirty-state",
+  ];
+  const FRAGMENT_CONTROL_ATTRIBUTE_NAMES = [
+    "data-volt-fragment-control",
+    "volt-fragment-control",
+    "volt:fragment-control",
+  ];
+
+  function parseStateSyncRuleValue(entry) {
+    if (typeof entry !== "string") {
+      return null;
+    }
+
+    const matches = entry
+      .trim()
+      .match(
+        /^(client|shared):([A-Za-z0-9_.-]+)\s*->\s*(params|updates)\.([A-Za-z_][A-Za-z0-9_]*)$/i,
+      );
+
+    if (!matches) {
+      return null;
+    }
+
+    return {
+      scope: normalizeRuntimeStateScope(matches[1]),
+      sourcePath: matches[2],
+      destination: matches[3].toLowerCase(),
+      field: matches[4],
+      raw: entry.trim(),
+    };
+  }
+
+  function parseStateSyncRules(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return value
+      .split(",")
+      .map(function (entry) {
+        return parseStateSyncRuleValue(entry);
+      })
+      .filter(function (rule) {
+        return rule !== null;
+      });
+  }
+
+  function stateSyncRulesForElement(element) {
+    if (!element || !element.getAttribute) {
+      return [];
+    }
+
+    const value = directiveValue(element, STATE_SYNC_ATTRIBUTE_NAMES);
+    return parseStateSyncRules(value || "");
+  }
+
+  function collectStateSyncRules(root, trigger) {
+    const rules = [];
+
+    stateSyncRulesForElement(root).forEach(function (rule) {
+      rules.push(rule);
+    });
+
+    if (trigger && trigger !== root) {
+      stateSyncRulesForElement(trigger).forEach(function (rule) {
+        rules.push(rule);
+      });
+    }
+
+    return rules;
+  }
+
+  function applySelectiveStateSync(
+    root,
+    trigger,
+    params,
+    updates,
+    requestMeta,
+  ) {
+    const nextParams = Object.assign({}, params || {});
+    const nextUpdates = Object.assign({}, updates || {});
+    const rules = collectStateSyncRules(root, trigger);
+    const applied = [];
+    const skipped = [];
+
+    rules.forEach(function (rule) {
+      const result = runtimeStateValueByPath(rule.scope, rule.sourcePath);
+
+      if (!result.found) {
+        skipped.push({
+          rule: rule.raw,
+          scope: rule.scope,
+          sourcePath: rule.sourcePath,
+          destination: rule.destination,
+          field: rule.field,
+          reason: "missing-source",
+        });
+        return;
+      }
+
+      if (rule.destination === "updates") {
+        nextUpdates[rule.field] = result.value;
+      } else {
+        nextParams[rule.field] = result.value;
+      }
+
+      applied.push({
+        rule: rule.raw,
+        scope: rule.scope,
+        sourcePath: rule.sourcePath,
+        destination: rule.destination,
+        field: rule.field,
+        value: cloneStateValue(result.value),
+      });
+    });
+
+    if (applied.length > 0 || skipped.length > 0) {
+      emitRuntimeHook(
+        "volt:state-sync",
+        requestHookDetail("action", requestMeta, {
+          applied: applied,
+          skipped: skipped,
+          params: cloneStateValue(nextParams),
+          updates: cloneStateValue(nextUpdates),
+        }),
+        resolveRuntimeRoot(root, requestMeta.component) || root || document,
+      );
+    }
+
+    return {
+      params: nextParams,
+      updates: nextUpdates,
+      applied: applied,
+      skipped: skipped,
+    };
+  }
+
+  function navigationUrlForElement(link) {
+    if (!link || !link.getAttribute) {
+      return null;
+    }
+
+    const href = link.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return null;
+    }
+
+    try {
+      const url = new URL(href, window.location.href);
+
+      if (!sameOrigin(url)) {
+        return null;
+      }
+
+      return url.toString();
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function prefetchModeTokensForElement(link) {
+    const attribute = directiveAttribute(link, [
+      "volt-prefetch",
+      "volt:prefetch",
+    ]);
+
+    if (!attribute) {
+      return ["auto"];
+    }
+
+    const value = (attribute.value || "").trim().toLowerCase();
+
+    if (value === "") {
+      return ["auto"];
+    }
+
+    return value.split(/[\s,|]+/).filter(function (token) {
+      return token !== "";
+    });
+  }
+
+  function linkAllowsPrefetchSource(link, source) {
+    const tokens = prefetchModeTokensForElement(link);
+
+    if (
+      tokens.includes("none") ||
+      tokens.includes("off") ||
+      tokens.includes("false")
+    ) {
+      return false;
+    }
+
+    if (
+      tokens.includes("auto") ||
+      tokens.includes("all") ||
+      tokens.includes("eager") ||
+      tokens.includes("true")
+    ) {
+      return true;
+    }
+
+    if (source === "intent") {
+      return (
+        tokens.includes("hover") ||
+        tokens.includes("focus") ||
+        tokens.includes("intent")
+      );
+    }
+
+    if (source === "viewport") {
+      return tokens.includes("viewport") || tokens.includes("visible");
+    }
+
+    if (source === "idle") {
+      return tokens.includes("idle") || tokens.includes("heuristic");
+    }
+
+    return false;
+  }
+
+  function normalizeHeadAssetUrl(url) {
+    if (!url) {
+      return "";
+    }
+
+    try {
+      return new URL(url, window.location.href).toString();
+    } catch (error) {
+      return String(url);
+    }
+  }
+
+  function parseNavigationDocument(html) {
+    const parser = new DOMParser();
+    return parser.parseFromString(html, "text/html");
+  }
+
+  function navigationCacheControlTokens(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return value
+      .trim()
+      .toLowerCase()
+      .split(/[\s,|;]+/)
+      .filter(function (token) {
+        return token !== "";
+      });
+  }
+
+  function mergeNavigationCacheControl(baseControl, overrideControl) {
+    const base =
+      baseControl && typeof baseControl === "object" ? baseControl : {};
+    const override =
+      overrideControl && typeof overrideControl === "object"
+        ? overrideControl
+        : {};
+
+    return {
+      mode:
+        override.mode && override.mode !== "default"
+          ? override.mode
+          : base.mode || "default",
+      ttl:
+        override.ttl !== null && typeof override.ttl !== "undefined"
+          ? override.ttl
+          : typeof base.ttl === "number"
+            ? base.ttl
+            : null,
+      raw: override.raw || base.raw || "",
+      source: override.source || base.source || "default",
+    };
+  }
+
+  function parseNavigationCacheControl(value, source) {
+    const tokens = navigationCacheControlTokens(value);
+    const control = {
+      mode: "default",
+      ttl: null,
+      raw: typeof value === "string" ? value : "",
+      source: source || "default",
+    };
+
+    tokens.forEach(function (token) {
+      if (token === "no-store" || token === "store=none") {
+        control.mode = "no-store";
+        return;
+      }
+
+      if (
+        control.mode !== "no-store" &&
+        (token === "reload" ||
+          token === "refresh" ||
+          token === "network-only" ||
+          token === "no-cache" ||
+          token === "revalidate" ||
+          token === "bypass")
+      ) {
+        control.mode = "reload";
+        return;
+      }
+
+      if (
+        control.mode === "default" &&
+        (token === "invalidate" ||
+          token === "reset" ||
+          token === "refresh-cache")
+      ) {
+        control.mode = "invalidate";
+        return;
+      }
+
+      const equalsMatch = token.match(/^(ttl|max-age)=(.+)$/);
+      const colonMatch = token.match(/^(ttl|max-age):(.+)$/);
+      const ttlMatch = equalsMatch || colonMatch;
+
+      if (!ttlMatch) {
+        return;
+      }
+
+      const parsedTtl = parseDirectiveTimeout(ttlMatch[2]);
+
+      if (parsedTtl !== null) {
+        control.ttl = parsedTtl;
+      }
+    });
+
+    return control;
+  }
+
+  function navigationCacheControlForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return parseNavigationCacheControl("", "default");
+    }
+
+    const attribute = directiveAttribute(element, [
+      "volt-cache",
+      "volt:cache",
+      "data-volt-cache",
+    ]);
+
+    if (!attribute) {
+      return parseNavigationCacheControl("", "default");
+    }
+
+    return parseNavigationCacheControl(attribute.value, "element");
+  }
+
+  function navigationCacheControlForDocument(doc) {
+    if (!doc || !doc.head || typeof doc.head.querySelector !== "function") {
+      return parseNavigationCacheControl("", "default");
+    }
+
+    for (
+      let index = 0;
+      index < NAVIGATION_CACHE_CONTROL_META_NAMES.length;
+      index += 1
+    ) {
+      const name = NAVIGATION_CACHE_CONTROL_META_NAMES[index];
+      const meta = doc.head.querySelector(
+        'meta[name="' + cssEscape(name) + '"]',
+      );
+
+      if (meta) {
+        return parseNavigationCacheControl(
+          meta.getAttribute("content") || "",
+          "document",
+        );
+      }
+    }
+
+    return parseNavigationCacheControl("", "default");
+  }
+
+  function parseNavigationMode(value, source) {
+    const normalized =
+      typeof value === "string" ? value.trim().toLowerCase() : "";
+
+    if (
+      normalized === "reload" ||
+      normalized === "full-reload" ||
+      normalized === "hard-reload" ||
+      normalized === "document"
+    ) {
+      return {
+        mode: "reload",
+        raw: normalized,
+        source: source || "default",
+      };
+    }
+
+    if (
+      normalized === "spa" ||
+      normalized === "soft" ||
+      normalized === "client"
+    ) {
+      return {
+        mode: "spa",
+        raw: normalized,
+        source: source || "default",
+      };
+    }
+
+    return {
+      mode: "auto",
+      raw: normalized,
+      source: source || "default",
+    };
+  }
+
+  function parseDocumentContract(value, source) {
+    const normalized =
+      typeof value === "string" ? value.trim().toLowerCase() : "";
+
+    if (
+      normalized === "reload" ||
+      normalized === "reload-only" ||
+      normalized === "static" ||
+      normalized === "non-spa" ||
+      normalized === "document"
+    ) {
+      return {
+        mode: "reload",
+        raw: normalized,
+        source: source || "default",
+      };
+    }
+
+    if (
+      normalized === "spa" ||
+      normalized === "interactive" ||
+      normalized === "reactive"
+    ) {
+      return {
+        mode: "spa",
+        raw: normalized,
+        source: source || "default",
+      };
+    }
+
+    return {
+      mode: "auto",
+      raw: normalized,
+      source: source || "default",
+    };
+  }
+
+  function navigationModeForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return parseNavigationMode("", "default");
+    }
+
+    const navigateAttribute = directiveAttribute(element, [
+      "volt-navigate",
+      "volt:navigate",
+    ]);
+
+    if (navigateAttribute) {
+      return parseNavigationMode(
+        navigateAttribute.value || "",
+        navigateAttribute.name,
+      );
+    }
+
+    const modeAttribute = directiveAttribute(
+      element,
+      NAVIGATION_MODE_ATTRIBUTE_NAMES,
+    );
+
+    if (modeAttribute) {
+      return parseNavigationMode(modeAttribute.value || "", modeAttribute.name);
+    }
+
+    return parseNavigationMode("", "default");
+  }
+
+  function navigationModeForDocument(doc) {
+    if (!doc || typeof doc !== "object") {
+      return parseNavigationMode("", "default");
+    }
+
+    if (doc.head && typeof doc.head.querySelector === "function") {
+      for (
+        let index = 0;
+        index < NAVIGATION_MODE_META_NAMES.length;
+        index += 1
+      ) {
+        const name = NAVIGATION_MODE_META_NAMES[index];
+        const meta = doc.head.querySelector(
+          'meta[name="' + cssEscape(name) + '"]',
+        );
+
+        if (meta) {
+          return parseNavigationMode(
+            meta.getAttribute("content") || "",
+            "document",
+          );
+        }
+      }
+    }
+
+    if (doc.body && typeof doc.body.getAttribute === "function") {
+      const attribute = directiveAttribute(
+        doc.body,
+        NAVIGATION_MODE_ATTRIBUTE_NAMES,
+      );
+
+      if (attribute) {
+        return parseNavigationMode(attribute.value || "", "body");
+      }
+    }
+
+    return parseNavigationMode("", "default");
+  }
+
+  function documentContractForDocument(doc) {
+    if (!doc || typeof doc !== "object") {
+      return parseDocumentContract("", "default");
+    }
+
+    const declaredMeta = firstDocumentMetaValue(doc, DOCUMENT_CONTRACT_META_NAMES);
+
+    if (declaredMeta !== null) {
+      return parseDocumentContract(declaredMeta, "document");
+    }
+
+    if (doc.body && typeof doc.body.getAttribute === "function") {
+      const attribute = directiveAttribute(
+        doc.body,
+        DOCUMENT_CONTRACT_ATTRIBUTE_NAMES,
+      );
+
+      if (attribute) {
+        return parseDocumentContract(attribute.value || "", "body");
+      }
+    }
+
+    if (doc.documentElement && typeof doc.documentElement.getAttribute === "function") {
+      const attribute = directiveAttribute(
+        doc.documentElement,
+        DOCUMENT_CONTRACT_ATTRIBUTE_NAMES,
+      );
+
+      if (attribute) {
+        return parseDocumentContract(attribute.value || "", "html");
+      }
+    }
+
+    return parseDocumentContract("", "default");
+  }
+
+  function parseHydrationEnabled(value, source) {
+    const raw = typeof value === "string" ? value : "";
+    const normalized = raw.trim().toLowerCase();
+
+    if (normalized === "") {
+      return {
+        enabled: false,
+        raw: raw,
+        source: source || "default",
+        declared: false,
+      };
+    }
+
+    if (
+      normalized === "false" ||
+      normalized === "off" ||
+      normalized === "disabled" ||
+      normalized === "none"
+    ) {
+      return {
+        enabled: false,
+        raw: raw,
+        source: source || "default",
+        declared: true,
+      };
+    }
+
+    return {
+      enabled: true,
+      raw: raw,
+      source: source || "default",
+      declared: true,
+    };
+  }
+
+  function hydrationForDocument(doc) {
+    if (!doc || typeof doc !== "object") {
+      return {
+        enabled: false,
+        strategy: null,
+        dirtyState: null,
+        source: "default",
+        declared: false,
+      };
+    }
+
+    const declaredMeta = firstDocumentMetaValue(doc, HYDRATE_META_NAMES);
+    const declaredStrategyMeta = firstDocumentMetaValue(
+      doc,
+      HYDRATE_STRATEGY_META_NAMES,
+    );
+    const declaredDirtyStateMeta = firstDocumentMetaValue(
+      doc,
+      HYDRATE_DIRTY_STATE_META_NAMES,
+    );
+    const bodyDeclared = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      HYDRATE_ATTRIBUTE_NAMES,
+    );
+    const bodyStrategy = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      HYDRATE_STRATEGY_ATTRIBUTE_NAMES,
+    );
+    const bodyDirtyState = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      HYDRATE_DIRTY_STATE_ATTRIBUTE_NAMES,
+    );
+    const enabledValue = declaredMeta !== null ? declaredMeta : bodyDeclared || "";
+    const hydration = parseHydrationEnabled(
+      enabledValue,
+      declaredMeta !== null ? "document" : bodyDeclared !== null ? "body" : "default",
+    );
+
+    return {
+      enabled: hydration.enabled,
+      strategy:
+        declaredStrategyMeta !== null
+          ? declaredStrategyMeta
+          : bodyStrategy || null,
+      dirtyState:
+        declaredDirtyStateMeta !== null
+          ? declaredDirtyStateMeta
+          : bodyDirtyState || null,
+      source: hydration.source,
+      declared:
+        hydration.declared ||
+        declaredStrategyMeta !== null ||
+        declaredDirtyStateMeta !== null ||
+        bodyStrategy !== null ||
+        bodyDirtyState !== null,
+    };
+  }
+
+  function shouldPrefetchForNavigationMode(mode) {
+    const navigationMode = mode && mode.mode ? mode.mode : "auto";
+    return navigationMode !== "reload";
+  }
+
+  function firstAttributeValue(element, names) {
+    if (
+      !element ||
+      typeof element.getAttribute !== "function" ||
+      !Array.isArray(names)
+    ) {
+      return null;
+    }
+
+    for (let index = 0; index < names.length; index += 1) {
+      const name = names[index];
+
+      if (element.hasAttribute(name)) {
+        return element.getAttribute(name) || "";
+      }
+    }
+
+    return null;
+  }
+
+  function firstDocumentMetaValue(doc, names) {
+    if (
+      !doc ||
+      !doc.head ||
+      typeof doc.head.querySelector !== "function" ||
+      !Array.isArray(names)
+    ) {
+      return null;
+    }
+
+    for (let index = 0; index < names.length; index += 1) {
+      const name = names[index];
+      const meta = doc.head.querySelector(
+        'meta[name="' + cssEscape(name) + '"]',
+      );
+
+      if (meta) {
+        return meta.getAttribute("content") || "";
+      }
+    }
+
+    return null;
+  }
+
+  function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function firstHtmlMetaValue(html, names) {
+    if (typeof html !== "string" || html === "" || !Array.isArray(names)) {
+      return null;
+    }
+
+    for (let index = 0; index < names.length; index += 1) {
+      const name = escapeRegExp(names[index]);
+      const nameFirst = new RegExp(
+        "<meta[^>]*name=[\"']" +
+          name +
+          "[\"'][^>]*content=[\"']([^\"']*)[\"'][^>]*>",
+        "i",
+      );
+      const contentFirst = new RegExp(
+        "<meta[^>]*content=[\"']([^\"']*)[\"'][^>]*name=[\"']" +
+          name +
+          "[\"'][^>]*>",
+        "i",
+      );
+      const nameFirstMatch = html.match(nameFirst);
+
+      if (nameFirstMatch && typeof nameFirstMatch[1] === "string") {
+        return nameFirstMatch[1];
+      }
+
+      const contentFirstMatch = html.match(contentFirst);
+
+      if (contentFirstMatch && typeof contentFirstMatch[1] === "string") {
+        return contentFirstMatch[1];
+      }
+    }
+
+    return null;
+  }
+
+  function normalizePageTransitionMode(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return "out-in";
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === "in-out") {
+      return "in-out";
+    }
+
+    return "out-in";
+  }
+
+  function normalizePageTransitionProfile(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(
+      PAGE_TRANSITION_PROFILES,
+      normalized,
+    )
+      ? normalized
+      : null;
+  }
+
+  function resolvePageTransitionProfile(value) {
+    const profileName = normalizePageTransitionProfile(value);
+
+    if (!profileName) {
+      return null;
+    }
+
+    const profile = PAGE_TRANSITION_PROFILES[profileName];
+
+    if (!profile) {
+      return null;
+    }
+
+    return Object.assign(
+      {
+        profile: profileName,
+      },
+      profile,
+    );
+  }
+
+  function parsePageTransition(value, source) {
+    const raw = typeof value === "string" ? value : "";
+    const normalized = raw.trim().toLowerCase();
+    const transition = {
+      name: null,
+      duration: null,
+      mode: "out-in",
+      raw: raw,
+      source: source || "default",
+      declared: normalized !== "",
+    };
+
+    if (!normalized) {
+      return transition;
+    }
+
+    if (
+      normalized === "none" ||
+      normalized === "off" ||
+      normalized === "false" ||
+      normalized === "disabled"
+    ) {
+      return transition;
+    }
+
+    transition.name =
+      normalized === "true" || normalized === "on" ? "default" : normalized;
+
+    return transition;
+  }
+
+  function applyPageTransitionOptions(transition, durationValue, modeValue) {
+    const nextTransition = Object.assign({}, transition);
+    const parsedDuration = parseDirectiveTimeout(durationValue);
+
+    if (typeof parsedDuration === "number" && parsedDuration >= 0) {
+      nextTransition.duration = parsedDuration;
+    }
+
+    if (typeof modeValue === "string" && modeValue.trim() !== "") {
+      nextTransition.mode = normalizePageTransitionMode(modeValue);
+    }
+
+    return nextTransition;
+  }
+
+  function createPageTransition(
+    transitionValue,
+    durationValue,
+    modeValue,
+    source,
+    profileValue,
+  ) {
+    const explicitTransition = parsePageTransition(
+      transitionValue || "",
+      source,
+    );
+    const profile = resolvePageTransitionProfile(profileValue);
+
+    const nextTransition = profile
+      ? {
+          name: profile.name || null,
+          duration:
+            typeof profile.duration === "number" ? profile.duration : null,
+          mode: profile.mode || "out-in",
+          raw: explicitTransition.raw,
+          source: source || "default",
+          declared: true,
+          profile: profile.profile,
+        }
+      : Object.assign({}, explicitTransition, {
+          profile: null,
+        });
+
+    if (explicitTransition.declared) {
+      nextTransition.name = explicitTransition.name;
+      nextTransition.declared = true;
+    }
+
+    return applyPageTransitionOptions(nextTransition, durationValue, modeValue);
+  }
+
+  function pageTransitionForElement(element) {
+    const transitionValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_ATTRIBUTE_NAMES,
+    );
+    const profileValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES,
+    );
+    const durationValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES,
+    );
+    const modeValue = firstAttributeValue(
+      element,
+      PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES,
+    );
+
+    return createPageTransition(
+      transitionValue,
+      durationValue,
+      modeValue,
+      "link",
+      profileValue,
+    );
+  }
+
+  function pageTransitionForDocument(doc) {
+    const documentTransition = firstDocumentMetaValue(
+      doc,
+      NAVIGATION_PAGE_TRANSITION_META_NAMES,
+    );
+    const documentProfile = firstDocumentMetaValue(
+      doc,
+      NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES,
+    );
+    const bodyTransition = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      PAGE_TRANSITION_ATTRIBUTE_NAMES,
+    );
+    const bodyProfile = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      PAGE_TRANSITION_PROFILE_ATTRIBUTE_NAMES,
+    );
+    const transitionValue =
+      documentTransition !== null ? documentTransition : bodyTransition || "";
+    const profileValue =
+      documentProfile !== null ? documentProfile : bodyProfile || "";
+    const durationValue =
+      firstDocumentMetaValue(
+        doc,
+        NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES,
+      ) ||
+      firstAttributeValue(
+        doc && doc.body ? doc.body : null,
+        PAGE_TRANSITION_DURATION_ATTRIBUTE_NAMES,
+      );
+    const modeValue =
+      firstDocumentMetaValue(doc, NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES) ||
+      firstAttributeValue(
+        doc && doc.body ? doc.body : null,
+        PAGE_TRANSITION_MODE_ATTRIBUTE_NAMES,
+      );
+    const source =
+      documentTransition !== null || documentProfile !== null
+        ? "document"
+        : bodyTransition !== null || bodyProfile !== null
+          ? "body"
+          : "default";
+
+    return createPageTransition(
+      transitionValue,
+      durationValue,
+      modeValue,
+      source,
+      profileValue,
+    );
+  }
+
+  function pageTransitionForPayload(payload) {
+    const documentTransition =
+      payload && payload.document
+        ? pageTransitionForDocument(payload.document)
+        : parsePageTransition("", "default");
+
+    if (documentTransition.declared) {
+      return documentTransition;
+    }
+
+    const transitionValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_META_NAMES,
+    );
+    const profileValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_PROFILE_META_NAMES,
+    );
+    const durationValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_DURATION_META_NAMES,
+    );
+    const modeValue = firstHtmlMetaValue(
+      payload && typeof payload.html === "string" ? payload.html : "",
+      NAVIGATION_PAGE_TRANSITION_MODE_META_NAMES,
+    );
+
+    return createPageTransition(
+      transitionValue || "",
+      durationValue,
+      modeValue,
+      transitionValue !== null || profileValue !== null
+        ? "document"
+        : "default",
+      profileValue,
+    );
+  }
+
+  function resolveNavigationPageTransition(
+    requestedTransition,
+    documentTransition,
+  ) {
+    if (documentTransition && documentTransition.declared) {
+      return documentTransition;
+    }
+
+    if (requestedTransition && requestedTransition.declared) {
+      return requestedTransition;
+    }
+
+    return (
+      documentTransition ||
+      requestedTransition ||
+      parsePageTransition("", "default")
+    );
+  }
+
+  function hasPageTransition(transition) {
+    return !!(
+      transition &&
+      typeof transition.name === "string" &&
+      transition.name !== ""
+    );
+  }
+
+  function navigationPageTransitionEffect(transition) {
+    if (!hasPageTransition(transition)) {
+      return null;
+    }
+
+    const phaseConfig = {
+      name: transition.name,
+    };
+
+    if (typeof transition.duration === "number" && transition.duration >= 0) {
+      phaseConfig.duration = transition.duration;
+    }
+
+    return {
+      type: "navigation-transition",
+      target: "body",
+      transition: {
+        leave: phaseConfig,
+        enter: phaseConfig,
+      },
+      pageTransitionSource: transition.source || "default",
+      pageTransitionMode: transition.mode || "out-in",
+      pageTransitionName: transition.name,
+      pageTransitionProfile: transition.profile || null,
+    };
+  }
+
+  async function runPageTransitionPhase(element, phase, transition) {
+    if (!element || !hasPageTransition(transition)) {
+      return false;
+    }
+
+    const effect = navigationPageTransitionEffect(transition);
+
+    if (!effect) {
+      return false;
+    }
+
+    return runElementTransition(element, element, phase, effect);
+  }
+
+  function fragmentControlTokens(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return value
+      .trim()
+      .toLowerCase()
+      .split(/[\s,|;]+/)
+      .filter(function (token) {
+        return token !== "";
+      });
+  }
+
+  function parseFragmentControl(value, source) {
+    const tokens = fragmentControlTokens(value);
+    const control = {
+      mode: "preserve",
+      raw: typeof value === "string" ? value : "",
+      source: source || "default",
+    };
+
+    tokens.forEach(function (token) {
+      if (
+        token === "reset" ||
+        token === "discard" ||
+        token === "drop" ||
+        token === "no-store" ||
+        token === "none" ||
+        token === "off" ||
+        token === "false"
+      ) {
+        control.mode = "reset";
+        return;
+      }
+
+      if (
+        token === "preserve" ||
+        token === "keep" ||
+        token === "on" ||
+        token === "true"
+      ) {
+        control.mode = "preserve";
+      }
+    });
+
+    return control;
+  }
+
+  function fragmentControlForDocument(doc) {
+    if (!doc || typeof doc !== "object") {
+      return parseFragmentControl("", "default");
+    }
+
+    if (doc.head && typeof doc.head.querySelector === "function") {
+      for (
+        let index = 0;
+        index < NAVIGATION_FRAGMENT_CONTROL_META_NAMES.length;
+        index += 1
+      ) {
+        const name = NAVIGATION_FRAGMENT_CONTROL_META_NAMES[index];
+        const meta = doc.head.querySelector(
+          'meta[name="' + cssEscape(name) + '"]',
+        );
+
+        if (meta) {
+          return parseFragmentControl(
+            meta.getAttribute("content") || "",
+            "document",
+          );
+        }
+      }
+    }
+
+    if (doc.body && typeof doc.body.getAttribute === "function") {
+      const attribute = directiveAttribute(
+        doc.body,
+        FRAGMENT_CONTROL_ATTRIBUTE_NAMES,
+      );
+
+      if (attribute) {
+        return parseFragmentControl(attribute.value, "body");
+      }
+    }
+
+    return parseFragmentControl("", "default");
+  }
+
+  function shouldReadNavigationCache(control) {
+    const mode = control && control.mode ? control.mode : "default";
+    return mode !== "reload" && mode !== "no-store" && mode !== "invalidate";
+  }
+
+  function shouldStoreNavigationCache(control) {
+    const mode = control && control.mode ? control.mode : "default";
+    return mode !== "no-store";
+  }
+
+  function shouldPrefetchNavigation(control) {
+    const mode = control && control.mode ? control.mode : "default";
+    return mode !== "no-store";
+  }
+
+  function navigationCacheTtlForControl(control) {
+    if (control && typeof control.ttl === "number" && control.ttl >= 0) {
+      return control.ttl;
+    }
+
+    return NAVIGATION_CACHE_TTL;
+  }
+
+  function navigationCacheAliases(entryOrUrl, finalUrl) {
+    const aliases = [];
+
+    function pushAlias(value) {
+      const normalized = normalizeNavigationUrl(value);
+
+      if (!normalized || aliases.indexOf(normalized) !== -1) {
+        return;
+      }
+
+      aliases.push(normalized);
+    }
+
+    if (entryOrUrl && typeof entryOrUrl === "object") {
+      if (Array.isArray(entryOrUrl.aliases)) {
+        entryOrUrl.aliases.forEach(pushAlias);
+      }
+
+      pushAlias(entryOrUrl.url);
+      pushAlias(entryOrUrl.finalUrl);
+      return aliases;
+    }
+
+    pushAlias(entryOrUrl);
+    pushAlias(finalUrl);
+    return aliases;
+  }
+
+  function uniqueNavigationCacheEntries() {
+    const entries = [];
+    const seen = new Set();
+
+    runtime.navigationCache.forEach(function (entry) {
+      if (!entry || !entry.cacheKey || seen.has(entry.cacheKey)) {
+        return;
+      }
+
+      seen.add(entry.cacheKey);
+      entries.push(entry);
+    });
+
+    return entries;
+  }
+
+  function deleteNavigationCacheEntry(entry) {
+    if (!entry) {
+      return 0;
+    }
+
+    let removed = 0;
+
+    navigationCacheAliases(entry).forEach(function (alias) {
+      if (runtime.navigationCache.get(alias) === entry) {
+        runtime.navigationCache.delete(alias);
+        removed += 1;
+      }
+    });
+
+    return removed;
+  }
+
+  function emitNavigationCacheEvent(name, detail) {
+    emitRuntimeHook(
+      name,
+      Object.assign(
+        {
+          cacheEntries: uniqueNavigationCacheEntries().length,
+        },
+        detail || {},
+      ),
+      document,
+    );
+  }
+
+  function invalidateNavigationCache(url, reason, extra) {
+    if (typeof url !== "string" || url === "") {
+      return 0;
+    }
+
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const details = extra && typeof extra === "object" ? extra : {};
+    const entry = runtime.navigationCache.get(normalizedUrl);
+    const aliases = entry ? navigationCacheAliases(entry) : [normalizedUrl];
+    const removed = entry
+      ? deleteNavigationCacheEntry(entry)
+      : runtime.navigationCache.delete(normalizedUrl)
+        ? 1
+        : 0;
+
+    if (removed > 0 && details.silent !== true) {
+      emitNavigationCacheEvent(
+        "volt:cache-invalidate",
+        Object.assign(
+          {
+            url: normalizedUrl,
+            aliases: aliases,
+            reason: reason || "manual",
+            removed: removed,
+          },
+          details,
+        ),
+      );
+    }
+
+    return removed;
+  }
+
+  function clearNavigationCache(reason, extra) {
+    const removed = uniqueNavigationCacheEntries().length;
+
+    if (removed === 0) {
+      return 0;
+    }
+
+    runtime.navigationCache.clear();
+    emitNavigationCacheEvent(
+      "volt:cache-clear",
+      Object.assign(
+        {
+          reason: reason || "manual",
+          removed: removed,
+        },
+        extra || {},
+      ),
+    );
+
+    return removed;
+  }
+
+  function cloneNavigationPayload(entry) {
+    if (!entry || typeof entry !== "object" || typeof entry.html !== "string") {
+      return null;
+    }
+
+    const documentPayload = parseNavigationDocument(entry.html);
+    const cacheControl =
+      entry.cacheControl || navigationCacheControlForDocument(documentPayload);
+    const navigationMode =
+      entry.navigationMode || navigationModeForDocument(documentPayload);
+    const pageTransition =
+      entry.pageTransition ||
+      pageTransitionForPayload({
+        html: entry.html,
+        document: documentPayload,
+      });
+
+    return {
+      url: entry.url,
+      target: entry.target || entry.url,
+      finalUrl: entry.finalUrl,
+      html: entry.html,
+      document: documentPayload,
+      fetchedAt: entry.fetchedAt,
+      lastAccessedAt: entry.lastAccessedAt,
+      expiresAt: entry.expiresAt,
+      source: entry.source || "cache",
+      cacheKey: entry.cacheKey || null,
+      aliases: navigationCacheAliases(entry),
+      cacheControl: cacheControl,
+      navigationMode: navigationMode,
+      pageTransition: pageTransition,
+    };
+  }
+
+  function pruneNavigationCache() {
+    const now = Date.now();
+
+    uniqueNavigationCacheEntries().forEach(function (entry) {
+      if (
+        !entry ||
+        typeof entry.expiresAt !== "number" ||
+        entry.expiresAt <= now
+      ) {
+        deleteNavigationCacheEntry(entry);
+      }
+    });
+
+    const entries = uniqueNavigationCacheEntries().sort(function (left, right) {
+      const leftStamp =
+        typeof left.lastAccessedAt === "number"
+          ? left.lastAccessedAt
+          : left.fetchedAt;
+      const rightStamp =
+        typeof right.lastAccessedAt === "number"
+          ? right.lastAccessedAt
+          : right.fetchedAt;
+      return leftStamp - rightStamp;
+    });
+
+    while (entries.length > NAVIGATION_CACHE_MAX_ENTRIES) {
+      const oldestEntry = entries.shift();
+
+      if (!oldestEntry) {
+        break;
+      }
+
+      deleteNavigationCacheEntry(oldestEntry);
+    }
+  }
+
+  function getCachedNavigation(url) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const entry = runtime.navigationCache.get(normalizedUrl);
+
+    if (!entry) {
+      return null;
+    }
+
+    if (typeof entry.expiresAt !== "number" || entry.expiresAt <= Date.now()) {
+      deleteNavigationCacheEntry(entry);
+      emitNavigationCacheEvent("volt:cache-invalidate", {
+        url: normalizedUrl,
+        aliases: navigationCacheAliases(entry),
+        reason: "ttl",
+      });
+      return null;
+    }
+
+    entry.lastAccessedAt = Date.now();
+
+    return cloneNavigationPayload(entry);
+  }
+
+  function setCachedNavigation(url, payload, source, control) {
+    if (!payload || typeof payload.html !== "string" || payload.html === "") {
+      return null;
+    }
+
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const payloadTarget =
+      typeof payload.target === "string" && payload.target !== ""
+        ? normalizeNavigationUrl(payload.target)
+        : normalizedUrl;
+    const finalUrl = normalizeNavigationUrl(payload.finalUrl || normalizedUrl);
+    const redirectTarget =
+      typeof payload.redirect === "string" && payload.redirect !== ""
+        ? normalizeNavigationUrl(payload.redirect)
+        : finalUrl !== normalizedUrl
+          ? finalUrl
+          : null;
+    const cacheControl = mergeNavigationCacheControl(
+      control,
+      payload.cacheControl && typeof payload.cacheControl === "object"
+        ? payload.cacheControl
+        : null,
+    );
+    const ttl = navigationCacheTtlForControl(cacheControl);
+
+    if (!shouldStoreNavigationCache(cacheControl) || ttl <= 0) {
+      invalidateNavigationCache(normalizedUrl, "no-store", {
+        finalUrl: finalUrl,
+      });
+
+      if (finalUrl !== normalizedUrl) {
+        invalidateNavigationCache(finalUrl, "no-store", {
+          requestedUrl: normalizedUrl,
+        });
+      }
+
+      return null;
+    }
+
+    const now = Date.now();
+    const aliases = navigationCacheAliases(normalizedUrl, finalUrl);
+
+    aliases.forEach(function (alias) {
+      invalidateNavigationCache(alias, "replace", {
+        requestedUrl: normalizedUrl,
+        finalUrl: finalUrl,
+        silent: true,
+      });
+    });
+
+    const entry = {
+      cacheKey: aliases.join("::"),
+      aliases: aliases,
+      url: normalizedUrl,
+      target: payloadTarget,
+      finalUrl: finalUrl,
+      html: payload.html,
+      fetchedAt: now,
+      lastAccessedAt: now,
+      expiresAt: now + ttl,
+      source: source || "prefetch",
+      cacheControl: cacheControl,
+      redirect: redirectTarget,
+      layout:
+        typeof payload.layout === "string" && payload.layout !== ""
+          ? payload.layout
+          : documentLayoutIdentity(parseNavigationDocument(payload.html)),
+      navigationMode:
+        payload.navigationMode && typeof payload.navigationMode === "object"
+          ? payload.navigationMode
+          : navigationModeForDocument(parseNavigationDocument(payload.html)),
+      hydrate:
+        payload.hydrate && typeof payload.hydrate === "object"
+          ? payload.hydrate
+          : hydrationForDocument(parseNavigationDocument(payload.html)),
+      pageTransition:
+        payload.pageTransition && typeof payload.pageTransition === "object"
+          ? payload.pageTransition
+          : pageTransitionForPayload({
+              html: payload.html,
+              document: parseNavigationDocument(payload.html),
+            }),
+    };
+
+    aliases.forEach(function (alias) {
+      runtime.navigationCache.set(alias, entry);
+    });
+    pruneNavigationCache();
+    emitNavigationCacheEvent("volt:cache-store", {
+      url: normalizedUrl,
+      finalUrl: finalUrl,
+      aliases: aliases,
+      source: entry.source,
+      ttl: ttl,
+      mode: cacheControl.mode,
+    });
+
+    return cloneNavigationPayload(entry);
+  }
+
+  function preloadDescriptorFromHeadNode(node) {
+    if (!node || node.nodeType !== 1) {
+      return null;
+    }
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "link") {
+      const rel = (node.getAttribute("rel") || "").toLowerCase();
+      const href = normalizeHeadAssetUrl(node.getAttribute("href") || "");
+
+      if (!href) {
+        return null;
+      }
+
+      if (rel === "stylesheet") {
+        return null;
+      }
+
+      if (rel === "modulepreload") {
+        return {
+          key: "module:" + href,
+          rel: "modulepreload",
+          href: href,
+          crossOrigin: node.getAttribute("crossorigin") || null,
+        };
+      }
+
+      return null;
+    }
+
+    if (tag === "script") {
+      const src = normalizeHeadAssetUrl(node.getAttribute("src") || "");
+      const type = (node.getAttribute("type") || "").toLowerCase();
+
+      if (!src || type !== "module") {
+        return null;
+      }
+
+      return {
+        key: "module:" + src,
+        rel: "modulepreload",
+        href: src,
+        crossOrigin: node.getAttribute("crossorigin") || null,
+      };
+    }
+
+    return null;
+  }
+
+  function documentAlreadyHasHeadAsset(descriptor) {
+    if (!descriptor || !descriptor.href || !document.head) {
+      return false;
+    }
+
+    const href = descriptor.href;
+
+    if (descriptor.as === "style") {
+      return (
+        !!document.head.querySelector(
+          'link[rel="stylesheet"][href="' + cssEscape(href) + '"]',
+        ) ||
+        !!document.head.querySelector(
+          'link[rel="preload"][as="style"][href="' + cssEscape(href) + '"]',
+        )
+      );
+    }
+
+    if (descriptor.rel === "modulepreload") {
+      return (
+        !!document.head.querySelector(
+          'link[rel="modulepreload"][href="' + cssEscape(href) + '"]',
+        ) ||
+        !!document.head.querySelector(
+          'script[type="module"][src="' + cssEscape(href) + '"]',
+        )
+      );
+    }
+
+    if (descriptor.rel === "preload") {
+      return !!document.head.querySelector(
+        'link[rel="preload"][href="' +
+          cssEscape(href) +
+          '"][as="' +
+          cssEscape(descriptor.as || "") +
+          '"]',
+      );
+    }
+
+    return false;
+  }
+
+  function ensurePreloadHint(descriptor) {
+    if (!descriptor || !descriptor.key || !descriptor.href || !document.head) {
+      return;
+    }
+
+    if (
+      runtime.navigationPreloadHints.has(descriptor.key) ||
+      documentAlreadyHasHeadAsset(descriptor)
+    ) {
+      return;
+    }
+
+    const link = document.createElement("link");
+    link.setAttribute("href", descriptor.href);
+    link.setAttribute("rel", descriptor.rel);
+    link.setAttribute("data-volt-prefetch-preload", descriptor.key);
+
+    if (descriptor.as) {
+      link.setAttribute("as", descriptor.as);
+    }
+
+    if (descriptor.crossOrigin) {
+      link.setAttribute("crossorigin", descriptor.crossOrigin);
+    }
+
+    document.head.appendChild(link);
+    runtime.navigationPreloadHints.add(descriptor.key);
+  }
+
+  function trackPrefetchInterest(element, url) {
+    if (!element) {
+      return normalizeNavigationUrl(url);
+    }
+
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const previousUrl = runtime.navigationPrefetchElements.get(element);
+
+    if (previousUrl === normalizedUrl) {
+      return normalizedUrl;
+    }
+
+    if (previousUrl) {
+      releasePrefetchInterest(element);
+    }
+
+    runtime.navigationPrefetchElements.set(element, normalizedUrl);
+    runtime.navigationPrefetchTrackedElements.add(element);
+    runtime.navigationPrefetchInterest.set(
+      normalizedUrl,
+      (runtime.navigationPrefetchInterest.get(normalizedUrl) || 0) + 1,
+    );
+
+    return normalizedUrl;
+  }
+
+  function cancelPrefetch(url) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const entry = runtime.navigationInFlight.get(normalizedUrl);
+
+    if (
+      !entry ||
+      entry.source !== "prefetch" ||
+      entry.retained ||
+      !entry.controller
+    ) {
+      return false;
+    }
+
+    entry.controller.abort();
+    return true;
+  }
+
+  function releasePrefetchInterest(element) {
+    if (!element) {
+      return;
+    }
+
+    const url = runtime.navigationPrefetchElements.get(element);
+
+    if (!url) {
+      return;
+    }
+
+    runtime.navigationPrefetchElements.delete(element);
+    runtime.navigationPrefetchTrackedElements.delete(element);
+
+    const nextCount = (runtime.navigationPrefetchInterest.get(url) || 0) - 1;
+
+    if (nextCount > 0) {
+      runtime.navigationPrefetchInterest.set(url, nextCount);
+      return;
+    }
+
+    runtime.navigationPrefetchInterest.delete(url);
+    cancelPrefetch(url);
+  }
+
+  function preloadCriticalHeadAssets(nextHead) {
+    if (!nextHead || !nextHead.children) {
+      return;
+    }
+
+    Array.from(nextHead.children).forEach(function (node) {
+      const descriptor = preloadDescriptorFromHeadNode(node);
+
+      if (descriptor) {
+        ensurePreloadHint(descriptor);
+      }
+    });
+  }
+
+  function requestNavigationPayload(url, signal, source, options) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const settings = options && typeof options === "object" ? options : {};
+    const requestedControl =
+      settings.cacheControl && typeof settings.cacheControl === "object"
+        ? settings.cacheControl
+        : parseNavigationCacheControl("", "default");
+    const requestedMode =
+      settings.navigationMode && typeof settings.navigationMode === "object"
+        ? settings.navigationMode
+        : parseNavigationMode("", "default");
+
+    if (runtime.navigationInFlight.has(normalizedUrl)) {
+      const existing = runtime.navigationInFlight.get(normalizedUrl);
+
+      if (
+        existing &&
+        existing.source === "prefetch" &&
+        existing.controller &&
+        (requestedControl.mode === "reload" ||
+          requestedControl.mode === "invalidate" ||
+          requestedControl.mode === "no-store")
+      ) {
+        existing.controller.abort();
+        runtime.navigationInFlight.delete(normalizedUrl);
+      } else {
+        if (source !== "prefetch") {
+          existing.retained = true;
+          existing.source = "navigate";
+        }
+
+        return existing.promise.then(function (payload) {
+          if (!shouldStoreNavigationCache(requestedControl)) {
+            invalidateNavigationCache(normalizedUrl, "no-store", {
+              finalUrl:
+                payload && payload.finalUrl ? payload.finalUrl : normalizedUrl,
+            });
+          }
+
+          return payload;
+        });
+      }
+    }
+
+    const prefetchController =
+      source === "prefetch" && typeof AbortController === "function"
+        ? new AbortController()
+        : null;
+    const requestSignal = prefetchController
+      ? prefetchController.signal
+      : signal;
+    const entry = {
+      promise: null,
+      controller: prefetchController,
+      source: source || "navigate",
+      retained: source !== "prefetch",
+    };
+    const promise = requestPage(normalizedUrl, requestSignal)
+      .then(function (payload) {
+        if (payload && payload.error && typeof payload.error === "object") {
+          return payload;
+        }
+
+        const responseControl = navigationCacheControlForDocument(
+          payload.document,
+        );
+        const responseMode = navigationModeForDocument(payload.document);
+        const responseHydrate = hydrationForDocument(payload.document);
+        const responsePageTransition = pageTransitionForDocument(
+          payload.document,
+        );
+        const responseLayout = documentLayoutIdentity(payload.document);
+        const responseRedirect =
+          payload.finalUrl && payload.finalUrl !== normalizedUrl
+            ? payload.finalUrl
+            : null;
+        const effectiveControl = mergeNavigationCacheControl(
+          requestedControl,
+          responseControl,
+        );
+        const enrichedPayload = Object.assign({}, payload, {
+          target: normalizedUrl,
+          cacheControl: effectiveControl,
+          redirect: responseRedirect,
+          layout: responseLayout,
+          navigationMode:
+            responseMode.mode !== "auto" ? responseMode : requestedMode,
+          hydrate: responseHydrate,
+          pageTransition: responsePageTransition,
+        });
+
+        if (
+          source === "prefetch" &&
+          enrichedPayload.document &&
+          enrichedPayload.document.head
+        ) {
+          preloadCriticalHeadAssets(enrichedPayload.document.head);
+        }
+
+        const cached = setCachedNavigation(
+          normalizedUrl,
+          enrichedPayload,
+          source || "navigate",
+          effectiveControl,
+        );
+        return cached || enrichedPayload;
+      })
+      .finally(function () {
+        runtime.navigationInFlight.delete(normalizedUrl);
+      });
+
+    entry.promise = promise;
+    runtime.navigationInFlight.set(normalizedUrl, entry);
+
+    return entry.promise;
+  }
+
+  function prefetchPage(url, options) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const settings = options && typeof options === "object" ? options : {};
+    const cacheControl =
+      settings.cacheControl && typeof settings.cacheControl === "object"
+        ? settings.cacheControl
+        : parseNavigationCacheControl("", "default");
+    const navigationMode =
+      settings.navigationMode && typeof settings.navigationMode === "object"
+        ? settings.navigationMode
+        : parseNavigationMode("", "default");
+
+    if (
+      !shouldPrefetchNavigation(cacheControl) ||
+      !shouldPrefetchForNavigationMode(navigationMode)
+    ) {
+      return Promise.resolve(null);
+    }
+
+    if (cacheControl.mode === "reload" || cacheControl.mode === "invalidate") {
+      invalidateNavigationCache(normalizedUrl, cacheControl.mode, {
+        source: "prefetch",
+      });
+    }
+
+    if (shouldReadNavigationCache(cacheControl)) {
+      const cached = getCachedNavigation(normalizedUrl);
+
+      if (cached) {
+        emitNavigationCacheEvent("volt:cache-hit", {
+          url: normalizedUrl,
+          finalUrl: cached.finalUrl,
+          source: "prefetch",
+          mode: cacheControl.mode,
+        });
+
+        return Promise.resolve(cached);
+      }
+    }
+
+    emitNavigationCacheEvent("volt:cache-miss", {
+      url: normalizedUrl,
+      source: "prefetch",
+      mode: cacheControl.mode,
+    });
+
+    return requestNavigationPayload(normalizedUrl, undefined, "prefetch", {
+      cacheControl: cacheControl,
+      navigationMode: navigationMode,
+    });
+  }
+
+  function hasNavigationCacheOrFlight(url) {
+    const normalizedUrl = normalizeNavigationUrl(url);
+    return (
+      !!getCachedNavigation(normalizedUrl) ||
+      runtime.navigationInFlight.has(normalizedUrl)
+    );
+  }
+
+  function navigationVisitCacheControl(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const optionControl =
+      settings.cacheControl && typeof settings.cacheControl === "object"
+        ? settings.cacheControl
+        : null;
+    const triggerControl = navigationCacheControlForElement(
+      settings.trigger || null,
+    );
+
+    return mergeNavigationCacheControl(triggerControl, optionControl);
+  }
+
+  function ensureNavigationViewportObserver() {
+    if (
+      runtime.navigationViewportObserver ||
+      typeof IntersectionObserver !== "function"
+    ) {
+      return runtime.navigationViewportObserver;
+    }
+
+    runtime.navigationViewportObserver = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) {
+            return;
+          }
+
+          const element = entry.target;
+          const url = navigationUrlForElement(element);
+
+          if (!url) {
+            runtime.navigationViewportObserver.unobserve(element);
+            return;
+          }
+
+          runtime.navigationViewportObserver.unobserve(element);
+          prefetchPage(url, {
+            cacheControl: navigationCacheControlForElement(element),
+            navigationMode: navigationModeForElement(element),
+          }).catch(function () {
+            return null;
+          });
+        });
+      },
+      {
+        root: null,
+        rootMargin: "200px 0px",
+        threshold: 0.01,
+      },
+    );
+
+    return runtime.navigationViewportObserver;
+  }
+
+  function cleanupRuntimeOrphans() {
+    runtime.navigationPrefetchTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      releasePrefetchInterest(element);
+    });
+
+    runtime.modelSyncTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      clearModelSyncDirectiveDebounce(element);
+    });
+
+    runtime.onDirectiveTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      runtime.onDirectiveOnce.delete(element);
+      runtime.onDirectiveTrackedElements.delete(element);
+    });
+
+    runtime.navigationViewportTrackedElements.forEach(function (element) {
+      if (element && element.isConnected) {
+        return;
+      }
+
+      if (runtime.navigationViewportObserver) {
+        runtime.navigationViewportObserver.unobserve(element);
+      }
+
+      runtime.navigationViewportObserved.delete(element);
+      runtime.navigationViewportTrackedElements.delete(element);
+    });
+
+    if (
+      runtime.navigationViewportTrackedElements.size === 0 &&
+      runtime.navigationViewportObserver
+    ) {
+      runtime.navigationViewportObserver.disconnect();
+      runtime.navigationViewportObserver = null;
+      runtime.navigationViewportObserved = new WeakSet();
+    }
+  }
+
+  function registerViewportPrefetchTargets(root) {
+    cleanupRuntimeOrphans();
+
+    const observer = ensureNavigationViewportObserver();
+
+    if (!observer || !root || typeof root.querySelectorAll !== "function") {
+      return;
+    }
+
+    root
+      .querySelectorAll(NAVIGATION_PREFETCH_SELECTOR)
+      .forEach(function (link) {
+        if (
+          !navigationUrlForElement(link) ||
+          !linkAllowsPrefetchSource(link, "viewport") ||
+          !shouldPrefetchForNavigationMode(navigationModeForElement(link))
+        ) {
+          return;
+        }
+
+        if (runtime.navigationViewportObserved.has(link)) {
+          return;
+        }
+
+        runtime.navigationViewportObserved.add(link);
+        runtime.navigationViewportTrackedElements.add(link);
+        observer.observe(link);
+      });
+  }
+
+  function navigationHeuristicScore(link) {
+    if (!link || typeof link.getBoundingClientRect !== "function") {
+      return null;
+    }
+
+    const rect = link.getBoundingClientRect();
+    const viewportHeight =
+      window.innerHeight || document.documentElement.clientHeight || 0;
+
+    if (
+      (rect.width <= 0 && rect.height <= 0) ||
+      rect.bottom < -1 * NAVIGATION_HEURISTIC_VIEWPORT_MARGIN ||
+      rect.top > viewportHeight + NAVIGATION_HEURISTIC_VIEWPORT_MARGIN
+    ) {
+      return null;
+    }
+
+    const insideViewport = rect.bottom >= 0 && rect.top <= viewportHeight;
+
+    if (insideViewport) {
+      return Math.max(rect.top, 0);
+    }
+
+    return 1000 + Math.max(rect.top - viewportHeight, 0);
+  }
+
+  function findHeuristicPrefetchCandidate(root) {
+    if (!root || typeof root.querySelectorAll !== "function") {
+      return null;
+    }
+
+    const currentUrl = normalizeNavigationUrl(window.location.href);
+    let bestCandidate = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    root
+      .querySelectorAll(NAVIGATION_PREFETCH_SELECTOR)
+      .forEach(function (link) {
+        const url = navigationUrlForElement(link);
+
+        if (
+          !url ||
+          !linkAllowsPrefetchSource(link, "idle") ||
+          !shouldPrefetchForNavigationMode(navigationModeForElement(link)) ||
+          normalizeNavigationUrl(url) === currentUrl ||
+          hasNavigationCacheOrFlight(url)
+        ) {
+          return;
+        }
+
+        const score = navigationHeuristicScore(link);
+
+        if (score === null || score >= bestScore) {
+          return;
+        }
+
+        bestCandidate = link;
+        bestScore = score;
+      });
+
+    return bestCandidate;
+  }
+
+  function cancelHeuristicPrefetch() {
+    if (runtime.navigationHeuristicHandle === null) {
+      return;
+    }
+
+    if (typeof cancelIdleCallback === "function") {
+      cancelIdleCallback(runtime.navigationHeuristicHandle);
+    } else {
+      clearTimeout(runtime.navigationHeuristicHandle);
+    }
+
+    runtime.navigationHeuristicHandle = null;
+  }
+
+  function scheduleHeuristicPrefetch(root) {
+    cleanupRuntimeOrphans();
+    cancelHeuristicPrefetch();
+
+    const candidateRoot =
+      root && typeof root.querySelectorAll === "function" ? root : document;
+    const run = function () {
+      runtime.navigationHeuristicHandle = null;
+
+      if (document.hidden) {
+        return;
+      }
+
+      const candidate = findHeuristicPrefetchCandidate(candidateRoot);
+
+      if (!candidate) {
+        return;
+      }
+
+      const url = navigationUrlForElement(candidate);
+
+      if (!url) {
+        return;
+      }
+
+      prefetchPage(url, {
+        cacheControl: navigationCacheControlForElement(candidate),
+        navigationMode: navigationModeForElement(candidate),
+      }).catch(function () {
+        return null;
+      });
+    };
+
+    if (typeof requestIdleCallback === "function") {
+      runtime.navigationHeuristicHandle = requestIdleCallback(run, {
+        timeout: NAVIGATION_HEURISTIC_DELAY,
+      });
+      return;
+    }
+
+    runtime.navigationHeuristicHandle = window.setTimeout(
+      run,
+      NAVIGATION_HEURISTIC_DELAY,
+    );
+  }
+
+  function directiveSelector(names) {
+    return names
+      .map(function (name) {
+        return "[" + name.replace(/[:.]/g, "\\$&") + "]";
+      })
+      .join(", ");
+  }
+
+  function collectElementsWithDirectiveAttributes(root, names) {
+    const elements = [];
+
+    if (!root || !Array.isArray(names) || names.length === 0) {
+      return elements;
+    }
+
+    function matchesNames(element) {
+      return names.some(function (name) {
+        return element.hasAttribute(name);
+      });
+    }
+
+    if (typeof root.hasAttribute === "function" && matchesNames(root)) {
+      elements.push(root);
+    }
+
+    if (typeof root.querySelectorAll !== "function") {
+      return elements;
+    }
+
+    root.querySelectorAll("*").forEach(function (element) {
+      if (matchesNames(element)) {
+        elements.push(element);
+      }
+    });
+
+    return elements;
+  }
+
+  function collectDirectiveElements(root, selector) {
+    const elements = [];
+
+    if (!root || typeof root.querySelectorAll !== "function") {
+      return elements;
+    }
+
+    if (typeof root.matches === "function" && root.matches(selector)) {
+      elements.push(root);
+    }
+
+    root.querySelectorAll(selector).forEach(function (element) {
+      elements.push(element);
+    });
+
+    return elements;
+  }
+
+  function runtimeDirectiveStore(element) {
+    if (!element.__voltRuntimeDirectiveStore) {
+      element.__voltRuntimeDirectiveStore = {
+        visibility: {},
+        attributes: {},
+        classes: {},
+        styles: {},
+        html: {},
+        bindings: {},
+        modelLocal: null,
+        portal: {},
+        focus: {},
+      };
+    }
+
+    return element.__voltRuntimeDirectiveStore;
+  }
+
+  function componentStatePolicies(component) {
+    if (!component) {
+      return [];
+    }
+
+    if (!runtime.statePolicies.has(component)) {
+      runtime.statePolicies.set(component, []);
+    }
+
+    return runtime.statePolicies.get(component);
+  }
+
+  function stateDirectiveNames(state, suffix) {
+    const parts = Array.isArray(suffix)
+      ? suffix.filter(function (value) {
+          return !!value;
+        })
+      : suffix
+        ? [suffix]
+        : [];
+    let dashed = "volt-" + state;
+    let dotted = "volt:" + state;
+
+    parts.forEach(function (part) {
+      dashed += "-" + part;
+      dotted += "." + part;
+    });
+
+    return [dashed, dotted];
+  }
+
+  function parseDirectiveList(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return value
+      .split(",")
+      .map(function (entry) {
+        return entry.trim();
+      })
+      .filter(function (entry) {
+        return entry !== "";
+      });
+  }
+
+  function runtimeStateContext(root, state) {
+    if (!root) {
+      return {
+        action: null,
+        target: null,
+      };
+    }
+
+    return {
+      action: root.getAttribute("data-volt-" + state + "-action") || null,
+      target: root.getAttribute("data-volt-" + state + "-target") || null,
+    };
+  }
+
+  function matchesDirectiveScope(filterValues, currentValue) {
+    if (!Array.isArray(filterValues) || filterValues.length === 0) {
+      return true;
+    }
+
+    if (!currentValue) {
+      return false;
+    }
+
+    return filterValues.indexOf(currentValue) !== -1;
+  }
+
+  function stateDirectiveScope(element, state, shorthandValue, context) {
+    const actionAttribute = directiveAttribute(
+      element,
+      stateDirectiveNames(state, "action"),
+    );
+    const targetAttribute = directiveAttribute(
+      element,
+      stateDirectiveNames(state, "target"),
+    );
+    const shorthandEntries = parseDirectiveList(shorthandValue);
+    const usesActionShorthand = !!(context && context.action);
+
+    return {
+      actions: actionAttribute
+        ? parseDirectiveList(actionAttribute.value)
+        : usesActionShorthand
+          ? shorthandEntries
+          : [],
+      targets: targetAttribute
+        ? parseDirectiveList(targetAttribute.value)
+        : usesActionShorthand
+          ? []
+          : shorthandEntries,
+    };
+  }
+
+  function stateDirectiveIsActive(
+    element,
+    state,
+    active,
+    shorthandValue,
+    context,
+  ) {
+    if (!active) {
+      return false;
+    }
+
+    const scope = stateDirectiveScope(element, state, shorthandValue, context);
+
+    return (
+      matchesDirectiveScope(scope.actions, context.action) &&
+      matchesDirectiveScope(scope.targets, context.target)
+    );
+  }
+
+  function applyDirectiveVisibility(element, state, active, inverse) {
+    const storeKey = state + ":" + (inverse ? "hide" : "show");
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.visibility[storeKey]) {
+      store.visibility[storeKey] = {
+        hidden: !!element.hidden,
+        ariaHidden: element.getAttribute("aria-hidden"),
+        display: element.style.display || "",
+      };
+    }
+
+    const shouldHide = inverse ? active : !active;
+    const initialState = store.visibility[storeKey];
+
+    if (shouldHide) {
+      element.hidden = true;
+      element.setAttribute("aria-hidden", "true");
+      element.style.setProperty("display", "none", "important");
+      return;
+    }
+
+    element.hidden = initialState.hidden;
+
+    if (initialState.display === "") {
+      element.style.removeProperty("display");
+    } else {
+      element.style.display = initialState.display;
+    }
+
+    if (initialState.ariaHidden === null) {
+      element.removeAttribute("aria-hidden");
+      return;
+    }
+
+    element.setAttribute("aria-hidden", initialState.ariaHidden);
+  }
+
+  function parseDirectiveAttributes(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return value
+      .split(",")
+      .map(function (token) {
+        const entry = token.trim();
+
+        if (!entry) {
+          return null;
+        }
+
+        const separator = entry.indexOf("=");
+
+        if (separator === -1) {
+          return {
+            name: entry,
+            value: "",
+          };
+        }
+
+        return {
+          name: entry.slice(0, separator).trim(),
+          value: entry.slice(separator + 1).trim(),
+        };
+      })
+      .filter(function (entry) {
+        return entry && entry.name;
+      });
+  }
+
+  function parseDirectiveStyles(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return [];
+    }
+
+    return value
+      .split(";")
+      .map(function (token) {
+        const entry = token.trim();
+
+        if (!entry) {
+          return null;
+        }
+
+        const separator = entry.indexOf(":");
+
+        if (separator === -1) {
+          return null;
+        }
+
+        return {
+          name: entry.slice(0, separator).trim(),
+          value: entry.slice(separator + 1).trim(),
+        };
+      })
+      .filter(function (entry) {
+        return entry && entry.name && entry.value;
+      });
+  }
+
+  function applyDirectiveAttributes(element, state, active, attributes) {
+    if (!Array.isArray(attributes) || attributes.length === 0) {
+      return;
+    }
+
+    const storeKey = state + ":attr";
+    const store = runtimeDirectiveStore(element);
+
+    if (!store.attributes[storeKey]) {
+      store.attributes[storeKey] = {};
+    }
+
+    attributes.forEach(function (entry) {
+      if (!store.attributes[storeKey].hasOwnProperty(entry.name)) {
+        store.attributes[storeKey][entry.name] = element.hasAttribute(
+          entry.name,
+        )
+          ? element.getAttribute(entry.name)
+          : null;
+      }
+
+      if (active) {
+        element.setAttribute(entry.name, entry.value);
+        return;
+      }
+
+      const initialValue = store.attributes[storeKey][entry.name];
+
+      if (initialValue === null) {
+        element.removeAttribute(entry.name);
+        return;
+      }
+
+      element.setAttribute(entry.name, initialValue);
+    });
+  }
+
+  function applyDirectiveStyles(element, active, styles, storeKey) {
+    if (!Array.isArray(styles) || styles.length === 0) {
+      return;
+    }
+
+    const store = runtimeDirectiveStore(element);
+    const styleStoreKey = storeKey || "runtime:style";
+
+    if (!store.styles[styleStoreKey]) {
+      store.styles[styleStoreKey] = {};
+    }
+
+    styles.forEach(function (entry) {
+      if (
+        !Object.prototype.hasOwnProperty.call(
+          store.styles[styleStoreKey],
+          entry.name,
+        )
+      ) {
+        store.styles[styleStoreKey][entry.name] = {
+          value: element.style.getPropertyValue(entry.name),
+          priority: element.style.getPropertyPriority(entry.name),
+        };
+      }
+
+      if (active) {
+        element.style.setProperty(entry.name, entry.value);
+        return;
+      }
+
+      const initialState = store.styles[styleStoreKey][entry.name];
+
+      if (!initialState || initialState.value === "") {
+        element.style.removeProperty(entry.name);
+        return;
+      }
+
+      element.style.setProperty(
+        entry.name,
+        initialState.value,
+        initialState.priority || "",
+      );
+    });
+  }
+
+  function applyDirectiveClasses(element, active, value, storeKey) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return;
+    }
+
+    const store = runtimeDirectiveStore(element);
+    const classStoreKey = storeKey || "runtime:class";
+
+    if (!store.classes[classStoreKey]) {
+      store.classes[classStoreKey] = {};
+    }
+
+    value.split(/\s+/).forEach(function (className) {
+      if (!className) {
+        return;
+      }
+
+      if (
+        !Object.prototype.hasOwnProperty.call(
+          store.classes[classStoreKey],
+          className,
+        )
+      ) {
+        store.classes[classStoreKey][className] =
+          element.classList.contains(className);
+      }
+
+      const initialValue = store.classes[classStoreKey][className];
+
+      if (!active && initialValue) {
+        element.classList.add(className);
+        return;
+      }
+
+      element.classList.toggle(className, active);
+    });
+  }
+
+  function syncClassDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    collectElementsWithDirectiveAttributes(root, classDirectiveNames()).forEach(
+      function (element) {
+        const directives = parseStoreClassDirectiveRules(
+          directiveValue(element, classDirectiveNames()),
+        );
+
+        if (directives.length === 0) {
+          return;
+        }
+
+        directives.forEach(function (directive) {
+          applyDirectiveClasses(
+            element,
+            evaluateStoreConditionNode(directive.expression.ast),
+            directive.classValue,
+            "store:" + directive.expression.raw + "->" + directive.classValue,
+          );
+        });
+      },
+    );
+  }
+
+  function stateDirectiveShorthandValue(element, state) {
+    const attribute = directiveAttribute(element, stateDirectiveNames(state));
+
+    return attribute ? attribute.value : "";
+  }
+
+  function parseDirectiveTimeout(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+    }
+
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    const match = normalized.match(/^(\d+(?:\.\d+)?)(ms|s)?$/);
+
+    if (!match) {
+      return null;
+    }
+
+    const amount = Number.parseFloat(match[1]);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      return null;
+    }
+
+    const unit = match[2] || "ms";
+    const multiplier = unit === "s" ? 1000 : 1;
+
+    return Math.round(amount * multiplier);
+  }
+
+  function runtimePolicyScopeMatches(policyValue, contextValue) {
+    if (typeof policyValue !== "string" || policyValue === "") {
+      return true;
+    }
+
+    return policyValue === contextValue;
+  }
+
+  function runtimePolicyValueKey(suffix) {
+    switch (suffix) {
+      case "delay":
+        return "delay";
+      case "timeout":
+        return "timeout";
+      case "debounce":
+        return "debounce";
+      case "min-duration":
+        return "minDuration";
+      default:
+        return null;
+    }
+  }
+
+  function matchingRuntimePolicyDurations(root, state, suffix, context) {
+    if (!root) {
+      return [];
+    }
+
+    const component = root.getAttribute("data-volt-component") || null;
+    const valueKey = runtimePolicyValueKey(suffix);
+
+    if (!component || !valueKey) {
+      return [];
+    }
+
+    return componentStatePolicies(component)
+      .filter(function (policy) {
+        return (
+          policy &&
+          policy.state === state &&
+          runtimePolicyScopeMatches(
+            policy.scopeAction,
+            context && context.action,
+          ) &&
+          runtimePolicyScopeMatches(
+            policy.scopeTarget,
+            context && context.target,
+          )
+        );
+      })
+      .map(function (policy) {
+        return parseDirectiveTimeout(policy[valueKey]);
+      })
+      .filter(function (value) {
+        return value !== null;
+      });
+  }
+
+  function registerRuntimePolicy(root, effect) {
+    if (
+      !root ||
+      !effect ||
+      effect.type !== "runtime.policy" ||
+      typeof effect.state !== "string" ||
+      effect.state === ""
+    ) {
+      return false;
+    }
+
+    const component = root.getAttribute("data-volt-component") || null;
+
+    if (!component) {
+      return false;
+    }
+
+    const normalized = {
+      state: effect.state,
+      scopeAction:
+        typeof effect.scopeAction === "string" && effect.scopeAction !== ""
+          ? effect.scopeAction
+          : null,
+      scopeTarget:
+        typeof effect.scopeTarget === "string" && effect.scopeTarget !== ""
+          ? effect.scopeTarget
+          : null,
+      delay: parseDirectiveTimeout(effect.delay),
+      timeout: parseDirectiveTimeout(effect.timeout),
+      debounce: parseDirectiveTimeout(effect.debounce),
+      minDuration: parseDirectiveTimeout(effect.minDuration),
+    };
+    const hasValues = ["delay", "timeout", "debounce", "minDuration"].some(
+      function (key) {
+        return normalized[key] !== null;
+      },
+    );
+    const signature = [
+      normalized.state,
+      normalized.scopeAction || "",
+      normalized.scopeTarget || "",
+    ].join("|");
+    const store = componentStatePolicies(component).filter(function (policy) {
+      const policySignature = [
+        policy.state,
+        policy.scopeAction || "",
+        policy.scopeTarget || "",
+      ].join("|");
+
+      return policySignature !== signature;
+    });
+
+    if (hasValues) {
+      store.push(normalized);
+    }
+
+    runtime.statePolicies.set(component, store);
+    return true;
+  }
+
+  function matchingStateDirectiveElements(
+    root,
+    state,
+    suffix,
+    active,
+    contextOverride,
+  ) {
+    const context = contextOverride || runtimeStateContext(root, state);
+    const names = stateDirectiveNames(state, suffix);
+
+    return collectElementsWithDirectiveAttributes(root, names).filter(
+      function (element) {
+        return stateDirectiveIsActive(
+          element,
+          state,
+          active,
+          stateDirectiveShorthandValue(element, state),
+          context,
+        );
+      },
+    );
+  }
+
+  function resolveStateDirectiveDuration(root, state, suffix, context) {
+    const values = matchingStateDirectiveElements(
+      root,
+      state,
+      suffix,
+      true,
+      context,
+    )
+      .map(function (element) {
+        return parseDirectiveTimeout(
+          directiveValue(element, stateDirectiveNames(state, suffix)),
+        );
+      })
+      .filter(function (value) {
+        return value !== null;
+      });
+    const policyValues = matchingRuntimePolicyDurations(
+      root,
+      state,
+      suffix,
+      context || runtimeStateContext(root, state),
+    );
+    const allValues = values.concat(policyValues);
+
+    if (allValues.length === 0) {
+      return null;
+    }
+
+    return Math.min.apply(null, allValues);
+  }
+
+  function resolveStateDirectiveTimeout(root, state) {
+    return resolveStateDirectiveDuration(root, state, "timeout");
+  }
+
+  function resolveStateDirectiveDelay(root, state, context) {
+    return resolveStateDirectiveDuration(root, state, "delay", context);
+  }
+
+  function resolveStateDirectiveMinDuration(root, state, context) {
+    return resolveStateDirectiveDuration(root, state, "min-duration", context);
+  }
+
+  function resolveStateDirectiveDebounce(root, state, context) {
+    return resolveStateDirectiveDuration(root, state, "debounce", context);
+  }
+
+  function clearLoadingDelay(root) {
+    const timeoutId = runtime.loadingDelays.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.loadingDelays.delete(root);
+    }
+  }
+
+  function clearLoadingMinDuration(root) {
+    const timeoutId = runtime.loadingMinClearDelays.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.loadingMinClearDelays.delete(root);
+    }
+  }
+
+  function clearSuccessTimeout(root) {
+    const timeoutId = runtime.successTimeouts.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.successTimeouts.delete(root);
+    }
+  }
+
+  function clearSuccessMinDuration(root) {
+    const timeoutId = runtime.successMinClearDelays.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.successMinClearDelays.delete(root);
+    }
+  }
+
+  function scheduleLoadingDelay(root, trigger, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearLoadingDelay(root);
+
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const context = {
+      action: detail.action || null,
+      target: stateTargetValue(detail),
+    };
+    const delay = resolveStateDirectiveDelay(root, "loading", context);
+
+    if (delay === null || delay <= 0) {
+      setLoadingState(root, true, trigger, detail);
+      return;
+    }
+
+    const component =
+      root.getAttribute("data-volt-component") || detail.component || null;
+    const requestId = detail.requestId || null;
+    const timeoutId = window.setTimeout(function () {
+      runtime.loadingDelays.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+      const state = componentRequestState(component);
+
+      if (!activeRoot || !state || state.requestId !== requestId) {
+        return;
+      }
+
+      setLoadingState(
+        activeRoot,
+        true,
+        trigger,
+        Object.assign({}, detail, {
+          component: component,
+        }),
+      );
+    }, delay);
+
+    runtime.loadingDelays.set(root, timeoutId);
+  }
+
+  function scheduleLoadingMinDurationClear(root, trigger, meta, remaining) {
+    if (!root) {
+      return;
+    }
+
+    clearLoadingMinDuration(root);
+
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: "min-duration",
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.loadingMinClearDelays.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-loading") !== "true"
+      ) {
+        return;
+      }
+
+      setLoadingState(activeRoot, false, trigger, detail);
+    }, remaining);
+
+    runtime.loadingMinClearDelays.set(root, timeoutId);
+  }
+
+  function clearErrorTimeout(root) {
+    const timeoutId = runtime.errorTimeouts.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.errorTimeouts.delete(root);
+    }
+  }
+
+  function clearDirtyDebounce(root) {
+    const timeoutId = runtime.dirtyDebounces.get(root);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      runtime.dirtyDebounces.delete(root);
+    }
+  }
+
+  function scheduleSuccessTimeout(root, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearSuccessTimeout(root);
+
+    const timeout = resolveStateDirectiveTimeout(root, "success");
+
+    if (timeout === null) {
+      return;
+    }
+
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: "timeout",
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.successTimeouts.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-success") !== "true"
+      ) {
+        return;
+      }
+
+      setSuccessState(activeRoot, false, detail);
+    }, timeout);
+
+    runtime.successTimeouts.set(root, timeoutId);
+  }
+
+  function scheduleSuccessMinDurationClear(root, meta, remaining) {
+    if (!root) {
+      return;
+    }
+
+    clearSuccessMinDuration(root);
+
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: "min-duration",
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.successMinClearDelays.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-success") !== "true"
+      ) {
+        return;
+      }
+
+      setSuccessState(activeRoot, false, detail);
+    }, remaining);
+
+    runtime.successMinClearDelays.set(root, timeoutId);
+  }
+
+  function scheduleErrorTimeout(root, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearErrorTimeout(root);
+
+    const timeout = resolveStateDirectiveTimeout(root, "error");
+
+    if (timeout === null) {
+      return;
+    }
+
+    const component =
+      root.getAttribute("data-volt-component") ||
+      (meta && meta.component) ||
+      null;
+    const detail = Object.assign({}, meta || {}, {
+      component: component,
+      reason: "timeout",
+    });
+
+    const timeoutId = window.setTimeout(function () {
+      runtime.errorTimeouts.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (
+        !activeRoot ||
+        activeRoot.getAttribute("data-volt-error") !== "true"
+      ) {
+        return;
+      }
+
+      setErrorState(activeRoot, false, detail);
+    }, timeout);
+
+    runtime.errorTimeouts.set(root, timeoutId);
+  }
+
+  function scheduleDirtyDebounce(root, meta) {
+    if (!root) {
+      return;
+    }
+
+    clearDirtyDebounce(root);
+
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const context = {
+      action: detail.action || null,
+      target: stateTargetValue(detail),
+    };
+    const debounce = resolveStateDirectiveDebounce(root, "dirty", context);
+
+    if (debounce === null || debounce <= 0) {
+      setDirtyState(root, true, detail);
+      return;
+    }
+
+    const component =
+      root.getAttribute("data-volt-component") || detail.component || null;
+    const timeoutId = window.setTimeout(function () {
+      runtime.dirtyDebounces.delete(root);
+
+      const activeRoot = resolveRuntimeRoot(root, component);
+
+      if (!activeRoot) {
+        return;
+      }
+
+      setDirtyState(
+        activeRoot,
+        true,
+        Object.assign({}, detail, {
+          component: component,
+          reason: "debounce",
+          debounce: debounce,
+        }),
+      );
+    }, debounce);
+
+    runtime.dirtyDebounces.set(root, timeoutId);
+  }
+
+  function syncRuntimeStateDirective(root, state, active) {
+    const showNames = stateDirectiveNames(state);
+    const hideNames = stateDirectiveNames(state, "hide");
+    const classNames = stateDirectiveNames(state, "class");
+    const attrNames = stateDirectiveNames(state, "attr");
+
+    collectElementsWithDirectiveAttributes(root, showNames).forEach(
+      function (element) {
+        applyDirectiveVisibility(
+          element,
+          state,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          false,
+        );
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(root, hideNames).forEach(
+      function (element) {
+        applyDirectiveVisibility(
+          element,
+          state,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          true,
+        );
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(root, classNames).forEach(
+      function (element) {
+        applyDirectiveClasses(
+          element,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          directiveValue(element, stateDirectiveNames(state, "class")),
+          "state:" + state + ":class",
+        );
+      },
+    );
+
+    collectElementsWithDirectiveAttributes(root, attrNames).forEach(
+      function (element) {
+        applyDirectiveAttributes(
+          element,
+          state,
+          stateDirectiveIsActive(
+            element,
+            state,
+            active,
+            stateDirectiveShorthandValue(element, state),
+            runtimeStateContext(root, state),
+          ),
+          parseDirectiveAttributes(
+            directiveValue(element, stateDirectiveNames(state, "attr")),
+          ),
+        );
+      },
+    );
+  }
+
+  function syncRuntimeStateDirectives(root) {
+    if (!root) {
+      return;
+    }
+
+    syncForDirectives(root);
+
+    let iterations = 0;
+
+    while (syncIfDirectives(root) && iterations < 5) {
+      iterations += 1;
+    }
+
+    syncRuntimeStateDirective(
+      root,
+      "loading",
+      root.getAttribute("data-volt-loading") === "true",
+    );
+    syncRuntimeStateDirective(
+      root,
+      "error",
+      root.getAttribute("data-volt-error") === "true",
+    );
+    syncRuntimeStateDirective(
+      root,
+      "dirty",
+      root.getAttribute("data-volt-dirty") === "true",
+    );
+    syncRuntimeStateDirective(
+      root,
+      "success",
+      root.getAttribute("data-volt-success") === "true",
+    );
+    syncPortalDirectives(root);
+    let htmlIterations = 0;
+
+    while (syncHtmlDirectives(root) && htmlIterations < 5) {
+      htmlIterations += 1;
+      syncForDirectives(root);
+
+      let htmlIfIterations = 0;
+
+      while (syncIfDirectives(root) && htmlIfIterations < 5) {
+        htmlIfIterations += 1;
+      }
+
+      syncPortalDirectives(root);
+    }
+
+    syncTextDirectives(root);
+    syncModelLocalDirectives(root);
+    syncModelSyncDirectives(root);
+    syncBindDirectives(root);
+    syncClassDirectives(root);
+    syncAttrDirectives(root);
+    syncStyleDirectives(root);
+    syncShowDirectives(root);
+    syncFocusDirectives(root);
+    cleanupRuntimeOrphans();
+  }
+
+  function syncAllRuntimeStateDirectives() {
+    const roots = document.querySelectorAll('[data-volt-root="true"]');
+
+    roots.forEach(function (root) {
+      syncRuntimeStateDirectives(root);
+    });
+  }
+
+  function elementIndex(elements, target) {
+    for (let index = 0; index < elements.length; index += 1) {
+      if (elements[index] === target) {
+        return index;
+      }
+    }
+
+    return -1;
+  }
+
+  function modelDescriptorMatches(root, modelName) {
+    if (!root || !modelName) {
+      return [];
+    }
+
+    return root.querySelectorAll(
+      '[volt-model="' +
+        modelName +
+        '"], [volt\\:model="' +
+        modelName +
+        '"], [volt-model-local="' +
+        modelName +
+        '"], [volt\\:model\\.local="' +
+        modelName +
+        '"], [data-volt-model-local="' +
+        modelName +
+        '"], [volt-model-sync="' +
+        modelName +
+        '"], [volt\\:model\\.sync="' +
+        modelName +
+        '"], [data-volt-model-sync="' +
+        modelName +
+        '"]',
+    );
+  }
+
+  function isTextSelectableElement(element) {
+    if (!element || typeof element !== "object") {
+      return false;
+    }
+
+    if (element.tagName === "TEXTAREA") {
+      return true;
+    }
+
+    if (element.tagName !== "INPUT") {
+      return false;
+    }
+
+    const type = (element.type || "text").toLowerCase();
+
+    return (
+      ["text", "search", "url", "tel", "password", "email", "number"].indexOf(
+        type,
+      ) !== -1
+    );
+  }
+
+  function buildFocusDescriptor(root, element) {
+    if (!element) {
+      return null;
+    }
+
+    if (element.id) {
+      return {
+        strategy: "id",
+        value: element.id,
+      };
+    }
+
+    const targetName = element.getAttribute("data-volt-target");
+
+    if (targetName) {
+      return {
+        strategy: "target",
+        value: targetName,
+      };
+    }
+
+    const modelName =
+      directiveValue(element, ["volt-model", "volt:model"]) ||
+      directiveValue(element, modelLocalDirectiveNames()) ||
+      directiveValue(element, modelSyncDirectiveNames());
+
+    if (modelName) {
+      const matches = modelDescriptorMatches(root, modelName);
+      const index = elementIndex(matches, element);
+
+      if (index !== -1) {
+        return {
+          strategy: "model",
+          value: modelName,
+          index: index,
+        };
+      }
+    }
+
+    const fieldName = element.getAttribute("name");
+
+    if (fieldName) {
+      const matches = root.querySelectorAll(
+        '[name="' + cssEscape(fieldName) + '"]',
+      );
+      const index = elementIndex(matches, element);
+
+      if (index !== -1) {
+        return {
+          strategy: "name",
+          value: fieldName,
+          index: index,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function buildStableElementDescriptor(element) {
+    if (!element) {
+      return null;
+    }
+
+    if (element.id) {
+      return {
+        strategy: "id",
+        value: element.id,
+      };
+    }
+
+    const targetName = element.getAttribute("data-volt-target");
+
+    if (targetName) {
+      return {
+        strategy: "target",
+        value: targetName,
+      };
+    }
+
+    return null;
+  }
+
+  function findByDescriptor(root, descriptor) {
+    if (!descriptor || !root) {
+      return null;
+    }
+
+    if (descriptor.strategy === "id" && descriptor.value) {
+      return document.getElementById(descriptor.value);
+    }
+
+    if (descriptor.strategy === "target" && descriptor.value) {
+      return root.querySelector(
+        '[data-volt-target="' + descriptor.value + '"]',
+      );
+    }
+
+    if (descriptor.strategy === "model" && descriptor.value) {
+      const matches = modelDescriptorMatches(root, descriptor.value);
+
+      return matches[descriptor.index || 0] || null;
+    }
+
+    if (descriptor.strategy === "name" && descriptor.value) {
+      const matches = root.querySelectorAll(
+        '[name="' + cssEscape(descriptor.value) + '"]',
+      );
+
+      return matches[descriptor.index || 0] || null;
+    }
+
+    return null;
+  }
+
+  function captureSelectionState(element) {
+    if (!isTextSelectableElement(element)) {
+      return null;
+    }
+
+    return {
+      start:
+        typeof element.selectionStart === "number"
+          ? element.selectionStart
+          : null,
+      end:
+        typeof element.selectionEnd === "number" ? element.selectionEnd : null,
+      direction:
+        typeof element.selectionDirection === "string"
+          ? element.selectionDirection
+          : "none",
+      scrollTop:
+        typeof element.scrollTop === "number" ? element.scrollTop : null,
+      scrollLeft:
+        typeof element.scrollLeft === "number" ? element.scrollLeft : null,
+    };
+  }
+
+  function captureFocusState(root) {
+    const activeElement = document.activeElement;
+
+    if (!root || !activeElement || !root.contains(activeElement)) {
+      return null;
+    }
+
+    const descriptor = buildFocusDescriptor(root, activeElement);
+
+    if (!descriptor) {
+      return null;
+    }
+
+    return {
+      descriptor: descriptor,
+      selection: captureSelectionState(activeElement),
+    };
+  }
+
+  function restoreSelectionState(element, selection) {
+    if (!element || !selection || !isTextSelectableElement(element)) {
+      return;
+    }
+
+    if (
+      typeof selection.start === "number" &&
+      typeof selection.end === "number" &&
+      typeof element.setSelectionRange === "function"
+    ) {
+      try {
+        element.setSelectionRange(
+          selection.start,
+          selection.end,
+          selection.direction || "none",
+        );
+      } catch (error) {}
+    }
+
+    if (typeof selection.scrollTop === "number") {
+      element.scrollTop = selection.scrollTop;
+    }
+
+    if (typeof selection.scrollLeft === "number") {
+      element.scrollLeft = selection.scrollLeft;
+    }
+  }
+
+  function restoreFocusState(root, focusState) {
+    if (!root || !focusState || !focusState.descriptor) {
+      return;
+    }
+
+    const nextElement = findByDescriptor(root, focusState.descriptor);
+
+    if (!nextElement || typeof nextElement.focus !== "function") {
+      return;
+    }
+
+    nextElement.focus({
+      preventScroll: true,
+    });
+    restoreSelectionState(nextElement, focusState.selection);
+  }
+
+  function isElementScrollRestorable(element) {
+    if (!element || typeof element !== "object") {
+      return false;
+    }
+
+    if (
+      element.hasAttribute("data-volt-preserve-scroll") ||
+      element.hasAttribute("volt-preserve-scroll") ||
+      element.hasAttribute("volt:preserve-scroll")
+    ) {
+      return true;
+    }
+
+    return !!(
+      (typeof element.scrollTop === "number" && element.scrollTop !== 0) ||
+      (typeof element.scrollLeft === "number" && element.scrollLeft !== 0)
+    );
+  }
+
+  function captureScrollState(root) {
+    if (!root) {
+      return [];
+    }
+
+    const candidates = [];
+    const seen = new Set();
+
+    function addCandidate(element) {
+      if (!element || seen.has(element)) {
+        return;
+      }
+
+      seen.add(element);
+
+      if (!isElementScrollRestorable(element)) {
+        return;
+      }
+
+      const descriptor = buildStableElementDescriptor(element);
+
+      if (!descriptor) {
+        return;
+      }
+
+      candidates.push({
+        descriptor: descriptor,
+        scrollTop:
+          typeof element.scrollTop === "number" ? element.scrollTop : null,
+        scrollLeft:
+          typeof element.scrollLeft === "number" ? element.scrollLeft : null,
+      });
+    }
+
+    addCandidate(root);
+    root
+      .querySelectorAll(
+        "[id], [data-volt-target], [data-volt-preserve-scroll], [volt-preserve-scroll], [volt\\:preserve-scroll]",
+      )
+      .forEach(addCandidate);
+
+    return candidates;
+  }
+
+  function restoreScrollState(root, scrollStates) {
+    if (!root || !Array.isArray(scrollStates)) {
+      return;
+    }
+
+    scrollStates.forEach(function (entry) {
+      if (!entry || !entry.descriptor) {
+        return;
+      }
+
+      const element = findByDescriptor(root, entry.descriptor);
+
+      if (!element) {
+        return;
+      }
+
+      if (typeof entry.scrollTop === "number") {
+        element.scrollTop = entry.scrollTop;
+      }
+
+      if (typeof entry.scrollLeft === "number") {
+        element.scrollLeft = entry.scrollLeft;
+      }
+    });
+  }
+
+  function emitRuntimeHook(name, detail, target) {
+    const hookDetail = detail && typeof detail === "object" ? detail : {};
+    const eventTarget = target || document;
+
+    eventTarget.dispatchEvent(
+      new CustomEvent(name, {
+        detail: hookDetail,
+        bubbles: true,
+      }),
+    );
+  }
+
+  function wait(duration) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, duration);
+    });
+  }
+
+  function nextFrame() {
+    return new Promise(function (resolve) {
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(resolve);
+      });
+    });
+  }
+
+  function transitionDurationFor(element, effect, phase) {
+    if (!element) {
+      return 180;
+    }
+
+    const phaseDuration = transitionConfigValue(effect, phase, "duration");
+
+    if (typeof phaseDuration === "number" && phaseDuration >= 0) {
+      return phaseDuration;
+    }
+
+    if (
+      effect &&
+      typeof effect.transitionDuration === "number" &&
+      effect.transitionDuration >= 0
+    ) {
+      return effect.transitionDuration;
+    }
+
+    const phaseAttribute = element.getAttribute(
+      "data-volt-transition-" + phase + "-duration",
+    );
+    const phaseParsed = phaseAttribute ? Number(phaseAttribute) : NaN;
+
+    if (Number.isFinite(phaseParsed) && phaseParsed >= 0) {
+      return phaseParsed;
+    }
+
+    const attributeValue = element.getAttribute(
+      "data-volt-transition-duration",
+    );
+    const parsed = attributeValue ? Number(attributeValue) : NaN;
+
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 180;
+  }
+
+  function transitionConfigValue(effect, phase, key) {
+    if (!effect || typeof effect !== "object") {
+      return null;
+    }
+
+    if (
+      effect.transition &&
+      typeof effect.transition === "object" &&
+      effect.transition !== null
+    ) {
+      const phaseConfig = effect.transition[phase];
+
+      if (
+        phaseConfig &&
+        typeof phaseConfig === "object" &&
+        Object.prototype.hasOwnProperty.call(phaseConfig, key)
+      ) {
+        return phaseConfig[key];
+      }
+
+      if (key === "name" && typeof phaseConfig === "string") {
+        return phaseConfig;
+      }
+    }
+
+    if (
+      effect.transitions &&
+      typeof effect.transitions === "object" &&
+      effect.transitions !== null
+    ) {
+      const phaseConfig = effect.transitions[phase];
+
+      if (
+        phaseConfig &&
+        typeof phaseConfig === "object" &&
+        Object.prototype.hasOwnProperty.call(phaseConfig, key)
+      ) {
+        return phaseConfig[key];
+      }
+
+      if (key === "name" && typeof phaseConfig === "string") {
+        return phaseConfig;
+      }
+    }
+
+    return null;
+  }
+
+  function transitionVariantFor(element, effect, phase) {
+    if (effect && effect.transition === false) {
+      return null;
+    }
+
+    const phaseVariant = transitionConfigValue(effect, phase, "name");
+
+    if (typeof phaseVariant === "string" && phaseVariant !== "") {
+      return phaseVariant;
+    }
+
+    if (
+      effect &&
+      typeof effect.transition === "string" &&
+      effect.transition !== ""
+    ) {
+      return effect.transition;
+    }
+
+    if (effect && effect.transition === true) {
+      return "default";
+    }
+
+    if (!element) {
+      return null;
+    }
+
+    const phaseAttribute = element.getAttribute(
+      "data-volt-transition-" + phase,
+    );
+
+    if (phaseAttribute === "") {
+      return "default";
+    }
+
+    if (phaseAttribute) {
+      return phaseAttribute;
+    }
+
+    const attributeValue = element.getAttribute("data-volt-transition");
+
+    if (attributeValue === "") {
+      return "default";
+    }
+
+    return attributeValue || null;
+  }
+
+  function transitionClassListFor(element, effect, phase, variant) {
+    const classes = ["volt-transition", "volt-transition-" + phase];
+
+    if (variant) {
+      classes.push("volt-transition-" + variant);
+    }
+
+    const phaseClasses = [];
+    const classConfig = transitionConfigValue(effect, phase, "className");
+
+    if (typeof classConfig === "string" && classConfig !== "") {
+      phaseClasses.push(classConfig);
+    }
+
+    if (element) {
+      const phaseAttribute = element.getAttribute(
+        "data-volt-transition-" + phase + "-class",
+      );
+
+      if (phaseAttribute) {
+        phaseClasses.push(phaseAttribute);
+      }
+
+      const globalAttribute = element.getAttribute(
+        "data-volt-transition-class",
+      );
+
+      if (globalAttribute) {
+        phaseClasses.push(globalAttribute);
+      }
+    }
+
+    phaseClasses.forEach(function (classList) {
+      classList.split(/\s+/).forEach(function (className) {
+        if (className) {
+          classes.push(className);
+        }
+      });
+    });
+
+    return classes;
+  }
+
+  async function runElementTransition(root, element, phase, effect) {
+    const variant = transitionVariantFor(element, effect, phase);
+
+    if (!element || !phase || !variant) {
+      return false;
+    }
+
+    const duration = transitionDurationFor(element, effect, phase);
+    const activeClass = "volt-transition-" + phase + "-active";
+    const classes = transitionClassListFor(element, effect, phase, variant);
+    const detail = effectHookDetail(root, effect, element, {
+      phase: phase,
+      variant: variant,
+      duration: duration,
+      transitionSource:
+        effect && effect.pageTransitionSource
+          ? effect.pageTransitionSource
+          : null,
+      transitionMode:
+        effect && effect.pageTransitionMode ? effect.pageTransitionMode : null,
+      transitionName:
+        effect && effect.pageTransitionName ? effect.pageTransitionName : null,
+    });
+
+    emitRuntimeHook("volt:before-" + phase, detail, element);
+    element.style.setProperty("--volt-transition-duration", duration + "ms");
+    element.classList.add.apply(element.classList, classes);
+    await nextFrame();
+    element.classList.add(activeClass);
+    await wait(duration);
+    element.classList.remove(activeClass);
+    element.classList.remove.apply(element.classList, classes);
+    element.style.removeProperty("--volt-transition-duration");
+    emitRuntimeHook("volt:after-" + phase, detail, element);
+
+    return true;
+  }
+
+  function fragmentFromHtml(html) {
+    if (typeof html !== "string" || html === "") {
+      return null;
+    }
+
+    const template = document.createElement("template");
+    template.innerHTML = html.trim();
+
+    return template.content;
+  }
+
+  function effectHookDetail(root, effect, target, extra) {
+    return Object.assign(
+      {
+        type: effect && effect.type ? effect.type : null,
+        target:
+          effect && typeof effect.target === "string" ? effect.target : null,
+        selector:
+          effect && typeof effect.selector === "string"
+            ? effect.selector
+            : null,
+        component:
+          root && typeof root.getAttribute === "function"
+            ? root.getAttribute("data-volt-component")
+            : null,
+        element: target || null,
+      },
+      extra || {},
+    );
+  }
+
+  function createEffectResult(
+    root,
+    effect,
+    target,
+    handled,
+    preventsHtmlFallback,
+    extra,
+  ) {
+    emitRuntimeHook(
+      "volt:after-effect",
+      effectHookDetail(
+        root,
+        effect,
+        target,
+        Object.assign(
+          {
+            handled: handled,
+            preventsHtmlFallback: preventsHtmlFallback,
+          },
+          extra || {},
+        ),
+      ),
+      target || root || document,
+    );
+
+    return {
+      handled: handled,
+      preventsHtmlFallback: preventsHtmlFallback,
+    };
+  }
+
+  function classifyPatchTelemetryOutcome(detail) {
+    const meta = detail && typeof detail === "object" ? detail : {};
+    const operationType =
+      typeof meta.type === "string" && meta.type !== "" ? meta.type : "unknown";
+    const action =
+      typeof meta.action === "string" && meta.action !== "" ? meta.action : null;
+    const effectCount = Array.isArray(meta.effects) ? meta.effects.length : 0;
+    const usedHtmlFallback = meta.usedHtmlFallback === true;
+    const isModelSync = action === MODEL_SYNC_INTERNAL_ACTION;
+
+    if (operationType === "navigation") {
+      return "navigation-patch";
+    }
+
+    if (operationType === "action") {
+      if (isModelSync) {
+        if (usedHtmlFallback) {
+          return "model-sync-html-fallback";
+        }
+
+        if (effectCount > 0) {
+          return "model-sync-effects";
+        }
+
+        return "model-sync-no-op";
+      }
+
+      if (usedHtmlFallback) {
+        return "action-html-fallback";
+      }
+
+      if (effectCount > 0) {
+        return "action-effects";
+      }
+
+      return "action-no-op";
+    }
+
+    if (usedHtmlFallback) {
+      return "html-fallback";
+    }
+
+    if (effectCount > 0) {
+      return "effects-only";
+    }
+
+    return "no-op";
+  }
+
+  async function withPreservedUiState(root, callback, meta) {
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const focusState = captureFocusState(root);
+    const scrollState = captureScrollState(root);
+    const patchStartedAt = runtimeNow();
+
+    emitRuntimeHook(
+      "volt:before-patch",
+      Object.assign({}, detail, {
+        patchStartedAt: roundedMetricValue(patchStartedAt),
+      }),
+      root,
+    );
+    const result = await callback();
+    const updatedRoot =
+      root && root.isConnected
+        ? root
+        : root && root.getAttribute
+          ? findRootByComponent(root.getAttribute("data-volt-component"))
+          : null;
+    const patchDurationMs = roundedMetricValue(runtimeNow() - patchStartedAt);
+
+    if (updatedRoot) {
+      restoreScrollState(updatedRoot, scrollState);
+      restoreFocusState(updatedRoot, focusState);
+    }
+
+    refreshActiveComponentsRegistry(
+      detail && detail.type ? "patch:" + detail.type : "patch",
+    );
+
+    const patchDetail = Object.assign({}, detail, {
+      patchDurationMs: patchDurationMs,
+      updatedRoot: updatedRoot || null,
+      activeComponentCount: runtime.activeComponents.size,
+    });
+
+    recordRuntimeTelemetry("patch", {
+      outcome: classifyPatchTelemetryOutcome(detail),
+      operationType: detail && detail.type ? detail.type : "unknown",
+      source: detail && detail.source ? detail.source : null,
+      component: detail && detail.component ? detail.component : null,
+      action: detail && detail.action ? detail.action : null,
+      url: detail && detail.url ? detail.url : null,
+      finalUrl: detail && detail.finalUrl ? detail.finalUrl : null,
+      effectCount:
+        detail && Array.isArray(detail.effects) ? detail.effects.length : 0,
+      effects:
+        detail && Array.isArray(detail.effects) ? detail.effects.slice() : [],
+      usedHtmlFallback:
+        detail && detail.usedHtmlFallback === true ? true : false,
+      patchDurationMs: patchDurationMs,
+      activeComponentCount: runtime.activeComponents.size,
+    });
+
+    emitRuntimeHook(
+      "volt:after-patch",
+      patchDetail,
+      updatedRoot || root || document,
+    );
+
+    return result;
+  }
+
+  function resolveRuntimeRoot(rootOrComponent, fallbackComponent) {
+    if (
+      rootOrComponent &&
+      typeof rootOrComponent === "object" &&
+      rootOrComponent.isConnected
+    ) {
+      return rootOrComponent;
+    }
+
+    if (typeof rootOrComponent === "string" && rootOrComponent !== "") {
+      return findRootByComponent(rootOrComponent);
+    }
+
+    if (typeof fallbackComponent === "string" && fallbackComponent !== "") {
+      return findRootByComponent(fallbackComponent);
+    }
+
+    return null;
+  }
+
+  function isAbortError(error) {
+    return !!(
+      error &&
+      typeof error === "object" &&
+      (error.name === "AbortError" || error.code === 20)
+    );
+  }
+
+  function triggerDescriptor(trigger) {
+    if (!trigger || typeof trigger.getAttribute !== "function") {
+      return null;
+    }
+
+    return {
+      tag: trigger.tagName ? String(trigger.tagName).toLowerCase() : null,
+      target: trigger.getAttribute("data-volt-target"),
+      action: directiveValue(trigger, [
+        "volt-click",
+        "volt:click",
+        "volt-submit",
+        "volt:submit",
+      ]),
+    };
+  }
+
+  function requestHookDetail(kind, meta, extra) {
+    return Object.assign(
+      {
+        type: kind,
+        component: meta && meta.component ? meta.component : null,
+        action: meta && meta.action ? meta.action : null,
+        requestId: meta && meta.requestId ? meta.requestId : null,
+        trigger: meta && meta.trigger ? meta.trigger : null,
+      },
+      extra || {},
+    );
+  }
+
+  const REQUEST_TIMEOUT_ATTRIBUTE_NAMES = [
+    "data-volt-request-timeout",
+    "volt-request-timeout",
+    "volt:request-timeout",
+    "data-volt-timeout",
+    "volt-timeout",
+    "volt:timeout",
+  ];
+  const REQUEST_RETRY_ATTRIBUTE_NAMES = [
+    "data-volt-request-retry",
+    "volt-request-retry",
+    "volt:request-retry",
+    "data-volt-retry",
+    "volt-retry",
+    "volt:retry",
+  ];
+  const REQUEST_RETRY_DELAY_ATTRIBUTE_NAMES = [
+    "data-volt-request-retry-delay",
+    "volt-request-retry-delay",
+    "volt:request-retry-delay",
+    "data-volt-retry-delay",
+    "volt-retry-delay",
+    "volt:retry-delay",
+  ];
+  const REQUEST_ERROR_KINDS = [
+    "aborted",
+    "stale",
+    "timeout",
+    "http-error",
+    "protocol-error",
+    "network-error",
+    "unexpected-error",
+  ];
+
+  function normalizedRequestErrorKind(value, fallback) {
+    if (
+      typeof value === "string" &&
+      REQUEST_ERROR_KINDS.indexOf(value) !== -1
+    ) {
+      return value;
+    }
+
+    return fallback;
+  }
+
+  function requestTimeoutForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = directiveAttribute(element, REQUEST_TIMEOUT_ATTRIBUTE_NAMES);
+    return attribute ? parseDirectiveTimeout(attribute.value) : null;
+  }
+
+  function resolveRequestTimeoutMs(kind, options, elements) {
+    const settings = options && typeof options === "object" ? options : {};
+    const explicitTimeout =
+      Object.prototype.hasOwnProperty.call(settings, "timeout")
+        ? parseDirectiveTimeout(settings.timeout)
+        : null;
+
+    if (explicitTimeout !== null) {
+      return explicitTimeout;
+    }
+
+    if (Array.isArray(elements)) {
+      for (let index = 0; index < elements.length; index += 1) {
+        const elementTimeout = requestTimeoutForElement(elements[index]);
+
+        if (elementTimeout !== null) {
+          return elementTimeout;
+        }
+      }
+    }
+
+    return kind === "navigation"
+      ? NAVIGATION_REQUEST_TIMEOUT
+      : ACTION_REQUEST_TIMEOUT;
+  }
+
+  function retryAttemptsValue(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+    }
+
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === "") {
+      return null;
+    }
+
+    if (normalized === "true" || normalized === "on" || normalized === "yes") {
+      return 1;
+    }
+
+    if (normalized === "false" || normalized === "off" || normalized === "no") {
+      return 0;
+    }
+
+    const parsed = Number.parseInt(normalized, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  function requestRetryAttemptsForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = directiveAttribute(element, REQUEST_RETRY_ATTRIBUTE_NAMES);
+    return attribute ? retryAttemptsValue(attribute.value) : null;
+  }
+
+  function requestRetryDelayForElement(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = directiveAttribute(
+      element,
+      REQUEST_RETRY_DELAY_ATTRIBUTE_NAMES,
+    );
+
+    return attribute ? parseDirectiveTimeout(attribute.value) : null;
+  }
+
+  function requestRetryStatusAllowed(status) {
+    return [408, 425, 429, 500, 502, 503, 504].indexOf(status) !== -1;
+  }
+
+  function resolveRequestRetryPolicy(kind, options, elements) {
+    const settings = options && typeof options === "object" ? options : {};
+    const explicitRetry = settings.retry;
+    let attempts = kind === "navigation" ? NAVIGATION_REQUEST_RETRY_ATTEMPTS : 0;
+    let delayMs =
+      kind === "navigation" ? NAVIGATION_REQUEST_RETRY_DELAY : 0;
+
+    if (Array.isArray(elements)) {
+      for (let index = 0; index < elements.length; index += 1) {
+        const elementAttempts = requestRetryAttemptsForElement(elements[index]);
+
+        if (elementAttempts !== null) {
+          attempts = elementAttempts;
+          break;
+        }
+      }
+
+      for (let index = 0; index < elements.length; index += 1) {
+        const elementDelay = requestRetryDelayForElement(elements[index]);
+
+        if (elementDelay !== null) {
+          delayMs = elementDelay;
+          break;
+        }
+      }
+    }
+
+    if (typeof explicitRetry === "boolean") {
+      attempts = explicitRetry ? attempts || 1 : 0;
+    } else if (typeof explicitRetry === "number") {
+      attempts = retryAttemptsValue(explicitRetry);
+    } else if (typeof explicitRetry === "string") {
+      const parsedAttempts = retryAttemptsValue(explicitRetry);
+
+      if (parsedAttempts !== null) {
+        attempts = parsedAttempts;
+      }
+    } else if (explicitRetry && typeof explicitRetry === "object") {
+      if (Object.prototype.hasOwnProperty.call(explicitRetry, "attempts")) {
+        const parsedAttempts = retryAttemptsValue(explicitRetry.attempts);
+
+        if (parsedAttempts !== null) {
+          attempts = parsedAttempts;
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(explicitRetry, "delay")) {
+        const parsedDelay = parseDirectiveTimeout(explicitRetry.delay);
+
+        if (parsedDelay !== null) {
+          delayMs = parsedDelay;
+        }
+      }
+    }
+
+    if (!Number.isFinite(attempts) || attempts < 0) {
+      attempts = 0;
+    }
+
+    if (!Number.isFinite(delayMs) || delayMs < 0) {
+      delayMs = 0;
+    }
+
+    return {
+      enabled: attempts > 0,
+      attempts: attempts,
+      delayMs: delayMs,
+    };
+  }
+
+  function shouldRetryNavigationRequest(errorDetail, policy, attemptIndex) {
+    if (
+      !policy ||
+      policy.enabled !== true ||
+      attemptIndex >= policy.attempts
+    ) {
+      return false;
+    }
+
+    if (!errorDetail || typeof errorDetail !== "object") {
+      return false;
+    }
+
+    if (
+      errorDetail.errorKind === "timeout" ||
+      errorDetail.errorKind === "network-error"
+    ) {
+      return true;
+    }
+
+    return (
+      errorDetail.errorKind === "http-error" &&
+      typeof errorDetail.status === "number" &&
+      requestRetryStatusAllowed(errorDetail.status)
+    );
+  }
+
+  function waitForRetryDelay(delayMs, signal) {
+    if (!delayMs || delayMs <= 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise(function (resolve, reject) {
+      let timeoutId = null;
+      let aborted = false;
+
+      function cleanup() {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+
+        if (signal && typeof signal.removeEventListener === "function") {
+          signal.removeEventListener("abort", handleAbort);
+        }
+      }
+
+      function handleAbort() {
+        if (aborted) {
+          return;
+        }
+
+        aborted = true;
+        cleanup();
+        const abortError = createRuntimeRequestError(
+          "aborted",
+          "Retry delay aborted.",
+          {
+            signal: signal || null,
+          },
+        );
+        abortError.name = "AbortError";
+        reject(
+          abortError,
+        );
+      }
+
+      if (signal && signal.aborted) {
+        handleAbort();
+        return;
+      }
+
+      timeoutId = window.setTimeout(function () {
+        cleanup();
+        resolve();
+      }, delayMs);
+
+      if (signal && typeof signal.addEventListener === "function") {
+        signal.addEventListener("abort", handleAbort, {
+          once: true,
+        });
+      }
+    });
+  }
+
+  function createRuntimeRequestError(errorKind, message, detail) {
+    const error = new Error(
+      typeof message === "string" && message !== ""
+        ? message
+        : "Unexpected runtime error.",
+    );
+
+    error.voltErrorKind = normalizedRequestErrorKind(
+      errorKind,
+      "unexpected-error",
+    );
+
+    if (detail && typeof detail === "object") {
+      Object.assign(error, detail);
+    }
+
+    return error;
+  }
+
+  function abortControllerWithMeta(controller, detail) {
+    if (!controller || typeof controller.abort !== "function") {
+      return;
+    }
+
+    if (controller.signal && typeof controller.signal === "object") {
+      controller.signal.__voltAbortMeta =
+        detail && typeof detail === "object"
+          ? Object.assign({}, detail)
+          : {
+              kind: "aborted",
+            };
+    }
+
+    controller.abort();
+  }
+
+  function requestAbortMeta(signal) {
+    if (!signal || typeof signal !== "object") {
+      return null;
+    }
+
+    const detail = signal.__voltAbortMeta;
+    return detail && typeof detail === "object" ? detail : null;
+  }
+
+  function withRequestTimeout(promise, controller, timeoutMs, detail) {
+    if (timeoutMs === null) {
+      return promise;
+    }
+
+    let timeoutId = null;
+    const timeoutDetail = detail && typeof detail === "object" ? detail : {};
+    const timeoutPromise = new Promise(function (_, reject) {
+      timeoutId = window.setTimeout(function () {
+        const message =
+          timeoutDetail.message ||
+          "Request timed out after " + timeoutMs + "ms.";
+
+        if (controller) {
+          abortControllerWithMeta(controller, {
+            kind: "timeout",
+            timeoutMs: timeoutMs,
+            message: message,
+          });
+        }
+
+        reject(
+          createRuntimeRequestError("timeout", message, {
+            timeoutMs: timeoutMs,
+          }),
+        );
+      }, timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(function () {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    });
+  }
+
+  function requestErrorDetail(kind, meta, errorKind, message, extra) {
+    const resolvedErrorKind = normalizedRequestErrorKind(
+      errorKind,
+      "unexpected-error",
+    );
+
+    return requestHookDetail(
+      kind,
+      meta,
+      Object.assign(
+        {
+          ok: false,
+          message:
+            typeof message === "string" && message !== ""
+              ? message
+              : "Unexpected runtime error.",
+          outcome: resolvedErrorKind,
+          errorKind: resolvedErrorKind,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function requestAbortDetail(kind, meta, signal, extra) {
+    const abortMeta = requestAbortMeta(signal);
+    const errorKind = normalizedRequestErrorKind(
+      abortMeta && abortMeta.kind ? abortMeta.kind : null,
+      "aborted",
+    );
+
+    return requestHookDetail(
+      kind,
+      meta,
+      Object.assign(
+        {
+          outcome: errorKind,
+          errorKind: errorKind,
+          message:
+            abortMeta && abortMeta.message
+              ? abortMeta.message
+              : errorKind === "timeout"
+                ? "Request timed out."
+                : "Request was aborted.",
+          timeoutMs:
+            abortMeta && typeof abortMeta.timeoutMs === "number"
+              ? abortMeta.timeoutMs
+              : null,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function timeoutErrorDetail(kind, meta, signal, extra) {
+    const abortMeta = requestAbortMeta(signal);
+    const message =
+      abortMeta && abortMeta.message
+        ? abortMeta.message
+        : "Request timed out.";
+
+    return requestErrorDetail(
+      kind,
+      meta,
+      "timeout",
+      message,
+      Object.assign(
+        {
+          timeoutMs:
+            abortMeta && typeof abortMeta.timeoutMs === "number"
+              ? abortMeta.timeoutMs
+              : null,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function responseErrorKind(response, payload) {
+    const payloadError =
+      payload && payload.error && typeof payload.error === "object"
+        ? payload.error
+        : {};
+
+    if (payloadError && typeof payloadError.kind === "string") {
+      return normalizedRequestErrorKind(payloadError.kind, "protocol-error");
+    }
+
+    if (payload && payload.error && typeof payload.error === "object") {
+      return "protocol-error";
+    }
+
+    return "http-error";
+  }
+
+  function responseErrorDetail(kind, response, payload, meta, extra) {
+    const payloadError =
+      payload && payload.error && typeof payload.error === "object"
+        ? payload.error
+        : {};
+    const errorKind = responseErrorKind(response, payload);
+
+    return requestErrorDetail(
+      kind,
+      meta,
+      errorKind,
+      payloadError.message ||
+        "Request failed with status " + response.status + ".",
+      Object.assign(
+        {
+          status: response.status,
+          error: payloadError,
+        },
+        extra || {},
+      ),
+    );
+  }
+
+  function exceptionErrorKind(error) {
+    if (!error || typeof error !== "object") {
+      return "unexpected-error";
+    }
+
+    if (typeof error.voltErrorKind === "string") {
+      return normalizedRequestErrorKind(
+        error.voltErrorKind,
+        "unexpected-error",
+      );
+    }
+
+    if (typeof error.errorKind === "string") {
+      return normalizedRequestErrorKind(error.errorKind, "unexpected-error");
+    }
+
+    if (error.name === "TypeError") {
+      return "network-error";
+    }
+
+    return "unexpected-error";
+  }
+
+  function exceptionErrorDetail(kind, error, meta, extra) {
+    const errorKind = exceptionErrorKind(error);
+
+    return requestErrorDetail(
+      kind,
+      meta,
+      errorKind,
+      error && error.message
+        ? error.message
+        : errorKind === "network-error"
+          ? "Network request failed."
+          : "Unexpected runtime error.",
+      extra,
+    );
+  }
+
+  function stateTargetValue(detail) {
+    if (!detail || typeof detail !== "object") {
+      return null;
+    }
+
+    if (detail.target) {
+      return detail.target;
+    }
+
+    if (detail.trigger && detail.trigger.target) {
+      return detail.trigger.target;
+    }
+
+    return null;
+  }
+
+  function fieldStateTarget(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    return (
+      directiveValue(element, ["volt-model", "volt:model"]) ||
+      element.getAttribute("data-volt-target") ||
+      element.getAttribute("name") ||
+      element.id ||
+      null
+    );
+  }
+
+  function syncRequestStatus(root) {
+    if (!root) {
+      return;
+    }
+
+    if (root.getAttribute("data-volt-loading") === "true") {
+      root.setAttribute("data-volt-request-status", "loading");
+      root.setAttribute("aria-busy", "true");
+      return;
+    }
+
+    if (root.getAttribute("data-volt-error") === "true") {
+      root.setAttribute("data-volt-request-status", "error");
+      root.setAttribute("aria-busy", "false");
+      return;
+    }
+
+    if (root.getAttribute("data-volt-success") === "true") {
+      root.setAttribute("data-volt-request-status", "success");
+      root.setAttribute("aria-busy", "false");
+      return;
+    }
+
+    if (root.getAttribute("data-volt-dirty") === "true") {
+      root.setAttribute("data-volt-request-status", "dirty");
+      root.setAttribute("aria-busy", "false");
+      return;
+    }
+
+    root.setAttribute("data-volt-request-status", "idle");
+    root.setAttribute("aria-busy", "false");
+  }
+
+  function setLoadingState(rootOrComponent, active, trigger, meta) {
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (root) {
+      const previous = root.getAttribute("data-volt-loading") === "true";
+      const context = active
+        ? {
+            action: detail.action || null,
+            target: stateTargetValue(detail),
+          }
+        : runtimeStateContext(root, "loading");
+      const minDuration = previous
+        ? resolveStateDirectiveMinDuration(root, "loading", context)
+        : null;
+      const activatedAt = runtime.loadingActivatedAt.get(root) || null;
+      const elapsed = activatedAt === null ? null : Date.now() - activatedAt;
+      const remainingMinDuration =
+        minDuration !== null && elapsed !== null
+          ? Math.max(0, minDuration - elapsed)
+          : null;
+
+      if (
+        !active &&
+        previous &&
+        remainingMinDuration !== null &&
+        remainingMinDuration > 0 &&
+        detail.reason !== "min-duration"
+      ) {
+        scheduleLoadingMinDurationClear(
+          root,
+          trigger,
+          detail,
+          remainingMinDuration,
+        );
+        return;
+      }
+
+      clearLoadingMinDuration(root);
+
+      if (active) {
+        runtime.loadingActivatedAt.set(root, Date.now());
+      } else {
+        runtime.loadingActivatedAt.delete(root);
+      }
+
+      root.setAttribute("data-volt-loading", active ? "true" : "false");
+
+      if (active && detail.action) {
+        root.setAttribute("data-volt-loading-action", detail.action);
+      } else {
+        root.removeAttribute("data-volt-loading-action");
+      }
+
+      if (active && detail.trigger && detail.trigger.target) {
+        root.setAttribute("data-volt-loading-target", detail.trigger.target);
+      } else {
+        root.removeAttribute("data-volt-loading-target");
+      }
+
+      if (active && detail.requestId) {
+        root.setAttribute("data-volt-request-id", String(detail.requestId));
+      } else {
+        root.removeAttribute("data-volt-request-id");
+      }
+
+      syncRequestStatus(root);
+      syncRuntimeStateDirectives(root);
+    }
+
+    if (
+      trigger &&
+      "disabled" in trigger &&
+      (!meta || meta.action !== MODEL_SYNC_INTERNAL_ACTION)
+    ) {
+      trigger.disabled = active;
+    }
+  }
+
+  function setErrorState(rootOrComponent, active, meta) {
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (!root) {
+      return;
+    }
+
+    const previous = root.getAttribute("data-volt-error") === "true";
+    clearErrorTimeout(root);
+    root.setAttribute("data-volt-error", active ? "true" : "false");
+
+    if (active) {
+      if (detail.action) {
+        root.setAttribute("data-volt-error-action", detail.action);
+      } else {
+        root.removeAttribute("data-volt-error-action");
+      }
+
+      if (detail.trigger && detail.trigger.target) {
+        root.setAttribute("data-volt-error-target", detail.trigger.target);
+      } else {
+        root.removeAttribute("data-volt-error-target");
+      }
+
+      if (detail.message) {
+        root.setAttribute("data-volt-error-message", String(detail.message));
+      } else {
+        root.removeAttribute("data-volt-error-message");
+      }
+
+      syncRequestStatus(root);
+      syncRuntimeStateDirectives(root);
+      scheduleErrorTimeout(root, detail);
+      return;
+    }
+
+    root.removeAttribute("data-volt-error-message");
+    root.removeAttribute("data-volt-error-action");
+    root.removeAttribute("data-volt-error-target");
+
+    syncRequestStatus(root);
+    syncRuntimeStateDirectives(root);
+
+    if (previous) {
+      emitRuntimeHook(
+        "volt:error-cleared",
+        requestHookDetail("error", detail, {
+          target: stateTargetValue(detail),
+          active: false,
+          reason: detail.reason || null,
+        }),
+        root,
+      );
+    }
+  }
+
+  function setDirtyState(rootOrComponent, active, meta) {
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (!root) {
+      return;
+    }
+
+    if (!active) {
+      clearDirtyDebounce(root);
+    }
+
+    const previous = root.getAttribute("data-volt-dirty") === "true";
+    root.setAttribute("data-volt-dirty", active ? "true" : "false");
+
+    if (active) {
+      const target = stateTargetValue(detail);
+
+      if (target) {
+        root.setAttribute("data-volt-dirty-target", target);
+      } else {
+        root.removeAttribute("data-volt-dirty-target");
+      }
+    } else {
+      root.removeAttribute("data-volt-dirty-target");
+    }
+
+    syncRequestStatus(root);
+    syncRuntimeStateDirectives(root);
+
+    if (previous !== active) {
+      emitRuntimeHook(
+        active ? "volt:dirty" : "volt:clean",
+        requestHookDetail("dirty", detail, {
+          target: stateTargetValue(detail),
+          active: active,
+          reason: detail.reason || null,
+          debounce: detail.debounce || null,
+        }),
+        root,
+      );
+    }
+  }
+
+  function setSuccessState(rootOrComponent, active, meta) {
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const root = resolveRuntimeRoot(rootOrComponent, detail.component);
+
+    if (!root) {
+      return;
+    }
+
+    const previous = root.getAttribute("data-volt-success") === "true";
+    const context = active
+      ? {
+          action: detail.action || null,
+          target: stateTargetValue(detail),
+        }
+      : runtimeStateContext(root, "success");
+    const minDuration = previous
+      ? resolveStateDirectiveMinDuration(root, "success", context)
+      : null;
+    const activatedAt = runtime.successActivatedAt.get(root) || null;
+    const elapsed = activatedAt === null ? null : Date.now() - activatedAt;
+    const remainingMinDuration =
+      minDuration !== null && elapsed !== null
+        ? Math.max(0, minDuration - elapsed)
+        : null;
+
+    if (
+      !active &&
+      previous &&
+      remainingMinDuration !== null &&
+      remainingMinDuration > 0 &&
+      detail.reason !== "min-duration"
+    ) {
+      scheduleSuccessMinDurationClear(root, detail, remainingMinDuration);
+      return;
+    }
+
+    clearSuccessTimeout(root);
+    clearSuccessMinDuration(root);
+
+    if (active) {
+      runtime.successActivatedAt.set(root, Date.now());
+    } else {
+      runtime.successActivatedAt.delete(root);
+    }
+
+    root.setAttribute("data-volt-success", active ? "true" : "false");
+
+    if (active) {
+      if (detail.action) {
+        root.setAttribute("data-volt-success-action", detail.action);
+      } else {
+        root.removeAttribute("data-volt-success-action");
+      }
+
+      const target = stateTargetValue(detail);
+
+      if (target) {
+        root.setAttribute("data-volt-success-target", target);
+      } else {
+        root.removeAttribute("data-volt-success-target");
+      }
+    } else {
+      root.removeAttribute("data-volt-success-action");
+      root.removeAttribute("data-volt-success-target");
+    }
+
+    syncRequestStatus(root);
+    syncRuntimeStateDirectives(root);
+
+    const timeout = active
+      ? resolveStateDirectiveTimeout(root, "success")
+      : null;
+
+    if (active) {
+      scheduleSuccessTimeout(root, detail);
+    }
+
+    if (previous !== active) {
+      emitRuntimeHook(
+        active ? "volt:success" : "volt:success-cleared",
+        requestHookDetail("success", detail, {
+          target: stateTargetValue(detail),
+          active: active,
+          timeout: timeout,
+          minDuration: minDuration,
+          reason: detail.reason || null,
+        }),
+        root,
+      );
+    }
+  }
+
+  function sameOrigin(url) {
+    return url.origin === window.location.origin;
+  }
+
+  function shouldHandleNavigation(event, link) {
+    if (!link) {
+      return false;
+    }
+
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return false;
+    }
+
+    if (link.hasAttribute("download")) {
+      return false;
+    }
+
+    const target = link.getAttribute("target");
+
+    if (target && target !== "" && target.toLowerCase() !== "_self") {
+      return false;
+    }
+
+    const href = link.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return false;
+    }
+
+    const url = new URL(href, window.location.href);
+
+    if (!sameOrigin(url)) {
+      return false;
+    }
+
+    if (documentContractForDocument(document).mode === "reload") {
+      return false;
+    }
+
+    return true;
+  }
+
+  function setNavigationState(active, trigger) {
+    document.documentElement.setAttribute(
+      "data-volt-navigating",
+      active ? "true" : "false",
+    );
+    document.documentElement.setAttribute(
+      "aria-busy",
+      active ? "true" : "false",
+    );
+
+    if (document.body) {
+      document.body.setAttribute(
+        "data-volt-navigating",
+        active ? "true" : "false",
+      );
+      document.body.setAttribute("aria-busy", active ? "true" : "false");
+    }
+
+    if (trigger && "disabled" in trigger) {
+      trigger.disabled = active;
+    }
+  }
+
+  function replaceBodyAttributes(nextBody) {
+    const currentBody = document.body;
+    const attributeNames = currentBody.getAttributeNames();
+
+    attributeNames.forEach(function (name) {
+      currentBody.removeAttribute(name);
+    });
+
+    nextBody.getAttributeNames().forEach(function (name) {
+      currentBody.setAttribute(name, nextBody.getAttribute(name) || "");
+    });
+  }
+
+  function preservedFragmentAttribute(element) {
+    return directiveAttribute(element, [
+      "data-volt-preserve",
+      "volt-preserve",
+      "volt:preserve",
+    ]);
+  }
+
+  function persistedFragmentAttribute(element) {
+    return directiveAttribute(element, [
+      "data-volt-persist",
+      "volt-persist",
+      "volt:persist",
+    ]);
+  }
+
+  function preservedFragmentKey(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = preservedFragmentAttribute(element);
+
+    if (!attribute) {
+      return null;
+    }
+
+    const explicitKey = (attribute.value || "").trim();
+
+    if (explicitKey !== "") {
+      return explicitKey;
+    }
+
+    const id = (element.getAttribute("id") || "").trim();
+
+    if (id !== "") {
+      return id;
+    }
+
+    const target = (element.getAttribute("data-volt-target") || "").trim();
+
+    return target !== "" ? target : null;
+  }
+
+  function persistedFragmentKey(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    const attribute = persistedFragmentAttribute(element);
+
+    if (!attribute) {
+      return null;
+    }
+
+    const explicitKey = (attribute.value || "").trim();
+
+    if (explicitKey !== "") {
+      return explicitKey;
+    }
+
+    const id = (element.getAttribute("id") || "").trim();
+
+    if (id !== "") {
+      return id;
+    }
+
+    const target = (element.getAttribute("data-volt-target") || "").trim();
+
+    return target !== "" ? target : null;
+  }
+
+  function retainedFragmentCandidates(root, selector) {
+    if (!root || typeof root.querySelectorAll !== "function") {
+      return [];
+    }
+
+    const candidates = [];
+
+    if (typeof root.matches === "function" && root.matches(selector)) {
+      candidates.push(root);
+    }
+
+    root.querySelectorAll(selector).forEach(function (element) {
+      candidates.push(element);
+    });
+
+    return candidates.filter(function (element) {
+      const parent = element.parentElement;
+
+      return !parent || !parent.closest(NAVIGATION_RETAINED_SELECTOR);
+    });
+  }
+
+  function preservedFragmentCandidates(root) {
+    return retainedFragmentCandidates(root, NAVIGATION_FRAGMENT_SELECTOR).filter(
+      function (element) {
+        return !persistedFragmentAttribute(element);
+      },
+    );
+  }
+
+  function persistedFragmentCandidates(root) {
+    return retainedFragmentCandidates(root, NAVIGATION_PERSIST_SELECTOR);
+  }
+
+  function fragmentNavigationDetail(meta, extra) {
+    return Object.assign(
+      {
+        source: meta && meta.source ? meta.source : "navigate",
+        url: meta && meta.url ? meta.url : window.location.href,
+        finalUrl: meta && meta.finalUrl ? meta.finalUrl : null,
+      },
+      extra || {},
+    );
+  }
+
+  function discardPreservedFragments(fragments, meta, reason, extra) {
+    if (!(fragments instanceof Map) || fragments.size === 0) {
+      return {
+        preservedCount: 0,
+        discardedCount: 0,
+      };
+    }
+
+    let discardedCount = 0;
+
+    fragments.forEach(function (fragment) {
+      discardedCount += 1;
+      emitRuntimeHook(
+        "volt:fragment-discard",
+        fragmentNavigationDetail(
+          meta,
+          Object.assign(
+            {
+              key: fragment.key,
+              tagName: fragment.tagName,
+              reason: reason,
+            },
+            extra || {},
+          ),
+        ),
+        document,
+      );
+    });
+
+    return {
+      preservedCount: 0,
+      discardedCount: discardedCount,
+    };
+  }
+
+  function shouldRestorePreservedFragments(control, meta) {
+    const fragmentMode = control && control.mode ? control.mode : "preserve";
+
+    if (fragmentMode === "reset") {
+      return false;
+    }
+
+    const cacheControl =
+      meta && meta.cacheControl && typeof meta.cacheControl === "object"
+        ? meta.cacheControl
+        : null;
+    const cacheMode =
+      cacheControl && cacheControl.mode ? cacheControl.mode : "default";
+
+    return cacheMode !== "no-store";
+  }
+
+  function capturePreservedFragments(root, meta) {
+    const fragments = new Map();
+
+    preservedFragmentCandidates(root).forEach(function (element) {
+      const key = preservedFragmentKey(element);
+
+      if (!key) {
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            reason: "missing-key",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
+        return;
+      }
+
+      if (fragments.has(key)) {
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: key,
+            reason: "duplicate-source",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
+        return;
+      }
+
+      fragments.set(key, {
+        key: key,
+        tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        element: element,
+      });
+    });
+
+    return fragments;
+  }
+
+  function preservedFragmentTargets(root, meta) {
+    const targets = new Map();
+
+    preservedFragmentCandidates(root).forEach(function (element) {
+      const key = preservedFragmentKey(element);
+
+      if (!key) {
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            reason: "missing-target-key",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
+        return;
+      }
+
+      if (targets.has(key)) {
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: key,
+            reason: "duplicate-target",
+            tagName: element.tagName ? element.tagName.toLowerCase() : null,
+          }),
+          document,
+        );
+        return;
+      }
+
+      targets.set(key, element);
+    });
+
+    return targets;
+  }
+
+  function restorePreservedFragments(root, fragments, meta) {
+    if (!root || !(fragments instanceof Map) || fragments.size === 0) {
+      return {
+        preservedCount: 0,
+        discardedCount: 0,
+      };
+    }
+
+    const targets = preservedFragmentTargets(root, meta);
+    let preservedCount = 0;
+    let discardedCount = 0;
+
+    fragments.forEach(function (fragment) {
+      const target = targets.get(fragment.key);
+
+      if (!target) {
+        discardedCount += 1;
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: fragment.key,
+            tagName: fragment.tagName,
+            reason: "missing-target",
+          }),
+          document,
+        );
+        return;
+      }
+
+      const targetTagName = target.tagName
+        ? target.tagName.toLowerCase()
+        : null;
+
+      if (targetTagName !== fragment.tagName) {
+        discardedCount += 1;
+        emitRuntimeHook(
+          "volt:fragment-discard",
+          fragmentNavigationDetail(meta, {
+            key: fragment.key,
+            tagName: fragment.tagName,
+            targetTagName: targetTagName,
+            reason: "tag-mismatch",
+          }),
+          document,
+        );
+        return;
+      }
+
+      target.replaceWith(fragment.element);
+      preservedCount += 1;
+
+      emitRuntimeHook(
+        "volt:fragment-preserve",
+        fragmentNavigationDetail(meta, {
+          key: fragment.key,
+          tagName: fragment.tagName,
+        }),
+        document,
+      );
+    });
+
+    return {
+      preservedCount: preservedCount,
+      discardedCount: discardedCount,
+    };
+  }
+
+  function capturePersistentFragments(root) {
+    const captured = new Map();
+    let discardedCount = 0;
+
+    persistedFragmentCandidates(root).forEach(function (element) {
+      const key = persistedFragmentKey(element);
+
+      if (!key) {
+        discardedCount += 1;
+        return;
+      }
+
+      if (captured.has(key)) {
+        discardedCount += 1;
+        return;
+      }
+
+      captured.set(key, {
+        key: key,
+        tagName: element.tagName ? element.tagName.toLowerCase() : null,
+        element: element,
+      });
+    });
+
+    captured.forEach(function (fragment, key) {
+      runtime.persistentFragments.set(key, fragment);
+    });
+
+    return {
+      capturedCount: captured.size,
+      discardedCount: discardedCount,
+      registrySize: runtime.persistentFragments.size,
+    };
+  }
+
+  function persistentFragmentTargets(root) {
+    const targets = new Map();
+
+    persistedFragmentCandidates(root).forEach(function (element) {
+      const key = persistedFragmentKey(element);
+
+      if (!key || targets.has(key)) {
+        return;
+      }
+
+      targets.set(key, element);
+    });
+
+    return targets;
+  }
+
+  function discardPersistentFragments() {
+    const discardedCount = runtime.persistentFragments.size;
+
+    runtime.persistentFragments.clear();
+
+    return {
+      persistedCount: 0,
+      discardedCount: discardedCount,
+      registrySize: 0,
+    };
+  }
+
+  function restorePersistentFragments(root) {
+    if (
+      !root ||
+      !(runtime.persistentFragments instanceof Map) ||
+      runtime.persistentFragments.size === 0
+    ) {
+      return {
+        persistedCount: 0,
+        discardedCount: 0,
+        registrySize:
+          runtime.persistentFragments instanceof Map
+            ? runtime.persistentFragments.size
+            : 0,
+      };
+    }
+
+    const targets = persistentFragmentTargets(root);
+    let persistedCount = 0;
+    let discardedCount = 0;
+
+    targets.forEach(function (target, key) {
+      const fragment = runtime.persistentFragments.get(key);
+
+      if (!fragment) {
+        return;
+      }
+
+      const targetTagName = target.tagName
+        ? target.tagName.toLowerCase()
+        : null;
+
+      if (targetTagName !== fragment.tagName) {
+        runtime.persistentFragments.delete(key);
+        discardedCount += 1;
+        return;
+      }
+
+      if (fragment.element !== target) {
+        target.replaceWith(fragment.element);
+      }
+
+      runtime.persistentFragments.set(key, {
+        key: key,
+        tagName: fragment.tagName,
+        element: fragment.element,
+      });
+      persistedCount += 1;
+    });
+
+    return {
+      persistedCount: persistedCount,
+      discardedCount: discardedCount,
+      registrySize: runtime.persistentFragments.size,
+    };
+  }
+
+  function currentLayoutIdentity() {
+    if (document.body) {
+      const bodyLayout = document.body.getAttribute("data-volt-layout");
+
+      if (bodyLayout) {
+        return bodyLayout;
+      }
+    }
+
+    if (document.documentElement) {
+      const documentLayout =
+        document.documentElement.getAttribute("data-volt-layout");
+
+      if (documentLayout) {
+        return documentLayout;
+      }
+    }
+
+    return null;
+  }
+
+  function documentLayoutIdentity(doc) {
+    if (!doc || typeof doc !== "object") {
+      return null;
+    }
+
+    if (doc.body) {
+      const bodyLayout = doc.body.getAttribute("data-volt-layout");
+
+      if (bodyLayout) {
+        return bodyLayout;
+      }
+    }
+
+    if (doc.documentElement) {
+      const documentLayout =
+        doc.documentElement.getAttribute("data-volt-layout");
+
+      if (documentLayout) {
+        return documentLayout;
+      }
+    }
+
+    return null;
+  }
+
+  function shouldFallbackForLayoutChange(doc) {
+    const currentLayout = currentLayoutIdentity();
+    const nextLayout = documentLayoutIdentity(doc);
+
+    if (!currentLayout && !nextLayout) {
+      return false;
+    }
+
+    return currentLayout !== nextLayout;
+  }
+
+  function setElementAttributes(target, source) {
+    const nextAttributes = {};
+
+    source.getAttributeNames().forEach(function (name) {
+      nextAttributes[name] = source.getAttribute(name) || "";
+    });
+
+    target.getAttributeNames().forEach(function (name) {
+      if (!Object.prototype.hasOwnProperty.call(nextAttributes, name)) {
+        target.removeAttribute(name);
+      }
+    });
+
+    Object.keys(nextAttributes).forEach(function (name) {
+      target.setAttribute(name, nextAttributes[name]);
+    });
+  }
+
+  function managedHeadNodeKey(node) {
+    if (!node || node.nodeType !== 1) {
+      return null;
+    }
+
+    const explicitKey = node.getAttribute("data-volt-head-key");
+
+    if (explicitKey) {
+      return "explicit:" + explicitKey;
+    }
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "meta") {
+      if (node.hasAttribute("name")) {
+        return "meta:name:" + (node.getAttribute("name") || "");
+      }
+
+      if (node.hasAttribute("property")) {
+        return "meta:property:" + (node.getAttribute("property") || "");
+      }
+
+      if (node.hasAttribute("http-equiv")) {
+        return "meta:http-equiv:" + (node.getAttribute("http-equiv") || "");
+      }
+
+      return null;
+    }
+
+    if (tag === "link") {
+      const rel = (node.getAttribute("rel") || "").toLowerCase();
+      const href = node.getAttribute("href") || "";
+
+      if (!rel || !href) {
+        return null;
+      }
+
+      return "link:" + rel + ":" + href + ":" + (node.getAttribute("as") || "");
+    }
+
+    if (tag === "script") {
+      const src = node.getAttribute("src") || "";
+
+      if (!src) {
+        return null;
+      }
+
+      return "script:" + (node.getAttribute("type") || "") + ":" + src;
+    }
+
+    if (tag === "style") {
+      const styleId = node.getAttribute("id") || "";
+
+      if (styleId) {
+        return "style:id:" + styleId;
+      }
+    }
+
+    return null;
+  }
+
+  function managedHeadEntries(head) {
+    if (!head || !head.children) {
+      return [];
+    }
+
+    const entries = [];
+
+    Array.from(head.children).forEach(function (node) {
+      const key = managedHeadNodeKey(node);
+
+      if (key) {
+        entries.push({
+          key: key,
+          node: node,
+        });
+      }
+    });
+
+    return entries;
+  }
+
+  function syncManagedHeadNode(currentNode, nextNode) {
+    if (!currentNode || !nextNode) {
+      return;
+    }
+
+    setElementAttributes(currentNode, nextNode);
+
+    const tag = currentNode.tagName.toLowerCase();
+
+    if (tag === "script" || tag === "style") {
+      const nextContent = nextNode.textContent || "";
+
+      if (currentNode.textContent !== nextContent) {
+        currentNode.textContent = nextContent;
+      }
+    }
+  }
+
+  function waitForManagedHeadNode(node) {
+    if (!node || node.tagName.toLowerCase() !== "link") {
+      return Promise.resolve();
+    }
+
+    const rel = (node.getAttribute("rel") || "").toLowerCase();
+
+    if (rel !== "stylesheet") {
+      return Promise.resolve();
+    }
+
+    return new Promise(function (resolve) {
+      let settled = false;
+
+      function finish() {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        resolve();
+      }
+
+      if (node.sheet) {
+        finish();
+        return;
+      }
+
+      node.addEventListener("load", finish, { once: true });
+      node.addEventListener("error", finish, { once: true });
+      window.setTimeout(finish, 1500);
+    });
+  }
+
+  async function reconcileDocumentHead(nextHead) {
+    if (!nextHead || !document.head) {
+      return;
+    }
+
+    const nextEntries = managedHeadEntries(nextHead);
+    const currentEntries = managedHeadEntries(document.head);
+    const nextMap = new Map();
+    const currentMap = new Map();
+    const pendingLoads = [];
+    const hasManagedHead = nextEntries.length > 0;
+
+    nextEntries.forEach(function (entry) {
+      nextMap.set(entry.key, entry.node);
+    });
+
+    currentEntries.forEach(function (entry) {
+      currentMap.set(entry.key, entry.node);
+    });
+
+    if (hasManagedHead) {
+      currentEntries.forEach(function (entry) {
+        if (!nextMap.has(entry.key)) {
+          entry.node.remove();
+        }
+      });
+    }
+
+    nextEntries.forEach(function (entry) {
+      const existing = currentMap.get(entry.key);
+
+      if (existing) {
+        syncManagedHeadNode(existing, entry.node);
+        return;
+      }
+
+      const clone = entry.node.cloneNode(true);
+      document.head.appendChild(clone);
+      pendingLoads.push(waitForManagedHeadNode(clone));
+    });
+
+    if (pendingLoads.length > 0) {
+      await Promise.all(pendingLoads);
+    }
+  }
+
+  async function applyDocumentPayload(doc, meta) {
+    const payloadMeta = meta && typeof meta === "object" ? meta : {};
+    const fragmentControl = fragmentControlForDocument(doc);
+    const pageTransition =
+      payloadMeta.pageTransition || parsePageTransition("", "default");
+    const fragmentSummary = {
+      preservedCount: 0,
+      discardedCount: 0,
+      persistedCount: 0,
+      discardedPersistentCount: 0,
+      capturedPersistentCount: 0,
+      persistentRegistrySize: runtime.persistentFragments.size,
+    };
+
+    if (doc.title) {
+      document.title = doc.title;
+    }
+
+    if (doc.head) {
+      await reconcileDocumentHead(doc.head);
+    }
+
+    if (doc.body) {
+      const fragmentMeta = Object.assign({}, payloadMeta, {
+        fragmentControl: fragmentControl,
+      });
+      const capturedPersistent = shouldRestorePreservedFragments(
+        fragmentControl,
+        payloadMeta,
+      )
+        ? capturePersistentFragments(document.body)
+        : discardPersistentFragments();
+      const preservedFragments = capturePreservedFragments(
+        document.body,
+        fragmentMeta,
+      );
+      replaceBodyAttributes(doc.body);
+      document.body.innerHTML = doc.body.innerHTML;
+      const restoredPersistent = shouldRestorePreservedFragments(
+        fragmentControl,
+        payloadMeta,
+      )
+        ? restorePersistentFragments(document.body)
+        : discardPersistentFragments();
+      const restoredFragments = shouldRestorePreservedFragments(
+        fragmentControl,
+        payloadMeta,
+      )
+        ? restorePreservedFragments(
+            document.body,
+            preservedFragments,
+            fragmentMeta,
+          )
+        : discardPreservedFragments(
+            preservedFragments,
+            fragmentMeta,
+            fragmentControl.mode === "reset"
+              ? "document-policy"
+              : "navigation-policy",
+            {
+              policyMode: fragmentControl.mode,
+              policySource: fragmentControl.source,
+              cacheMode:
+                payloadMeta.cacheControl && payloadMeta.cacheControl.mode
+                  ? payloadMeta.cacheControl.mode
+                  : "default",
+            },
+          );
+
+      fragmentSummary.preservedCount = restoredFragments.preservedCount;
+      fragmentSummary.discardedCount = restoredFragments.discardedCount;
+      fragmentSummary.persistedCount = restoredPersistent.persistedCount;
+      fragmentSummary.discardedPersistentCount =
+        capturedPersistent.discardedCount + restoredPersistent.discardedCount;
+      fragmentSummary.capturedPersistentCount =
+        capturedPersistent.capturedCount || 0;
+      fragmentSummary.persistentRegistrySize =
+        restoredPersistent.registrySize || 0;
+      syncAllRuntimeStateDirectives();
+      refreshActiveComponentsRegistry(
+        payloadMeta.type ? payloadMeta.type : "navigation",
+      );
+      registerViewportPrefetchTargets(document);
+      scheduleHeuristicPrefetch(document);
+      await runPageTransitionPhase(document.body, "enter", pageTransition);
+    }
+
+    return fragmentSummary;
+  }
+
+  function resolveEffectTarget(root, effect) {
+    if (!effect || typeof effect !== "object") {
+      return null;
+    }
+
+    if (effect.target === "root" || effect.target === "self") {
+      return root;
+    }
+
+    if (typeof effect.selector === "string" && effect.selector !== "") {
+      return document.querySelector(effect.selector);
+    }
+
+    if (typeof effect.target !== "string" || effect.target === "") {
+      return null;
+    }
+
+    const escapedTarget = cssEscape(effect.target);
+    const scopedTarget = root
+      ? root.querySelector("#" + escapedTarget) ||
+        root.querySelector('[data-volt-target="' + effect.target + '"]')
+      : null;
+
+    if (scopedTarget) {
+      return scopedTarget;
+    }
+
+    return (
+      document.getElementById(effect.target) ||
+      document.querySelector('[data-volt-target="' + effect.target + '"]')
+    );
+  }
+
+  function dispatchRuntimeEvent(effect, target) {
+    const name = effect.name || effect.event;
+
+    if (!name) {
+      return;
+    }
+
+    const eventTarget = target || document;
+    eventTarget.dispatchEvent(
+      new CustomEvent(name, {
+        detail: effect.payload || effect.detail || {},
+        bubbles: true,
+      }),
+    );
+  }
+
+  function applyHtmlReplace(root, target, effect) {
+    if (!target) {
+      return null;
+    }
+
+    const html = typeof effect.html === "string" ? effect.html : effect.value;
+
+    if (typeof html !== "string") {
+      return null;
+    }
+
+    const descriptor = buildStableElementDescriptor(target);
+
+    if (
+      effect.outer === true ||
+      effect.mode === "outer" ||
+      target === document.body ||
+      target.hasAttribute("data-volt-root")
+    ) {
+      target.outerHTML = html;
+
+      if (target === document.body) {
+        return document.body;
+      }
+
+      if (target.hasAttribute("data-volt-root")) {
+        const componentName = target.getAttribute("data-volt-component");
+
+        return componentName ? findRootByComponent(componentName) : null;
+      }
+
+      return descriptor
+        ? findByDescriptor(root || document.body, descriptor)
+        : null;
+    }
+
+    target.innerHTML = html;
+    return target;
+  }
+
+  function applyClassToggle(target, effect) {
+    if (!target) {
+      return;
+    }
+
+    const className = effect.class || effect.className || effect.value;
+
+    if (typeof className !== "string" || className === "") {
+      return;
+    }
+
+    if (typeof effect.force === "boolean") {
+      target.classList.toggle(className, effect.force);
+      return;
+    }
+
+    target.classList.toggle(className);
+  }
+
+  function applyStyleSet(target, effect) {
+    if (!target) {
+      return;
+    }
+
+    if (effect.styles && typeof effect.styles === "object") {
+      Object.keys(effect.styles).forEach(function (property) {
+        if (effect.styles[property] === null) {
+          target.style.removeProperty(property);
+          return;
+        }
+
+        target.style.setProperty(property, String(effect.styles[property]));
+      });
+
+      return;
+    }
+
+    if (typeof effect.property === "string") {
+      if (effect.value === null) {
+        target.style.removeProperty(effect.property);
+        return;
+      }
+
+      if (typeof effect.value !== "undefined") {
+        target.style.setProperty(effect.property, String(effect.value));
+      }
+    }
+  }
+
+  function resolveContainerTarget(root, effect) {
+    if (!effect || typeof effect !== "object") {
+      return null;
+    }
+
+    if (typeof effect.parentTarget === "string" && effect.parentTarget !== "") {
+      return resolveEffectTarget(root, { target: effect.parentTarget });
+    }
+
+    return resolveEffectTarget(root, effect);
+  }
+
+  function applyDomInsert(root, effect) {
+    const container = resolveContainerTarget(root, effect);
+    const fragment = fragmentFromHtml(effect.html);
+
+    if (!container || typeof effect.html !== "string" || !fragment) {
+      return [];
+    }
+
+    const insertedNodes = Array.from(fragment.childNodes);
+    const insertedElements = insertedNodes.filter(function (node) {
+      return node.nodeType === 1;
+    });
+
+    if (
+      typeof effect.beforeSelector === "string" &&
+      effect.beforeSelector !== ""
+    ) {
+      const anchor = document.querySelector(effect.beforeSelector);
+
+      if (anchor) {
+        anchor.parentNode.insertBefore(fragment, anchor);
+        return insertedElements;
+      }
+    }
+
+    if (
+      (effect.position || "beforeend") === "afterbegin" &&
+      container.firstChild
+    ) {
+      container.insertBefore(fragment, container.firstChild);
+      return insertedElements;
+    }
+
+    container.appendChild(fragment);
+    return insertedElements;
+  }
+
+  function applyDomMove(root, target, effect) {
+    const container = resolveContainerTarget(root, effect);
+
+    if (!target || !container) {
+      return false;
+    }
+
+    if (
+      typeof effect.beforeSelector === "string" &&
+      effect.beforeSelector !== ""
+    ) {
+      const anchor = document.querySelector(effect.beforeSelector);
+
+      if (anchor && anchor.parentNode === container) {
+        container.insertBefore(target, anchor);
+        return true;
+      }
+    }
+
+    container.appendChild(target);
+    return true;
+  }
+
+  function syncAttributeProperty(target, name, value) {
+    if (!target || typeof name !== "string") {
+      return;
+    }
+
+    if (name === "value" && "value" in target) {
+      target.value = value;
+      return;
+    }
+
+    if (name === "checked" && "checked" in target) {
+      target.checked = value !== null;
+      return;
+    }
+
+    if (name === "selected" && "selected" in target) {
+      target.selected = value !== null;
+      return;
+    }
+
+    if (name === "disabled" && "disabled" in target) {
+      target.disabled = value !== null;
+    }
+  }
+
+  function applyScroll(target, effect) {
+    const behavior = effect.behavior === "smooth" ? "smooth" : "auto";
+
+    if (target && typeof target.scrollIntoView === "function") {
+      target.scrollIntoView({
+        behavior: behavior,
+        block: effect.block || "start",
+        inline: effect.inline || "nearest",
+      });
+      return;
+    }
+
+    window.scrollTo({
+      top: typeof effect.top === "number" ? effect.top : 0,
+      left: typeof effect.left === "number" ? effect.left : 0,
+      behavior: behavior,
+    });
+  }
+
+  async function applyEffect(root, effect) {
+    if (!effect || typeof effect.type !== "string") {
+      return {
+        handled: false,
+        preventsHtmlFallback: false,
+      };
+    }
+
+    const target = resolveEffectTarget(root, effect);
+    emitRuntimeHook(
+      "volt:before-effect",
+      effectHookDetail(root, effect, target),
+      target || root || document,
+    );
+
+    switch (effect.type) {
+      case "text.update":
+        if (target && typeof effect.value !== "undefined") {
+          target.textContent = String(effect.value);
+          await runElementTransition(root, target, "update", effect);
+          return createEffectResult(root, effect, target, true, true);
+        }
+        break;
+
+      case "html.replace": {
+        const replacedTarget = applyHtmlReplace(root, target, effect);
+
+        if (replacedTarget) {
+          await runElementTransition(
+            root,
+            replacedTarget,
+            effect.outer === true || effect.mode === "outer"
+              ? "enter"
+              : "update",
+            effect,
+          );
+        }
+
+        return createEffectResult(
+          root,
+          effect,
+          replacedTarget || target,
+          !!target,
+          !!target,
+        );
+      }
+
+      case "dom.append":
+        if (target && typeof effect.html === "string") {
+          const insertedElements = applyDomInsert(
+            root,
+            Object.assign({}, effect, {
+              beforeSelector: null,
+              position: effect.position || "beforeend",
+            }),
+          );
+
+          for (let index = 0; index < insertedElements.length; index += 1) {
+            await runElementTransition(
+              root,
+              insertedElements[index],
+              "enter",
+              effect,
+            );
+          }
+
+          return createEffectResult(root, effect, target, true, true, {
+            insertedCount: insertedElements.length,
+          });
+        }
+        break;
+
+      case "dom.insert":
+        {
+          const insertedElements = applyDomInsert(root, effect);
+
+          if (insertedElements.length > 0) {
+            for (let index = 0; index < insertedElements.length; index += 1) {
+              await runElementTransition(
+                root,
+                insertedElements[index],
+                "enter",
+                effect,
+              );
+            }
+
+            return createEffectResult(root, effect, target, true, true, {
+              insertedCount: insertedElements.length,
+            });
+          }
+        }
+        break;
+
+      case "dom.remove":
+        if (target) {
+          await runElementTransition(root, target, "leave", effect);
+          target.remove();
+          return createEffectResult(root, effect, target, true, true);
+        }
+        break;
+
+      case "dom.move":
+        if (applyDomMove(root, target, effect)) {
+          await runElementTransition(root, target, "move", effect);
+          return createEffectResult(root, effect, target, true, true);
+        }
+        break;
+
+      case "attribute.set":
+        if (target && typeof effect.name === "string") {
+          const attributeValue =
+            typeof effect.value === "undefined" ? "" : String(effect.value);
+          target.setAttribute(effect.name, attributeValue);
+          syncAttributeProperty(target, effect.name, attributeValue);
+          await runElementTransition(root, target, "update", effect);
+          return createEffectResult(root, effect, target, true, true);
+        }
+        break;
+
+      case "attribute.remove":
+        if (target && typeof effect.name === "string") {
+          target.removeAttribute(effect.name);
+          syncAttributeProperty(target, effect.name, null);
+          await runElementTransition(root, target, "update", effect);
+          return createEffectResult(root, effect, target, true, true);
+        }
+        break;
+
+      case "class.toggle":
+        applyClassToggle(target, effect);
+        if (target) {
+          await runElementTransition(root, target, "update", effect);
+        }
+        return createEffectResult(root, effect, target, !!target, !!target);
+
+      case "style.set":
+        applyStyleSet(target, effect);
+        if (target) {
+          await runElementTransition(root, target, "update", effect);
+        }
+        return createEffectResult(root, effect, target, !!target, !!target);
+
+      case "focus":
+        if (target && typeof target.focus === "function") {
+          target.focus();
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case "blur":
+        if (target && typeof target.blur === "function") {
+          target.blur();
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case "scroll":
+        applyScroll(target, effect);
+        return createEffectResult(root, effect, target, true, false);
+
+      case "dispatch.event":
+        dispatchRuntimeEvent(effect, target);
+        return createEffectResult(root, effect, target, true, false);
+
+      case "runtime.policy": {
+        const component =
+          root && root.getAttribute
+            ? root.getAttribute("data-volt-component")
+            : null;
+        const activeRoot = resolveRuntimeRoot(root, component) || root;
+
+        return createEffectResult(
+          activeRoot,
+          effect,
+          activeRoot,
+          registerRuntimePolicy(activeRoot, effect),
+          false,
+        );
+      }
+
+      case "state.set":
+        if (typeof effect.key === "string" && effect.key !== "") {
+          setRuntimeStateValue(effect.key, effect.value, {
+            scope: effect.scope,
+            action: "effect",
+          });
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case "state.merge":
+        if (typeof effect.key === "string" && effect.key !== "") {
+          mergeRuntimeStateValue(effect.key, effect.value, {
+            scope: effect.scope,
+          });
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case "state.delete":
+        if (typeof effect.key === "string" && effect.key !== "") {
+          deleteRuntimeStateValue(effect.key, {
+            scope: effect.scope,
+          });
+          return createEffectResult(root, effect, target, true, false);
+        }
+        break;
+
+      case "state.clear":
+        clearRuntimeState(effect.scope, effect.reason || "effect");
+        return createEffectResult(root, effect, target, true, false);
+
+      case "navigate":
+        if (typeof effect.url === "string" && effect.url !== "") {
+          await visit(effect.url, {
+            historyMode: effect.replace ? "replace" : "push",
+            preserveScroll: !!effect.preserveScroll,
+          });
+          return createEffectResult(root, effect, target, true, true);
+        }
+        break;
+
+      default:
+        return createEffectResult(root, effect, target, false, false);
+    }
+
+    return createEffectResult(root, effect, target, false, false);
+  }
+
+  async function applyEffects(root, effects) {
+    if (!Array.isArray(effects) || effects.length === 0) {
+      return {
+        handled: false,
+        preventsHtmlFallback: false,
+      };
+    }
+
+    let handled = false;
+    let preventsHtmlFallback = false;
+
+    for (let index = 0; index < effects.length; index += 1) {
+      const result = await applyEffect(root, effects[index]);
+      handled = result.handled || handled;
+      preventsHtmlFallback =
+        result.preventsHtmlFallback || preventsHtmlFallback;
+    }
+
+    return {
+      handled: handled,
+      preventsHtmlFallback: preventsHtmlFallback,
+    };
+  }
+
+  function navigationErrorPayload(status, statusText) {
+    const resolvedStatus = typeof status === "number" ? status : 500;
+    const resolvedStatusText =
+      typeof statusText === "string" && statusText.trim() !== ""
+        ? statusText.trim()
+        : resolvedStatus === 404
+          ? "Not Found"
+          : resolvedStatus === 405
+            ? "Method Not Allowed"
+            : resolvedStatus >= 500
+              ? "Server Error"
+              : "HTTP Error";
+
+    return {
+      code: resolvedStatus,
+      message: resolvedStatusText,
+    };
+  }
+
+  async function requestPage(url, signal) {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "VoltStack",
+        "X-Volt-Navigate": "true",
+      },
+      credentials: "same-origin",
+      signal: signal,
+    });
+
+    const html = await response.text();
+    const payload = {
+      html: html,
+      document: parseNavigationDocument(html),
+      finalUrl: response.url || url,
+    };
+
+    if (!response.ok) {
+      payload.error = navigationErrorPayload(response.status, response.statusText);
+      return payload;
+    }
+
+    return payload;
+  }
+
+  async function visit(url, options) {
+    const settings = options || {};
+    const normalizedUrl = normalizeNavigationUrl(url);
+    const cacheControl = navigationVisitCacheControl(settings);
+    const requestedNavigationMode =
+      settings.navigationMode && typeof settings.navigationMode === "object"
+        ? settings.navigationMode
+        : parseNavigationMode("", "default");
+    const requestId = runtime.navigationRequestId + 1;
+    runtime.navigationRequestId = requestId;
+    const previousController = runtime.navigationController;
+    const controller =
+      typeof AbortController === "function" ? new AbortController() : null;
+    const requestMeta = {
+      requestId: requestId,
+      trigger: triggerDescriptor(settings.trigger || null),
+    };
+    const requestStartedAt = runtimeNow();
+    let finalUrl = normalizedUrl;
+    let responsePayloadBytes = 0;
+    let htmlBytes = 0;
+    let patchDurationMs = null;
+    let networkDurationMs = null;
+    let cacheHit = false;
+    let resolvedNavigationMode = requestedNavigationMode.mode;
+    let resolvedDocumentContract = null;
+    let resolvedPageTransition = null;
+    let preservedFragments = 0;
+    let discardedFragments = 0;
+    let persistedFragments = 0;
+    let persistentFragmentRegistrySize = 0;
+    const timeoutMs = resolveRequestTimeoutMs("navigation", settings, [
+      settings.trigger || null,
+      document.body,
+      document.documentElement,
+    ]);
+    const retryPolicy = resolveRequestRetryPolicy("navigation", settings, [
+      settings.trigger || null,
+      document.body,
+      document.documentElement,
+    ]);
+    let retryCount = 0;
+    let errorKind = null;
+    let errorMessage = null;
+    let responseStatus = null;
+    runtime.navigationController = controller;
+
+    if (previousController) {
+      abortControllerWithMeta(previousController, {
+        kind: "aborted",
+        message: "Navigation request was superseded by a newer visit.",
+      });
+    }
+
+    setNavigationState(true, settings.trigger || null);
+    emitRuntimeHook(
+      "volt:request-start",
+      requestHookDetail("navigation", requestMeta, {
+        url: normalizedUrl,
+        historyMode: settings.historyMode || "push",
+        cacheMode: cacheControl.mode,
+        navigationMode: requestedNavigationMode.mode,
+        timeoutMs: timeoutMs,
+        retryAttempts: retryPolicy.attempts,
+        retryDelayMs: retryPolicy.delayMs,
+      }),
+      document,
+    );
+
+    let outcome = "success";
+    let fallbackReason = null;
+
+    try {
+      if (
+        cacheControl.mode === "reload" ||
+        cacheControl.mode === "invalidate"
+      ) {
+        invalidateNavigationCache(normalizedUrl, cacheControl.mode, {
+          source: "navigate",
+        });
+      }
+
+      const cachedPayload = shouldReadNavigationCache(cacheControl)
+        ? getCachedNavigation(normalizedUrl)
+        : null;
+
+      if (cachedPayload) {
+        cacheHit = true;
+        emitNavigationCacheEvent("volt:cache-hit", {
+          url: normalizedUrl,
+          finalUrl: cachedPayload.finalUrl,
+          source: "navigate",
+          mode: cacheControl.mode,
+        });
+      } else {
+        emitNavigationCacheEvent("volt:cache-miss", {
+          url: normalizedUrl,
+          source: "navigate",
+          mode: cacheControl.mode,
+        });
+      }
+
+      const payload =
+        cachedPayload ||
+        (await (async function () {
+          let attempt = 0;
+
+          while (true) {
+            try {
+              return await withRequestTimeout(
+                requestNavigationPayload(
+                  normalizedUrl,
+                  controller ? controller.signal : undefined,
+                  "navigate",
+                  {
+                    cacheControl: cacheControl,
+                    navigationMode: requestedNavigationMode,
+                  },
+                ),
+                controller,
+                timeoutMs,
+                {
+                  message:
+                    "Navigation request timed out after " + timeoutMs + "ms.",
+                },
+              );
+            } catch (error) {
+              if (isAbortError(error)) {
+                throw error;
+              }
+
+              const retryDetail = exceptionErrorDetail(
+                "navigation",
+                error,
+                requestMeta,
+                {
+                  url: normalizedUrl,
+                  finalUrl: finalUrl,
+                  status:
+                    error && typeof error.status === "number"
+                      ? error.status
+                      : null,
+                  retryAttempt: attempt + 1,
+                },
+              );
+
+              if (
+                !shouldRetryNavigationRequest(
+                  retryDetail,
+                  retryPolicy,
+                  attempt,
+                )
+              ) {
+                throw error;
+              }
+
+              retryCount = attempt + 1;
+              emitRuntimeHook(
+                "volt:request-retry",
+                requestHookDetail("navigation", requestMeta, {
+                  url: normalizedUrl,
+                  finalUrl: finalUrl,
+                  retryAttempt: retryCount,
+                  retryAttempts: retryPolicy.attempts,
+                  retryDelayMs: retryPolicy.delayMs,
+                  errorKind: retryDetail.errorKind,
+                  message: retryDetail.message,
+                  status:
+                    typeof retryDetail.status === "number"
+                      ? retryDetail.status
+                      : null,
+                }),
+                document,
+              );
+
+              await waitForRetryDelay(
+                retryPolicy.delayMs,
+                controller ? controller.signal : null,
+              );
+              attempt += 1;
+            }
+          }
+        })());
+      const navigationTarget =
+        payload && typeof payload.target === "string" && payload.target !== ""
+          ? payload.target
+          : normalizedUrl;
+
+      finalUrl =
+        payload && payload.finalUrl
+          ? payload.finalUrl
+          : payload && payload.redirect
+            ? payload.redirect
+            : normalizedUrl;
+      htmlBytes = serializedPayloadBytes(payload && payload.html ? payload.html : "");
+      responsePayloadBytes = htmlBytes;
+      networkDurationMs = cacheHit
+        ? 0
+        : roundedMetricValue(runtimeNow() - requestStartedAt);
+
+      if (runtime.navigationRequestId !== requestId) {
+        outcome = "stale";
+        errorKind = "stale";
+        emitRuntimeHook(
+          "volt:request-stale",
+          requestHookDetail("navigation", requestMeta, {
+            url: normalizedUrl,
+            finalUrl: finalUrl,
+            outcome: outcome,
+          }),
+          document,
+        );
+        return;
+      }
+
+      if (payload && payload.error && typeof payload.error === "object") {
+        responseStatus =
+          typeof payload.error.code === "number" ? payload.error.code : null;
+
+        const errorDetail = requestErrorDetail(
+          "navigation",
+          requestMeta,
+          "http-error",
+          typeof payload.error.message === "string" &&
+            payload.error.message !== ""
+            ? payload.error.message
+            : "Navigation request failed.",
+          {
+            url: normalizedUrl,
+            finalUrl: finalUrl,
+            status: responseStatus,
+            error: payload.error,
+          },
+        );
+
+        outcome = errorDetail.errorKind;
+        errorKind = errorDetail.errorKind;
+        errorMessage = errorDetail.message;
+        fallbackReason = settings.fallback !== false ? "request-error" : null;
+        emitRuntimeHook("volt:request-error", errorDetail, document);
+
+        if (settings.fallback !== false) {
+          window.location.assign(finalUrl);
+          return;
+        }
+
+        throw createRuntimeRequestError("http-error", errorDetail.message, {
+          status: responseStatus,
+          url: normalizedUrl,
+          finalUrl: finalUrl,
+          error: payload.error,
+          payload: payload,
+        });
+      }
+
+      const resolvedPayloadNavigationMode = payload.document
+        ? navigationModeForDocument(payload.document)
+        : payload.navigationMode && typeof payload.navigationMode === "object"
+          ? payload.navigationMode
+          : requestedNavigationMode;
+      const payloadNavigationMode =
+        resolvedPayloadNavigationMode.mode !== "auto"
+          ? resolvedPayloadNavigationMode
+          : payload.navigationMode && typeof payload.navigationMode === "object"
+            ? payload.navigationMode
+            : requestedNavigationMode;
+      const payloadDocumentContract = payload.document
+        ? documentContractForDocument(payload.document)
+        : parseDocumentContract("", "default");
+      const payloadPageTransition =
+        payload.document || (payload && typeof payload.html === "string")
+          ? pageTransitionForPayload(payload)
+          : payload.pageTransition && typeof payload.pageTransition === "object"
+            ? payload.pageTransition
+            : parsePageTransition("", "default");
+      resolvedNavigationMode =
+        payloadNavigationMode && payloadNavigationMode.mode
+          ? payloadNavigationMode.mode
+          : requestedNavigationMode.mode;
+      resolvedDocumentContract = payloadDocumentContract.mode;
+
+      if (shouldFallbackForLayoutChange(payload.document)) {
+        outcome = "layout-fallback";
+        fallbackReason = "layout-mismatch";
+
+        if (settings.fallback !== false) {
+          window.location.assign(payload.finalUrl);
+          return;
+        }
+      }
+
+      if (payloadDocumentContract.mode === "reload") {
+        outcome = "document-fallback";
+        fallbackReason = "document-reload-only";
+
+        if (settings.fallback !== false) {
+          window.location.assign(payload.finalUrl);
+          return;
+        }
+      }
+
+      if (payloadNavigationMode && payloadNavigationMode.mode === "reload") {
+        outcome = "policy-reload";
+        fallbackReason = "document-policy-reload";
+
+        if (settings.fallback !== false) {
+          window.location.assign(payload.finalUrl);
+          return;
+        }
+      }
+
+      const pageTransition = resolveNavigationPageTransition(
+        settings.pageTransition,
+        payloadPageTransition,
+      );
+      resolvedPageTransition = pageTransition.name;
+
+      emitRuntimeHook(
+        "volt:before-navigate",
+        {
+          target: navigationTarget,
+          url: normalizedUrl,
+          finalUrl: finalUrl,
+          navigationMode: resolvedNavigationMode,
+          pageTransition: pageTransition.name,
+          pageTransitionSource: pageTransition.source || "default",
+          pageTransitionMode: pageTransition.mode || "out-in",
+          pageTransitionDuration:
+            typeof pageTransition.duration === "number"
+              ? pageTransition.duration
+              : null,
+          pageTransitionProfile: pageTransition.profile || null,
+        },
+        document,
+      );
+
+      if (pageTransition.mode === "out-in") {
+        await runPageTransitionPhase(document.body, "leave", pageTransition);
+      }
+
+      const patchStartedAt = runtimeNow();
+      const navigationMutation = await withPreservedUiState(
+        document.body,
+        async function () {
+          return applyDocumentPayload(payload.document, {
+            source: "navigate",
+            url: normalizedUrl,
+            finalUrl: finalUrl,
+            cacheControl: payload.cacheControl,
+            pageTransition: pageTransition,
+          });
+        },
+        {
+          type: "navigation",
+          url: normalizedUrl,
+          finalUrl: finalUrl,
+        },
+      );
+      patchDurationMs = roundedMetricValue(runtimeNow() - patchStartedAt);
+      preservedFragments =
+        navigationMutation &&
+        typeof navigationMutation.preservedCount === "number"
+          ? navigationMutation.preservedCount
+          : 0;
+      discardedFragments =
+        navigationMutation &&
+        typeof navigationMutation.discardedCount === "number"
+          ? navigationMutation.discardedCount
+          : 0;
+      persistedFragments =
+        navigationMutation &&
+        typeof navigationMutation.persistedCount === "number"
+          ? navigationMutation.persistedCount
+          : 0;
+      persistentFragmentRegistrySize =
+        navigationMutation &&
+        typeof navigationMutation.persistentRegistrySize === "number"
+          ? navigationMutation.persistentRegistrySize
+          : 0;
+
+      if (settings.historyMode === "replace") {
+        window.history.replaceState({}, "", finalUrl);
+      } else if (settings.updateHistory !== false) {
+        window.history.pushState({}, "", finalUrl);
+      }
+
+      if (settings.preserveScroll !== true) {
+        window.scrollTo(0, 0);
+      }
+
+      transitionClientStateScope(finalUrl, "navigation");
+
+      emitRuntimeHook(
+        "volt:navigated",
+        {
+          target: navigationTarget,
+          url: normalizedUrl,
+          finalUrl: finalUrl,
+          historyMode: settings.historyMode || "push",
+          navigationMode: resolvedNavigationMode,
+          pageTransition: pageTransition.name,
+          pageTransitionSource: pageTransition.source || "default",
+          pageTransitionMode: pageTransition.mode || "out-in",
+          pageTransitionDuration:
+            typeof pageTransition.duration === "number"
+              ? pageTransition.duration
+              : null,
+          pageTransitionProfile: pageTransition.profile || null,
+          preservedFragments: preservedFragments,
+          discardedFragments: discardedFragments,
+          persistedFragments: persistedFragments,
+          persistentFragmentRegistrySize: persistentFragmentRegistrySize,
+        },
+        document,
+      );
+    } catch (error) {
+      if (isAbortError(error)) {
+        const abortDetail = requestAbortDetail(
+          "navigation",
+          requestMeta,
+          controller ? controller.signal : null,
+          {
+            url: normalizedUrl,
+            finalUrl: finalUrl,
+          },
+        );
+
+        if (abortDetail.errorKind === "timeout") {
+          const errorDetail = timeoutErrorDetail(
+            "navigation",
+            requestMeta,
+            controller ? controller.signal : null,
+            {
+              url: normalizedUrl,
+              finalUrl: finalUrl,
+            },
+          );
+          outcome = "timeout";
+          errorKind = errorDetail.errorKind;
+          errorMessage = errorDetail.message;
+          fallbackReason = settings.fallback !== false ? "request-timeout" : null;
+          emitRuntimeHook("volt:request-error", errorDetail, document);
+
+          if (settings.fallback !== false) {
+            window.location.assign(normalizedUrl);
+            return;
+          }
+
+          throw error;
+        }
+
+        outcome = "aborted";
+        errorKind = abortDetail.errorKind;
+        errorMessage = abortDetail.message;
+        emitRuntimeHook("volt:request-abort", abortDetail, document);
+        return;
+      }
+
+      const errorDetail = exceptionErrorDetail("navigation", error, requestMeta, {
+        url: normalizedUrl,
+        finalUrl: finalUrl,
+        status:
+          error && typeof error.status === "number" ? error.status : null,
+        error:
+          error &&
+          error.error &&
+          typeof error.error === "object"
+            ? error.error
+            : error &&
+                error.payload &&
+                error.payload.error &&
+                typeof error.payload.error === "object"
+              ? error.payload.error
+              : null,
+      });
+      outcome = errorDetail.errorKind;
+      errorKind = errorDetail.errorKind;
+      errorMessage = errorDetail.message;
+      responseStatus =
+        errorDetail && typeof errorDetail.status === "number"
+          ? errorDetail.status
+          : null;
+      fallbackReason = settings.fallback !== false ? "request-error" : null;
+      emitRuntimeHook(
+        "volt:request-error",
+        errorDetail,
+        document,
+      );
+
+      if (settings.fallback !== false) {
+        window.location.assign(normalizedUrl);
+        return;
+      }
+
+      throw error;
+    } finally {
+      if (runtime.navigationController === controller) {
+        runtime.navigationController = null;
+      }
+
+      if (runtime.navigationRequestId === requestId) {
+        setNavigationState(false, settings.trigger || null);
+      }
+
+      const finishDetail = requestHookDetail("navigation", requestMeta, {
+        target: navigationTarget,
+        url: normalizedUrl,
+        finalUrl: finalUrl,
+        outcome: outcome,
+        fallbackReason: fallbackReason,
+        cacheMode: cacheControl.mode,
+        cacheHit: cacheHit,
+        navigationMode: resolvedNavigationMode,
+        documentContract: resolvedDocumentContract,
+        pageTransition: resolvedPageTransition,
+        timeoutMs: timeoutMs,
+        retryCount: retryCount,
+        retryAttempts: retryPolicy.attempts,
+        retryDelayMs: retryPolicy.delayMs,
+        networkDurationMs: networkDurationMs,
+        patchDurationMs: patchDurationMs,
+        totalDurationMs: roundedMetricValue(runtimeNow() - requestStartedAt),
+        status: responseStatus,
+        errorKind: errorKind,
+        message: errorMessage,
+        requestPayloadBytes: 0,
+        responsePayloadBytes: responsePayloadBytes,
+        htmlBytes: htmlBytes,
+        preservedFragments: preservedFragments,
+        discardedFragments: discardedFragments,
+        persistedFragments: persistedFragments,
+        persistentFragmentRegistrySize: persistentFragmentRegistrySize,
+      });
+      const telemetryEntry = recordRuntimeTelemetry("navigation", finishDetail);
+
+      emitRuntimeHook(
+        "volt:request-finish",
+        Object.assign({}, finishDetail, {
+          telemetrySequence: telemetryEntry.sequence,
+        }),
+        document,
+      );
+    }
+  }
+
+  async function dispatchAction(root, action, params, updates, trigger) {
+    const snapshot = root.getAttribute("data-volt-snapshot");
+    const component = root.getAttribute("data-volt-component");
+    const endpoint = root.getAttribute("data-volt-endpoint") || "/_volt/action";
+    const csrf = root.getAttribute("data-volt-csrf");
+
+    if (!snapshot || !component || !action) {
+      return;
+    }
+
+    const state = componentRequestState(component);
+    const previousController =
+      state && state.controller ? state.controller : null;
+    const requestId = state ? state.requestId + 1 : 1;
+    const controller =
+      typeof AbortController === "function" ? new AbortController() : null;
+    const requestMeta = {
+      component: component,
+      action: action,
+      requestId: requestId,
+      trigger: triggerDescriptor(trigger),
+    };
+    const requestStartedAt = runtimeNow();
+    let requestPayloadBytes = 0;
+    let responsePayloadBytes = 0;
+    let htmlBytes = 0;
+    let snapshotBytes = 0;
+    let patchDurationMs = null;
+    let effectCount = 0;
+    let usedHtmlFallback = false;
+    const timeoutMs = resolveRequestTimeoutMs("action", null, [
+      trigger || null,
+      root,
+    ]);
+    let errorKind = null;
+    let errorMessage = null;
+    let responseStatus = null;
+    const syncedPayload = applySelectiveStateSync(
+      root,
+      trigger,
+      params,
+      updates,
+      requestMeta,
+    );
+
+    if (state) {
+      state.requestId = requestId;
+      state.controller = controller;
+    }
+
+    if (previousController) {
+      abortControllerWithMeta(previousController, {
+        kind: "aborted",
+        message: "Action request was superseded by a newer request.",
+      });
+    }
+
+    clearDirtyDebounce(root);
+    setErrorState(component, false, requestMeta);
+    setSuccessState(
+      component,
+      false,
+      Object.assign({}, requestMeta, {
+        reason: "request",
+      }),
+    );
+
+    if (
+      trigger &&
+      "disabled" in trigger &&
+      action !== MODEL_SYNC_INTERNAL_ACTION
+    ) {
+      trigger.disabled = true;
+    }
+
+    scheduleLoadingDelay(root, trigger, requestMeta);
+    emitRuntimeHook(
+      "volt:request-start",
+      requestHookDetail("action", requestMeta, {
+        selectiveSyncAppliedCount: Array.isArray(syncedPayload.applied)
+          ? syncedPayload.applied.length
+          : 0,
+        selectiveSyncSkippedCount: Array.isArray(syncedPayload.skipped)
+          ? syncedPayload.skipped.length
+          : 0,
+        timeoutMs: timeoutMs,
+      }),
+      resolveRuntimeRoot(root, component) || document,
+    );
+
+    let outcome = "success";
+
+    try {
+      const requestBody = {
+        component: component,
+        action: action,
+        params: syncedPayload.params,
+        updates: syncedPayload.updates,
+        snapshot: JSON.parse(snapshot),
+      };
+      const serializedRequestBody = JSON.stringify(requestBody);
+      requestPayloadBytes = serializedPayloadBytes(serializedRequestBody);
+      const response = await withRequestTimeout(
+        fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "VoltStack",
+            "X-CSRF-TOKEN": csrf || "",
+          },
+          credentials: "same-origin",
+          signal: controller ? controller.signal : undefined,
+          body: serializedRequestBody,
+        }),
+        controller,
+        timeoutMs,
+        {
+          message: "Action request timed out after " + timeoutMs + "ms.",
+        },
+      );
+
+      let payload = null;
+
+      try {
+        payload = await response.json();
+      } catch (error) {
+        payload = null;
+      }
+
+      responsePayloadBytes = serializedPayloadBytes(payload);
+      htmlBytes = serializedPayloadBytes(payload && payload.html ? payload.html : "");
+      snapshotBytes = serializedPayloadBytes(
+        payload && payload.snapshot ? payload.snapshot : null,
+      );
+      effectCount = Array.isArray(payload && payload.effects)
+        ? payload.effects.length
+        : 0;
+
+      if (state && state.requestId !== requestId) {
+        outcome = "stale";
+        errorKind = "stale";
+        emitRuntimeHook(
+          "volt:request-stale",
+          requestHookDetail("action", requestMeta, {
+            status: response.status,
+            outcome: outcome,
+          }),
+          resolveRuntimeRoot(root, component) || document,
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        const errorDetail = responseErrorDetail(
+          "action",
+          response,
+          payload,
+          requestMeta,
+        );
+        outcome = errorDetail.errorKind;
+        errorKind = errorDetail.errorKind;
+        errorMessage = errorDetail.message;
+        responseStatus = response.status;
+        setErrorState(component, true, errorDetail);
+        emitRuntimeHook(
+          "volt:request-error",
+          errorDetail,
+          resolveRuntimeRoot(root, component) || document,
+        );
+        return;
+      }
+
+      const patchMeta = {
+        type: "action",
+        component: component,
+        action: action,
+        effects: Array.isArray(payload.effects)
+          ? payload.effects
+              .map(function (effect) {
+                return effect && effect.type ? effect.type : null;
+              })
+              .filter(function (value) {
+                return value !== null;
+              })
+          : [],
+        usedHtmlFallback: false,
+      };
+
+      const patchRoot = resolveRuntimeRoot(root, component) || root;
+
+      const patchStartedAt = runtimeNow();
+      await withPreservedUiState(
+        patchRoot,
+        async function () {
+          const activeRoot = resolveRuntimeRoot(root, component) || root;
+          const result = await applyEffects(activeRoot, payload.effects);
+
+          if (
+            !result.preventsHtmlFallback &&
+            payload.html &&
+            activeRoot.isConnected &&
+            !(
+              action === MODEL_SYNC_INTERNAL_ACTION &&
+              Array.isArray(payload.effects) &&
+              payload.effects.length === 0
+            )
+          ) {
+            patchMeta.usedHtmlFallback = true;
+            activeRoot.outerHTML = payload.html;
+          }
+
+          const updatedRoot = resolveRuntimeRoot(activeRoot, component);
+
+          if (payload.snapshot && updatedRoot) {
+            updatedRoot.setAttribute(
+              "data-volt-snapshot",
+              JSON.stringify(payload.snapshot),
+            );
+          }
+
+          return result;
+        },
+        patchMeta,
+      );
+      patchDurationMs = roundedMetricValue(runtimeNow() - patchStartedAt);
+      usedHtmlFallback = patchMeta.usedHtmlFallback === true;
+
+      setDirtyState(component, false, requestMeta);
+      setSuccessState(component, true, requestMeta);
+    } catch (error) {
+      if (isAbortError(error)) {
+        const abortDetail = requestAbortDetail(
+          "action",
+          requestMeta,
+          controller ? controller.signal : null,
+        );
+
+        if (abortDetail.errorKind === "timeout") {
+          const errorDetail = timeoutErrorDetail(
+            "action",
+            requestMeta,
+            controller ? controller.signal : null,
+          );
+          outcome = "timeout";
+          errorKind = errorDetail.errorKind;
+          errorMessage = errorDetail.message;
+          setErrorState(component, true, errorDetail);
+          emitRuntimeHook(
+            "volt:request-error",
+            errorDetail,
+            resolveRuntimeRoot(root, component) || document,
+          );
+          return;
+        }
+
+        outcome = "aborted";
+        errorKind = abortDetail.errorKind;
+        errorMessage = abortDetail.message;
+        emitRuntimeHook(
+          "volt:request-abort",
+          abortDetail,
+          resolveRuntimeRoot(root, component) || document,
+        );
+        return;
+      }
+
+      const errorDetail = exceptionErrorDetail("action", error, requestMeta);
+      outcome = errorDetail.errorKind;
+      errorKind = errorDetail.errorKind;
+      errorMessage = errorDetail.message;
+      responseStatus =
+        error && typeof error.status === "number" ? error.status : null;
+      setErrorState(component, true, errorDetail);
+      emitRuntimeHook(
+        "volt:request-error",
+        errorDetail,
+        resolveRuntimeRoot(root, component) || document,
+      );
+      throw error;
+    } finally {
+      if (state && state.requestId === requestId) {
+        state.controller = null;
+        clearLoadingDelay(resolveRuntimeRoot(root, component) || root);
+        setLoadingState(component, false, trigger, requestMeta);
+      }
+
+      const finishDetail = requestHookDetail("action", requestMeta, {
+        outcome: outcome,
+        errorKind: errorKind,
+        message: errorMessage,
+        status: responseStatus,
+        timeoutMs: timeoutMs,
+        requestPayloadBytes: requestPayloadBytes,
+        responsePayloadBytes: responsePayloadBytes,
+        htmlBytes: htmlBytes,
+        snapshotBytes: snapshotBytes,
+        patchDurationMs: patchDurationMs,
+        totalDurationMs: roundedMetricValue(runtimeNow() - requestStartedAt),
+        effectCount: effectCount,
+        usedHtmlFallback: usedHtmlFallback,
+        selectiveSyncAppliedCount: Array.isArray(syncedPayload.applied)
+          ? syncedPayload.applied.length
+          : 0,
+        selectiveSyncSkippedCount: Array.isArray(syncedPayload.skipped)
+          ? syncedPayload.skipped.length
+          : 0,
+      });
+      const telemetryEntry = recordRuntimeTelemetry("action", finishDetail);
+
+      emitRuntimeHook(
+        "volt:request-finish",
+        Object.assign({}, finishDetail, {
+          telemetrySequence: telemetryEntry.sequence,
+        }),
+        resolveRuntimeRoot(root, component) || document,
+      );
+    }
+  }
+
+
+  document.addEventListener("input", function (event) {
+    handleOnDirectiveEvent("input", event);
+
+    const element = closestFromEventTarget(event, "input, textarea, select");
+
+    if (!element) {
+      return;
+    }
+
+    const root = findRoot(element);
+
+    if (!root) {
+      return;
+    }
+
+    const component = root.getAttribute("data-volt-component");
+    const snapshot = readSnapshot(root);
+    const key = directiveValue(element, ["volt-model", "volt:model"]);
+
+    if (snapshot && snapshot.state && key) {
+      snapshot.state[key] =
+        element.type === "checkbox" ? !!element.checked : element.value;
+      root.setAttribute("data-volt-snapshot", JSON.stringify(snapshot));
+    }
+
+    updateModelLocalDirectiveFromElement(element, "directive:model.local:input");
+    updateModelSyncDirectiveFromElement(element, root, "directive:model.sync:input");
+
+    scheduleDirtyDebounce(root, {
+      component: component,
+      target: fieldStateTarget(element),
+    });
+    setSuccessState(root, false, {
+      component: component,
+      target: fieldStateTarget(element),
+    });
+  });
+
+  document.addEventListener("click", function (event) {
+    handleOnDirectiveEvent("click", event);
+
+    const actionTrigger = closestFromEventTarget(
+      event,
+      "[volt-click], [volt\\:click]",
+    );
+
+    if (actionTrigger) {
+      const root = findRoot(actionTrigger);
+
+      if (!root) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const params = directiveValue(actionTrigger, [
+        "volt-params",
+        "volt:params",
+      ]);
+      dispatchAction(
+        root,
+        directiveValue(actionTrigger, ["volt-click", "volt:click"]),
+        params ? JSON.parse(params) : {},
+        collectModelUpdates(root),
+        actionTrigger,
+      ).catch(function (error) {
+        console.error("VoltStack runtime error:", error);
+      });
+
+      return;
+    }
+
+    const dispatchTrigger = closestFromEventTarget(
+      event,
+      "[volt-dispatch], [volt\\:dispatch]",
+    );
+
+    if (dispatchTrigger) {
+      emitDispatchDirective(
+        dispatchTrigger,
+        findRoot(dispatchTrigger),
+        directiveValue(dispatchTrigger, dispatchDirectiveNames()),
+        event,
+      );
+    }
+
+    const navigationTrigger = closestFromEventTarget(
+      event,
+      "a[volt-navigate], a[volt\\:navigate]",
+    );
+
+    if (!shouldHandleNavigation(event, navigationTrigger)) {
+      return;
+    }
+
+    const url = new URL(navigationTrigger.href, window.location.href);
+    const navigationMode = navigationModeForElement(navigationTrigger);
+
+    if (navigationMode.mode === "reload") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const preserveScroll =
+      navigationTrigger.hasAttribute("volt-preserve-scroll") ||
+      navigationTrigger.hasAttribute("volt:preserve-scroll");
+    const replace =
+      navigationTrigger.hasAttribute("volt-replace") ||
+      navigationTrigger.hasAttribute("volt:replace");
+
+    visit(url.toString(), {
+      trigger: navigationTrigger,
+      preserveScroll: preserveScroll,
+      historyMode: replace ? "replace" : "push",
+      navigationMode: navigationMode,
+      pageTransition: pageTransitionForElement(navigationTrigger),
+    }).catch(function (error) {
+      console.error("VoltStack navigation error:", error);
+    });
+  });
+
+  document.addEventListener(
+    "pointerenter",
+    function (event) {
+      const navigationTrigger = closestFromEventTarget(
+        event,
+        NAVIGATION_PREFETCH_SELECTOR,
+      );
+
+      if (
+        !navigationTrigger ||
+        !navigationTrigger.href ||
+        !linkAllowsPrefetchSource(navigationTrigger, "intent") ||
+        !shouldPrefetchForNavigationMode(
+          navigationModeForElement(navigationTrigger),
+        )
+      ) {
+        return;
+      }
+
+      const url = trackPrefetchInterest(
+        navigationTrigger,
+        navigationTrigger.href,
+      );
+
+      prefetchPage(url, {
+        cacheControl: navigationCacheControlForElement(navigationTrigger),
+        navigationMode: navigationModeForElement(navigationTrigger),
+      }).catch(function () {
+        return null;
+      });
+    },
+    true,
+  );
+
+  document.addEventListener(
+    "pointerleave",
+    function (event) {
+      const navigationTrigger = closestFromEventTarget(
+        event,
+        NAVIGATION_PREFETCH_SELECTOR,
+      );
+
+      if (!navigationTrigger) {
+        return;
+      }
+
+      releasePrefetchInterest(navigationTrigger);
+    },
+    true,
+  );
+
+  document.addEventListener("focusin", function (event) {
+    handleOnDirectiveEvent("focus", event);
+
+    const navigationTrigger = closestFromEventTarget(
+      event,
+      NAVIGATION_PREFETCH_SELECTOR,
+    );
+
+    if (
+      !navigationTrigger ||
+      !navigationTrigger.href ||
+      !linkAllowsPrefetchSource(navigationTrigger, "intent") ||
+      !shouldPrefetchForNavigationMode(
+        navigationModeForElement(navigationTrigger),
+      )
+    ) {
+      return;
+    }
+
+    const url = trackPrefetchInterest(
+      navigationTrigger,
+      navigationTrigger.href,
+    );
+
+    prefetchPage(url, {
+      cacheControl: navigationCacheControlForElement(navigationTrigger),
+      navigationMode: navigationModeForElement(navigationTrigger),
+    }).catch(function () {
+      return null;
+    });
+  });
+
+  document.addEventListener(
+    "volt:navigation-cache-invalidate",
+    function (event) {
+      const detail =
+        event && event.detail && typeof event.detail === "object"
+          ? event.detail
+          : {};
+
+      if (typeof detail.url === "string" && detail.url !== "") {
+        invalidateNavigationCache(detail.url, detail.reason || "event", {
+          source: detail.source || "event",
+        });
+        return;
+      }
+
+      clearNavigationCache(detail.reason || "event", {
+        source: detail.source || "event",
+      });
+    },
+  );
+
+  document.addEventListener("focusout", function (event) {
+    handleOnDirectiveEvent("blur", event);
+
+    const navigationTrigger = closestFromEventTarget(
+      event,
+      NAVIGATION_PREFETCH_SELECTOR,
+    );
+
+    if (!navigationTrigger) {
+      return;
+    }
+
+    releasePrefetchInterest(navigationTrigger);
+  });
+
+  document.addEventListener("submit", function (event) {
+    handleOnDirectiveEvent("submit", event);
+
+    const form = closestFromEventTarget(
+      event,
+      "form[volt-submit], form[volt\\:submit]",
+    );
+
+    if (!form) {
+      return;
+    }
+
+    const root = findRoot(form);
+
+    if (!root) {
+      return;
+    }
+
+    event.preventDefault();
+
+    dispatchAction(
+      root,
+      directiveValue(form, ["volt-submit", "volt:submit"]),
+      collectFormData(form),
+      collectModelUpdates(root),
+      form,
+    ).catch(function (error) {
+      console.error("VoltStack runtime error:", error);
+    });
+  });
+
+  document.addEventListener("change", function (event) {
+    handleOnDirectiveEvent("change", event);
+
+    const element = closestFromEventTarget(event, "input, textarea, select");
+
+    if (!element) {
+      return;
+    }
+
+    const root = findRoot(element);
+
+    updateModelLocalDirectiveFromElement(element, "directive:model.local:change");
+    updateModelSyncDirectiveFromElement(element, root, "directive:model.sync:change");
+  });
+
+  document.addEventListener("keydown", function (event) {
+    handleOnDirectiveEvent("keydown", event);
+  });
+
+  document.addEventListener("keyup", function (event) {
+    handleOnDirectiveEvent("keyup", event);
+  });
+
+  window.addEventListener("popstate", function () {
+    visit(window.location.href, {
+      updateHistory: false,
+      historyMode: "replace",
+      preserveScroll: false,
+      fallback: false,
+    }).catch(function (error) {
+      console.error("VoltStack navigation error:", error);
+      window.location.reload();
+    });
+  });
+
+  runtime.clientStateScope = normalizeNavigationUrl(window.location.href);
+  window.Volt =
+    window.Volt && typeof window.Volt === "object" ? window.Volt : {};
+  window.Volt.contract = createPublicRuntimeContract();
+  window.Volt.visit = function (url, options) {
+    return visit(url, options || {});
+  };
+  window.Volt.prefetch = function (url, options) {
+    return prefetchPage(url, options || {});
+  };
+  window.Volt.state = createPublicStateApi();
+  window.Volt.components = createPublicComponentsApi();
+  window.Volt.telemetry = createPublicTelemetryApi();
+
+  function bootRuntimeDocumentFeatures() {
+    syncAllRuntimeStateDirectives();
+    refreshActiveComponentsRegistry("boot");
+    registerViewportPrefetchTargets(document);
+    scheduleHeuristicPrefetch(document);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootRuntimeDocumentFeatures, {
+      once: true,
+    });
+  }
+
+  bootRuntimeDocumentFeatures();
+})();

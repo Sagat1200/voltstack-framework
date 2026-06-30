@@ -311,12 +311,12 @@ Abrir solo cuando `V1` este cerrado.
 ### 7.2 SPA Routing Protocol Minimo
 
 - `[ ]` definir payload de navegacion minima
-- `[ ]` incluir `target`
-- `[ ]` incluir `layout`
-- `[ ]` incluir `transition`
-- `[ ]` incluir `hydrate`
-- `[ ]` incluir `redirect`
-- `[ ]` incluir `error`
+- `[x]` incluir `target`
+- `[x]` incluir `layout`
+- `[x]` incluir `transition`
+- `[x]` incluir `hydrate`
+- `[x]` incluir `redirect`
+- `[x]` incluir `error`
 
 ### 7.3 Integracion Con Runtime SPA Reactivo
 
@@ -422,3 +422,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` artifacts de routing operativos con `collection.php`, `tree.php`, `metadata.php`, `pipeline.php` y `version.php`; ya existe invalidacion automatica base en desarrollo y politica minima de no recompilacion durante request en produccion
 - `[x]` URL generator basico operativo mediante `Router::route(...)` y helper global `route()`, con soporte para parametros, query string residual o explicita (`_query`), fragment (`_fragment`), dominio y generacion absoluta/relativa
 - `[x]` la integracion con runtime SPA reactivo ya queda cerrada en su contrato actual: `visit()` se mantiene sobre `GET`, `dispatchAction()` se mantiene sobre `POST`, las rutas internas compiladas exponen esos verbos y el codigo fuente del runtime queda cubierto por tests para evitar regresiones accidentales
+- `[x]` `layout` ya forma parte del contrato minimo reutilizable desde metadata compilada: `HtmlDocumentBootstrapper` proyecta `runtime.layout` a `data-volt-layout` cuando el HTML no lo declara, `frontend/runtime/volt.js` lo expone como `payload.layout` en navegacion y el HTML explicito mantiene prioridad sobre la metadata inyectada
+- `[x]` `target` ya forma parte del contrato minimo de navegacion: `frontend/runtime/volt.js` expone `payload.target` como la URL objetivo solicitada, la conserva en cache y la refleja en los hooks de navegacion aunque `finalUrl` o `redirect` terminen resolviendo otro destino efectivo
+- `[x]` `transition` ya forma parte del contrato minimo reutilizable desde metadata compilada: `HtmlDocumentBootstrapper` acepta `runtime.transition` como string u objeto enriquecido (`name`, `profile`, `duration`, `mode`), lo proyecta al documento y el runtime lo rehidrata sin depender de HTML manual
+- `[x]` `hydrate` ya forma parte del contrato minimo reutilizable desde metadata compilada: `HtmlDocumentBootstrapper` proyecta `runtime.hydrate` (`enabled`, `strategy`, `dirtyState`) al documento, `frontend/runtime/volt.js` lo expone como `payload.hydrate` en navegacion, y el HTML explicito mantiene prioridad sobre metadata inyectada
+- `[x]` `redirect` ya forma parte del contrato minimo de navegacion: `frontend/runtime/volt.js` expone `payload.redirect` cuando una navegacion `GET` termina en una URL distinta por redirect HTTP, mantiene `finalUrl` como fuente principal y usa `redirect` como fallback explicito del protocolo
+- `[x]` `error` ya forma parte del contrato minimo de navegacion: una respuesta HTTP fallida en navegacion `GET` produce `payload.error = { code, message }`, no entra al cache SPA y `visit()` reutiliza ese contrato uniforme antes de aplicar fallback o rethrow

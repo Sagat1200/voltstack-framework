@@ -1,4 +1,4 @@
-﻿  const STATE_SYNC_ATTRIBUTE_NAMES = [
+  const STATE_SYNC_ATTRIBUTE_NAMES = [
     "data-volt-state-sync",
     "volt-state-sync",
     "volt:state-sync",
@@ -12,6 +12,21 @@
     "data-volt-document",
     "volt-document",
     "volt:document",
+  ];
+  const HYDRATE_ATTRIBUTE_NAMES = [
+    "data-volt-hydrate",
+    "volt-hydrate",
+    "volt:hydrate",
+  ];
+  const HYDRATE_STRATEGY_ATTRIBUTE_NAMES = [
+    "data-volt-hydrate-strategy",
+    "volt-hydrate-strategy",
+    "volt:hydrate-strategy",
+  ];
+  const HYDRATE_DIRTY_STATE_ATTRIBUTE_NAMES = [
+    "data-volt-hydrate-dirty-state",
+    "volt-hydrate-dirty-state",
+    "volt:hydrate-dirty-state",
   ];
   const PAGE_TRANSITION_ATTRIBUTE_NAMES = [
     "data-volt-page-transition",
@@ -32,6 +47,15 @@
     "data-volt-page-transition-mode",
     "volt-page-transition-mode",
     "volt:page-transition-mode",
+  ];
+  const HYDRATE_META_NAMES = ["volt-hydrate", "volt:hydrate"];
+  const HYDRATE_STRATEGY_META_NAMES = [
+    "volt-hydrate-strategy",
+    "volt:hydrate-strategy",
+  ];
+  const HYDRATE_DIRTY_STATE_META_NAMES = [
+    "volt-hydrate-dirty-state",
+    "volt:hydrate-dirty-state",
   ];
   const FRAGMENT_CONTROL_ATTRIBUTE_NAMES = [
     "data-volt-fragment-control",
@@ -582,6 +606,99 @@
     }
 
     return parseDocumentContract("", "default");
+  }
+
+  function parseHydrationEnabled(value, source) {
+    const raw = typeof value === "string" ? value : "";
+    const normalized = raw.trim().toLowerCase();
+
+    if (normalized === "") {
+      return {
+        enabled: false,
+        raw: raw,
+        source: source || "default",
+        declared: false,
+      };
+    }
+
+    if (
+      normalized === "false" ||
+      normalized === "off" ||
+      normalized === "disabled" ||
+      normalized === "none"
+    ) {
+      return {
+        enabled: false,
+        raw: raw,
+        source: source || "default",
+        declared: true,
+      };
+    }
+
+    return {
+      enabled: true,
+      raw: raw,
+      source: source || "default",
+      declared: true,
+    };
+  }
+
+  function hydrationForDocument(doc) {
+    if (!doc || typeof doc !== "object") {
+      return {
+        enabled: false,
+        strategy: null,
+        dirtyState: null,
+        source: "default",
+        declared: false,
+      };
+    }
+
+    const declaredMeta = firstDocumentMetaValue(doc, HYDRATE_META_NAMES);
+    const declaredStrategyMeta = firstDocumentMetaValue(
+      doc,
+      HYDRATE_STRATEGY_META_NAMES,
+    );
+    const declaredDirtyStateMeta = firstDocumentMetaValue(
+      doc,
+      HYDRATE_DIRTY_STATE_META_NAMES,
+    );
+    const bodyDeclared = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      HYDRATE_ATTRIBUTE_NAMES,
+    );
+    const bodyStrategy = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      HYDRATE_STRATEGY_ATTRIBUTE_NAMES,
+    );
+    const bodyDirtyState = firstAttributeValue(
+      doc && doc.body ? doc.body : null,
+      HYDRATE_DIRTY_STATE_ATTRIBUTE_NAMES,
+    );
+    const enabledValue = declaredMeta !== null ? declaredMeta : bodyDeclared || "";
+    const hydration = parseHydrationEnabled(
+      enabledValue,
+      declaredMeta !== null ? "document" : bodyDeclared !== null ? "body" : "default",
+    );
+
+    return {
+      enabled: hydration.enabled,
+      strategy:
+        declaredStrategyMeta !== null
+          ? declaredStrategyMeta
+          : bodyStrategy || null,
+      dirtyState:
+        declaredDirtyStateMeta !== null
+          ? declaredDirtyStateMeta
+          : bodyDirtyState || null,
+      source: hydration.source,
+      declared:
+        hydration.declared ||
+        declaredStrategyMeta !== null ||
+        declaredDirtyStateMeta !== null ||
+        bodyStrategy !== null ||
+        bodyDirtyState !== null,
+    };
   }
 
   function shouldPrefetchForNavigationMode(mode) {

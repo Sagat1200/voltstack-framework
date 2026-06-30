@@ -1,3 +1,22 @@
+  function navigationErrorPayload(status, statusText) {
+    const resolvedStatus = typeof status === "number" ? status : 500;
+    const resolvedStatusText =
+      typeof statusText === "string" && statusText.trim() !== ""
+        ? statusText.trim()
+        : resolvedStatus === 404
+          ? "Not Found"
+          : resolvedStatus === 405
+            ? "Method Not Allowed"
+            : resolvedStatus >= 500
+              ? "Server Error"
+              : "HTTP Error";
+
+    return {
+      code: resolvedStatus,
+      message: resolvedStatusText,
+    };
+  }
+
   async function requestPage(url, signal) {
     const response = await fetch(url, {
       method: "GET",
@@ -9,25 +28,19 @@
       signal: signal,
     });
 
-    if (!response.ok) {
-      throw createRuntimeRequestError(
-        "http-error",
-        "Navigation request failed with status " + response.status + ".",
-        {
-          status: response.status,
-          ok: false,
-          url: url,
-        },
-      );
-    }
-
     const html = await response.text();
-
-    return {
+    const payload = {
       html: html,
       document: parseNavigationDocument(html),
       finalUrl: response.url || url,
     };
+
+    if (!response.ok) {
+      payload.error = navigationErrorPayload(response.status, response.statusText);
+      return payload;
+    }
+
+    return payload;
   }
 
   async function visit(url, options) {
@@ -213,8 +226,17 @@
             }
           }
         })());
+      const navigationTarget =
+        payload && typeof payload.target === "string" && payload.target !== ""
+          ? payload.target
+          : normalizedUrl;
 
-      finalUrl = payload && payload.finalUrl ? payload.finalUrl : normalizedUrl;
+      finalUrl =
+        payload && payload.finalUrl
+          ? payload.finalUrl
+          : payload && payload.redirect
+            ? payload.redirect
+            : normalizedUrl;
       htmlBytes = serializedPayloadBytes(payload && payload.html ? payload.html : "");
       responsePayloadBytes = htmlBytes;
       networkDurationMs = cacheHit
@@ -234,6 +256,46 @@
           document,
         );
         return;
+      }
+
+      if (payload && payload.error && typeof payload.error === "object") {
+        responseStatus =
+          typeof payload.error.code === "number" ? payload.error.code : null;
+
+        const errorDetail = requestErrorDetail(
+          "navigation",
+          requestMeta,
+          "http-error",
+          typeof payload.error.message === "string" &&
+            payload.error.message !== ""
+            ? payload.error.message
+            : "Navigation request failed.",
+          {
+            url: normalizedUrl,
+            finalUrl: finalUrl,
+            status: responseStatus,
+            error: payload.error,
+          },
+        );
+
+        outcome = errorDetail.errorKind;
+        errorKind = errorDetail.errorKind;
+        errorMessage = errorDetail.message;
+        fallbackReason = settings.fallback !== false ? "request-error" : null;
+        emitRuntimeHook("volt:request-error", errorDetail, document);
+
+        if (settings.fallback !== false) {
+          window.location.assign(finalUrl);
+          return;
+        }
+
+        throw createRuntimeRequestError("http-error", errorDetail.message, {
+          status: responseStatus,
+          url: normalizedUrl,
+          finalUrl: finalUrl,
+          error: payload.error,
+          payload: payload,
+        });
       }
 
       const resolvedPayloadNavigationMode = payload.document
@@ -301,6 +363,7 @@
       emitRuntimeHook(
         "volt:before-navigate",
         {
+          target: navigationTarget,
           url: normalizedUrl,
           finalUrl: finalUrl,
           navigationMode: resolvedNavigationMode,
@@ -375,6 +438,7 @@
       emitRuntimeHook(
         "volt:navigated",
         {
+          target: navigationTarget,
           url: normalizedUrl,
           finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
@@ -442,6 +506,17 @@
         finalUrl: finalUrl,
         status:
           error && typeof error.status === "number" ? error.status : null,
+        error:
+          error &&
+          error.error &&
+          typeof error.error === "object"
+            ? error.error
+            : error &&
+                error.payload &&
+                error.payload.error &&
+                typeof error.payload.error === "object"
+              ? error.payload.error
+              : null,
       });
       outcome = errorDetail.errorKind;
       errorKind = errorDetail.errorKind;
@@ -473,6 +548,7 @@
       }
 
       const finishDetail = requestHookDetail("navigation", requestMeta, {
+        target: navigationTarget,
         url: normalizedUrl,
         finalUrl: finalUrl,
         outcome: outcome,

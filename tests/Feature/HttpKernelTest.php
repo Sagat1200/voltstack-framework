@@ -899,19 +899,30 @@ final class HttpKernelTest extends TestCase
     public function test_it_reuses_runtime_route_metadata_when_bootstrapping_an_html_document(): void
     {
         $router = $this->app->make(Router::class);
-        $router->get('/document-runtime-metadata', fn() => '<!DOCTYPE html><html><body data-volt-layout="app"><main>Document</main></body></html>')
+        $router->get('/document-runtime-metadata', fn() => '<!DOCTYPE html><html><body><main>Document</main></body></html>')
             ->meta([
                 'runtime' => [
                     'document' => 'reload',
+                    'layout' => 'app-shell',
                     'navigation' => 'reload',
-                    'transition' => 'fade',
+                    'hydrate' => [
+                        'enabled' => true,
+                        'strategy' => 'partial',
+                        'dirtyState' => 'defer',
+                    ],
+                    'transition' => [
+                        'name' => 'fade',
+                        'profile' => 'smooth',
+                        'duration' => 240,
+                        'mode' => 'in-out',
+                    ],
                 ],
             ]);
 
         $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-runtime-metadata'));
 
         self::assertStringContainsString(
-            '<body data-volt-layout="app" data-volt-document="reload" data-volt-navigation-mode="reload" data-volt-page-transition="fade">',
+            '<body data-volt-document="reload" data-volt-navigation-mode="reload" data-volt-layout="app-shell" data-volt-page-transition="fade" data-volt-page-transition-profile="smooth" data-volt-page-transition-duration="240" data-volt-page-transition-mode="in-out" data-volt-hydrate="true" data-volt-hydrate-strategy="partial" data-volt-hydrate-dirty-state="defer">',
             $response->content(),
         );
         self::assertStringContainsString('data-volt-runtime="true"', $response->content());
@@ -925,8 +936,19 @@ final class HttpKernelTest extends TestCase
             ->meta([
                 'runtime' => [
                     'document' => 'reload',
+                    'layout' => 'app-shell',
                     'navigation' => 'reload',
-                    'transition' => 'fade',
+                    'hydrate' => [
+                        'enabled' => true,
+                        'strategy' => 'partial',
+                        'dirtyState' => 'defer',
+                    ],
+                    'transition' => [
+                        'name' => 'fade',
+                        'profile' => 'smooth',
+                        'duration' => 240,
+                        'mode' => 'in-out',
+                    ],
                 ],
             ]);
 
@@ -940,10 +962,73 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(200, $response->statusCode());
         self::assertStringContainsString(
-            '<body data-volt-document="reload" data-volt-navigation-mode="reload" data-volt-page-transition="fade">',
+            '<body data-volt-document="reload" data-volt-navigation-mode="reload" data-volt-layout="app-shell" data-volt-page-transition="fade" data-volt-page-transition-profile="smooth" data-volt-page-transition-duration="240" data-volt-page-transition-mode="in-out" data-volt-hydrate="true" data-volt-hydrate-strategy="partial" data-volt-hydrate-dirty-state="defer">',
             $response->content(),
         );
         self::assertStringContainsString('data-volt-runtime="true"', $response->content());
+    }
+
+    public function test_it_preserves_explicit_html_page_transition_options_over_runtime_metadata(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-runtime-transition-explicit', fn() => '<!DOCTYPE html><html><body data-volt-page-transition="slide" data-volt-page-transition-profile="cinematic" data-volt-page-transition-duration="360" data-volt-page-transition-mode="out-in"><main>Document</main></body></html>')
+            ->meta([
+                'runtime' => [
+                    'transition' => [
+                        'name' => 'fade',
+                        'profile' => 'smooth',
+                        'duration' => 240,
+                        'mode' => 'in-out',
+                    ],
+                ],
+            ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-runtime-transition-explicit'));
+
+        self::assertStringContainsString(
+            '<body data-volt-page-transition="slide" data-volt-page-transition-profile="cinematic" data-volt-page-transition-duration="360" data-volt-page-transition-mode="out-in" data-volt-document="spa" data-volt-navigation-mode="auto">',
+            $response->content(),
+        );
+    }
+
+    public function test_it_projects_runtime_hydrate_metadata_without_overriding_explicit_html_hydration_markers(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-runtime-hydrate-explicit', fn() => '<!DOCTYPE html><html><body data-volt-hydrate="false" data-volt-hydrate-strategy="islands" data-volt-hydrate-dirty-state="eager"><main>Document</main></body></html>')
+            ->meta([
+                'runtime' => [
+                    'hydrate' => [
+                        'enabled' => true,
+                        'strategy' => 'partial',
+                        'dirtyState' => 'defer',
+                    ],
+                ],
+            ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-runtime-hydrate-explicit'));
+
+        self::assertStringContainsString(
+            '<body data-volt-hydrate="false" data-volt-hydrate-strategy="islands" data-volt-hydrate-dirty-state="eager" data-volt-document="spa" data-volt-navigation-mode="auto">',
+            $response->content(),
+        );
+    }
+
+    public function test_it_projects_runtime_layout_metadata_without_overriding_explicit_html_layout_markers(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-runtime-layout-explicit', fn() => '<!DOCTYPE html><html><body data-volt-layout="explicit-shell"><main>Document</main></body></html>')
+            ->meta([
+                'runtime' => [
+                    'layout' => 'app-shell',
+                ],
+            ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-runtime-layout-explicit'));
+
+        self::assertStringContainsString(
+            '<body data-volt-layout="explicit-shell" data-volt-document="spa" data-volt-navigation-mode="auto">',
+            $response->content(),
+        );
     }
 
     public function test_it_serves_the_runtime_as_a_cacheable_javascript_asset(): void

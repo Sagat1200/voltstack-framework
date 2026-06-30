@@ -400,6 +400,96 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('"/_volt/action"', $actionSource);
     }
 
+    public function test_runtime_source_exposes_redirect_as_an_explicit_navigation_payload_field(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationCacheSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '20-navigation-cache.js'
+        );
+        $visitSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '44-navigation-visit.js'
+        );
+
+        self::assertIsString($navigationCacheSource);
+        self::assertIsString($visitSource);
+        self::assertStringContainsString('redirect: redirectTarget,', $navigationCacheSource);
+        self::assertStringContainsString('redirect: responseRedirect,', $navigationCacheSource);
+        self::assertStringContainsString('payload && payload.redirect', $visitSource);
+    }
+
+    public function test_runtime_source_exposes_error_as_an_explicit_navigation_payload_field(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationCacheSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '20-navigation-cache.js'
+        );
+        $visitSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '44-navigation-visit.js'
+        );
+
+        self::assertIsString($navigationCacheSource);
+        self::assertIsString($visitSource);
+        self::assertStringContainsString('payload.error = navigationErrorPayload(', $visitSource);
+        self::assertStringContainsString('if (payload && payload.error && typeof payload.error === "object") {', $visitSource);
+        self::assertStringContainsString('if (payload && payload.error && typeof payload.error === "object") {', $navigationCacheSource);
+        self::assertStringContainsString('error: payload.error,', $visitSource);
+    }
+
+    public function test_runtime_source_exposes_target_as_an_explicit_navigation_payload_field(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationCacheSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '20-navigation-cache.js'
+        );
+        $visitSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '44-navigation-visit.js'
+        );
+
+        self::assertIsString($navigationCacheSource);
+        self::assertIsString($visitSource);
+        self::assertStringContainsString('target: entry.target || entry.url,', $navigationCacheSource);
+        self::assertStringContainsString('target: payloadTarget,', $navigationCacheSource);
+        self::assertStringContainsString('target: normalizedUrl,', $navigationCacheSource);
+        self::assertStringContainsString('const navigationTarget =', $visitSource);
+        self::assertStringContainsString('target: navigationTarget,', $visitSource);
+    }
+
     private function handleSkeletonRequest(string $path): Response
     {
         $app = new Application(self::$skeletonBasePath);
