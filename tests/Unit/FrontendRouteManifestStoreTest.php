@@ -47,6 +47,7 @@ final class FrontendRouteManifestStoreTest extends TestCase
                 'runtime' => [
                     'layout' => 'dashboard',
                     'document' => 'reload',
+                    'navigation' => 'reload',
                     'transition' => [
                         'name' => 'fade',
                         'profile' => 'smooth',
@@ -96,6 +97,10 @@ final class FrontendRouteManifestStoreTest extends TestCase
                 'transition' => 'fade',
                 'hydrate' => true,
             ],
+            'policy' => [
+                'document' => 'reload',
+                'navigation' => 'reload',
+            ],
         ], $routes[0]);
         self::assertSame([
             'name' => 'users.store',
@@ -110,6 +115,7 @@ final class FrontendRouteManifestStoreTest extends TestCase
         self::assertArrayNotHasKey('middleware', $routes[0]);
         self::assertArrayNotHasKey('auth', $routes[0]);
         self::assertArrayNotHasKey('document', $routes[0]['runtime']);
+        self::assertArrayNotHasKey('navigation', $routes[0]['runtime']);
         self::assertSame(['users.show', 'users.store'], array_column($routes, 'name'));
     }
 

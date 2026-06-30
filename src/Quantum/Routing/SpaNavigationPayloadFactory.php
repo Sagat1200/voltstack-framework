@@ -21,6 +21,10 @@ final class SpaNavigationPayloadFactory
             screen: [
                 'route' => $this->routeName($request),
             ],
+            policy: [
+                'document' => $this->documentContract($request),
+                'navigation' => $this->navigationMode($request),
+            ],
             runtime: [
                 'layout' => $this->layout($request),
                 'transition' => $this->transition($request),
@@ -40,6 +44,44 @@ final class SpaNavigationPayloadFactory
         }
 
         return trim($name);
+    }
+
+    private function documentContract(Request $request): ?string
+    {
+        $document = $request->routeRuntimeMeta('document');
+
+        if (! is_string($document) || trim($document) === '') {
+            $document = $request->routeRuntimeMeta('contract');
+        }
+
+        if (! is_string($document) || trim($document) === '') {
+            $mode = $request->routeRuntimeMeta('mode');
+
+            if (is_string($mode) && $this->supportsDocumentContract($mode)) {
+                $document = $mode;
+            }
+        }
+
+        if (! is_string($document) || trim($document) === '') {
+            return null;
+        }
+
+        return $this->normalizeDocumentContract($document);
+    }
+
+    private function navigationMode(Request $request): ?string
+    {
+        $navigationMode = $request->routeRuntimeMeta('navigation');
+
+        if (! is_string($navigationMode) || trim($navigationMode) === '') {
+            $navigationMode = $request->routeRuntimeMeta('navigationMode');
+        }
+
+        if (! is_string($navigationMode) || trim($navigationMode) === '') {
+            return null;
+        }
+
+        return strtolower(trim($navigationMode));
     }
 
     private function layout(Request $request): ?string
@@ -141,6 +183,29 @@ final class SpaNavigationPayloadFactory
             422 => 'Unprocessable Entity',
             429 => 'Too Many Requests',
             default => $status >= 500 ? 'Server Error' : 'HTTP Error',
+        };
+    }
+
+    private function supportsDocumentContract(string $mode): bool
+    {
+        return in_array(strtolower(trim($mode)), [
+            'spa',
+            'reload',
+            'reload-only',
+            'static',
+            'non-spa',
+            'document',
+            'interactive',
+            'reactive',
+        ], true);
+    }
+
+    private function normalizeDocumentContract(string $document): string
+    {
+        return match (strtolower(trim($document))) {
+            'reload-only', 'static', 'non-spa', 'document' => 'reload',
+            'interactive', 'reactive' => 'spa',
+            default => strtolower(trim($document)),
         };
     }
 }

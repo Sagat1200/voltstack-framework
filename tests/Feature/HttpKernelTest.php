@@ -1069,6 +1069,13 @@ final class HttpKernelTest extends TestCase
         self::assertStringContainsString('const payloadLayout =', $response->content());
         self::assertStringContainsString('shouldFallbackForLayoutChange(payload.document, payloadLayout)', $response->content());
         self::assertStringContainsString('const payloadHydrate =', $response->content());
+        self::assertStringContainsString('payload.documentContract &&', $response->content());
+        self::assertStringContainsString('function spaNavigationDocumentContract(spaNavigation)', $response->content());
+        self::assertStringContainsString('function spaNavigationNavigationMode(spaNavigation)', $response->content());
+        self::assertStringContainsString('"/_volt/routes-manifest.json"', $response->content());
+        self::assertStringContainsString('resolveFrontendManifestRoute(normalizedUrl, "GET")', $response->content());
+        self::assertStringContainsString('manifest-policy-reload', $response->content());
+        self::assertStringContainsString('manifest-prefetch-disabled', $response->content());
         self::assertStringContainsString('payload.pageTransition && typeof payload.pageTransition === "object"', $response->content());
         self::assertStringContainsString('hydrateEnabled:', $response->content());
         self::assertStringContainsString('hydrateSource:', $response->content());
@@ -1096,6 +1103,7 @@ final class HttpKernelTest extends TestCase
                         'strategy' => 'partial',
                     ],
                     'document' => 'reload',
+                    'navigation' => 'reload',
                 ],
             ]);
         $router->post('/manifest-users', TestStringController::class . '@show')
@@ -1120,30 +1128,34 @@ final class HttpKernelTest extends TestCase
         self::assertSame('VoltStack Frontend Manifest', $payload['protocol']['name'] ?? null);
         self::assertSame('1.0', $payload['protocol']['version'] ?? null);
         self::assertNotEmpty($payload['version']['checksum'] ?? null);
-        self::assertContains([
-            'name' => 'manifest.users.show',
-            'path' => '/manifest-users/{user}',
-            'methods' => ['GET'],
-            'capabilities' => ['navigate', 'hydrate', 'prefetch'],
-            'runtime' => [
-                'layout' => 'app-shell',
-                'transition' => 'fade',
-                'hydrate' => true,
-            ],
-        ], $payload['routes'] ?? []);
-        self::assertContains([
-            'name' => 'manifest.users.store',
-            'path' => '/manifest-users',
-            'methods' => ['POST'],
-            'capabilities' => [],
-            'runtime' => [
-                'transition' => 'slide',
-                'hydrate' => false,
-            ],
-        ], $payload['routes'] ?? []);
+        $routes = is_array($payload['routes'] ?? null) ? $payload['routes'] : [];
+        $showRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.users.show'));
+        $storeRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.users.store'));
+
+        self::assertCount(1, $showRoute);
+        self::assertCount(1, $storeRoute);
+        self::assertSame('/manifest-users/{user}', $showRoute[0]['path'] ?? null);
+        self::assertSame(['GET'], $showRoute[0]['methods'] ?? null);
+        self::assertSame(['navigate', 'hydrate', 'prefetch'], $showRoute[0]['capabilities'] ?? null);
+        self::assertSame([
+            'document' => 'reload',
+            'navigation' => 'reload',
+        ], $showRoute[0]['policy'] ?? null);
+        self::assertSame([
+            'layout' => 'app-shell',
+            'transition' => 'fade',
+            'hydrate' => true,
+        ], $showRoute[0]['runtime'] ?? null);
+        self::assertSame('/manifest-users', $storeRoute[0]['path'] ?? null);
+        self::assertSame(['POST'], $storeRoute[0]['methods'] ?? null);
+        self::assertSame([], $storeRoute[0]['capabilities'] ?? null);
+        self::assertSame([
+            'transition' => 'slide',
+            'hydrate' => false,
+        ], $storeRoute[0]['runtime'] ?? null);
         self::assertStringNotContainsString('"middleware"', $response->content());
         self::assertStringNotContainsString('"auth"', $response->content());
-        self::assertStringNotContainsString('"document"', $response->content());
+        self::assertStringNotContainsString('"contract"', $response->content());
     }
 
     public function test_it_emits_a_minimal_spa_navigation_payload_for_volt_navigation_requests(): void
@@ -1153,6 +1165,8 @@ final class HttpKernelTest extends TestCase
             ->name('spa.navigation.users.show')
             ->meta([
                 'runtime' => [
+                    'document' => 'reload',
+                    'navigation' => 'reload',
                     'layout' => 'app-shell',
                     'transition' => [
                         'name' => 'fade',
@@ -1187,6 +1201,8 @@ final class HttpKernelTest extends TestCase
         self::assertSame('/spa-navigation/users/15', $payload['navigation']['target'] ?? null);
         self::assertSame('GET', $payload['navigation']['method'] ?? null);
         self::assertSame('spa.navigation.users.show', $payload['screen']['route'] ?? null);
+        self::assertSame('reload', $payload['policy']['document'] ?? null);
+        self::assertSame('reload', $payload['policy']['navigation'] ?? null);
         self::assertSame('app-shell', $payload['runtime']['layout'] ?? null);
         self::assertSame('fade', $payload['runtime']['transition'] ?? null);
         self::assertTrue($payload['runtime']['hydrate'] ?? false);

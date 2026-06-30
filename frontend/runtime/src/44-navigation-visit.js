@@ -136,6 +136,35 @@
     let resolvedRoute = null;
 
     try {
+      const manifestRoute = await resolveFrontendManifestRoute(normalizedUrl, "GET");
+      const manifestNavigationMode = frontendManifestRouteNavigationMode(
+        manifestRoute,
+      );
+      const manifestDocumentContract =
+        frontendManifestRouteDocumentContract(manifestRoute);
+
+      if (manifestDocumentContract && manifestDocumentContract.mode === "reload") {
+        resolvedDocumentContract = manifestDocumentContract.mode;
+        outcome = "document-fallback";
+        fallbackReason = "manifest-document-reload";
+
+        if (settings.fallback !== false) {
+          window.location.assign(normalizedUrl);
+          return;
+        }
+      }
+
+      if (manifestNavigationMode && manifestNavigationMode.mode === "reload") {
+        resolvedNavigationMode = manifestNavigationMode.mode;
+        outcome = "policy-reload";
+        fallbackReason = "manifest-policy-reload";
+
+        if (settings.fallback !== false) {
+          window.location.assign(normalizedUrl);
+          return;
+        }
+      }
+
       if (
         cacheControl.mode === "reload" ||
         cacheControl.mode === "invalidate"
@@ -341,9 +370,16 @@
           : payload.navigationMode && typeof payload.navigationMode === "object"
             ? payload.navigationMode
             : requestedNavigationMode;
-      const payloadDocumentContract = payload.document
+      const documentPayloadContract = payload.document
         ? documentContractForDocument(payload.document)
         : parseDocumentContract("", "default");
+      const payloadDocumentContract =
+        documentPayloadContract.mode !== "auto"
+          ? documentPayloadContract
+          : payload.documentContract &&
+              typeof payload.documentContract === "object"
+            ? payload.documentContract
+            : documentPayloadContract;
       const documentHydrate = payload.document
         ? hydrationForDocument(payload.document)
         : {
@@ -424,6 +460,7 @@
           url: normalizedUrl,
           finalUrl: finalUrl,
           navigationMode: resolvedNavigationMode,
+          documentContract: resolvedDocumentContract,
           hydrateEnabled:
             payloadHydrate && typeof payloadHydrate.enabled === "boolean"
               ? payloadHydrate.enabled
@@ -510,6 +547,7 @@
           finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
           navigationMode: resolvedNavigationMode,
+          documentContract: resolvedDocumentContract,
           hydrateEnabled:
             payloadHydrate && typeof payloadHydrate.enabled === "boolean"
               ? payloadHydrate.enabled

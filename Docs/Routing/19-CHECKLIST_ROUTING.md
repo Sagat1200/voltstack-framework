@@ -305,8 +305,8 @@ Abrir solo cuando `V1` este cerrado.
 
 - `[x]` definir metadata SPA publica minima
 - `[x]` generar `Frontend Route Manifest` minimo
-- `[x]` exponer `routes`, `methods`, `path` y `public capabilities`
-- `[x]` evitar exponer middleware, policies o metadata privada
+- `[x]` exponer `routes`, `methods`, `path`, `public capabilities` y politica publica minima
+- `[x]` evitar exponer middleware, metadata privada o policies internas no publicas
 
 Propuesta minima recomendada para abrir este bloque:
 
@@ -332,6 +332,10 @@ Contrato minimo sugerido:
       "path": "/users/{user}",
       "methods": ["GET"],
       "capabilities": ["navigate", "hydrate"],
+      "policy": {
+        "document": "reload",
+        "navigation": "reload"
+      },
       "runtime": {
         "layout": "dashboard",
         "transition": "fade",
@@ -348,6 +352,8 @@ Campos publicos minimos por ruta:
 - `path`: patron publico navegable ya normalizado
 - `methods`: verbos HTTP publicos soportados por la ruta; para SPA minima solo se debe consumir `GET`
 - `capabilities`: lista declarativa de capacidades publicas como `navigate`, `hydrate`, `prefetch`
+- `policy.document`: contrato publico minimo de documento como `spa` o `reload`
+- `policy.navigation`: politica publica minima de navegacion como `auto`, `spa` o `reload`
 - `runtime.layout`: layout publico consumible por el runtime sin exponer detalles internos
 - `runtime.transition`: sugerencia visual publica y opcional
 - `runtime.hydrate`: flag publico minimo para indicar si la pantalla requiere hidratacion SPA
@@ -355,7 +361,7 @@ Campos publicos minimos por ruta:
 Campos que no deben serializarse en esta fase:
 
 - middleware
-- policies
+- policies internas no publicas
 - aliases internos
 - constraints internas no necesarias para el cliente
 - metadata privada de seguridad
@@ -364,18 +370,22 @@ Campos que no deben serializarse en esta fase:
 Criterio minimo para marcar `7.1`:
 
 - el runtime puede decidir si una ruta publica es navegable por SPA usando solo `name`, `path`, `methods` y `capabilities`
+- el manifest y el payload SPA comparten la misma politica publica minima para `document` y `navigation`
 - el manifiesto no expone datos privados ni obliga al cliente a conocer `Route`, `CompiledRoute` o artifacts internos
 - la informacion necesaria para `layout`, `transition` y `hydrate` ya sale de metadata compilada publica y estable
+- el runtime puede usar el manifest como fuente previa para decidir `prefetch` y `reload` sin esperar a parsear el documento destino
 
 Nota del corte actual:
 
 - existe `FrontendRouteManifest` como contrato publico minimo serializable
 - existe `FrontendRouteManifestStore` que compila el manifiesto desde `CompiledRouteCollection`
 - el manifiesto se publica como `JSON` cacheable en `/_volt/routes-manifest.json`
-- el manifiesto actual expone `name`, `path`, `methods`, `capabilities` y un bloque `runtime` publico reducido
+- el manifiesto actual expone `name`, `path`, `methods`, `capabilities`, un bloque `policy` publico minimo y un bloque `runtime` publico reducido
+- el bloque `policy` publico actual solo incluye `document` y `navigation`
 - el bloque `runtime` publico actual solo incluye `layout`, `transition` y `hydrate`
-- la serializacion excluye rutas internas como `/_volt/*`, rutas sin nombre, `middleware`, `auth`, `document`, policies y referencias internas del container
+- la serializacion excluye rutas internas como `/_volt/*`, rutas sin nombre, `middleware`, `auth`, policies internas adicionales y referencias internas del container
 - hay pruebas focalizadas de store y de endpoint publico para validar serializacion minima y exclusion de metadata privada
+- el runtime JS ya carga `/_volt/routes-manifest.json` bajo demanda y lo usa para deshabilitar `prefetch` no permitido y adelantar `reload` cuando la politica publica ya lo declara
 
 ### 7.2 SPA Routing Protocol Minimo
 
@@ -462,6 +472,9 @@ Estado de integracion:
 - `visit()` ya puede resolver `pageTransition` desde el contrato SPA cuando el documento no declara una transicion explicita
 - la informacion de `hydrate` del contrato SPA ya se proyecta en hooks y telemetria de navegacion aunque el parcheo del documento siga siendo HTML-first
 - `applyDocumentPayload()` ya materializa `hydrate` del contrato SPA como atributos `data-volt-hydrate*` sobre `body` cuando el HTML destino no declara hidratacion explicita
+- el contrato SPA ya proyecta una politica publica minima con `document` y `navigation`
+- `visit()` ya usa esa politica del contrato SPA como fallback para `document contract` y `navigation mode` cuando el HTML no declara esos marcadores
+- el runtime ya puede apoyarse tambien en el `Frontend Route Manifest` para decidir `prefetch` y `reload` antes del fetch HTML cuando existe una coincidencia publica de ruta
 - el siguiente paso natural de `V2` es profundizar el consumo del contrato SPA en el runtime para reducir aun mas la dependencia del parseo HTML cuando no existan overrides explicitos
 
 ### 7.3 Integracion Con Runtime SPA Reactivo

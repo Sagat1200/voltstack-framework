@@ -114,15 +114,23 @@ final class FrontendRouteManifestStore
         }
 
         $methods = $this->normalizeMethods($route->methods());
-        $runtime = $this->publicRuntimeMetadata($metadata->get('runtime'));
+        $rawRuntime = $metadata->get('runtime');
+        $runtime = $this->publicRuntimeMetadata($rawRuntime);
+        $policy = $this->publicPolicyMetadata($rawRuntime);
 
-        return [
+        $route = [
             'name' => $name,
             'path' => $route->uri(),
             'methods' => $methods,
             'capabilities' => $this->publicCapabilities($methods, $metadata, $runtime),
             'runtime' => $runtime,
         ];
+
+        if ($policy !== []) {
+            $route['policy'] = $policy;
+        }
+
+        return $route;
     }
 
     private function isInternalRoute(CompiledRoute $route, RouteMetadata $metadata): bool
@@ -191,6 +199,35 @@ final class FrontendRouteManifestStore
     }
 
     /**
+     * @return array<string, string>
+     */
+    private function publicPolicyMetadata(mixed $runtime): array
+    {
+        if (! is_array($runtime)) {
+            return [];
+        }
+
+        $public = [];
+        $document = $runtime['document'] ?? ($runtime['contract'] ?? $runtime['mode'] ?? null);
+
+        if (is_string($document) && trim($document) !== '') {
+            $normalizedDocument = $this->normalizeDocumentContract($document);
+
+            if ($normalizedDocument !== '') {
+                $public['document'] = $normalizedDocument;
+            }
+        }
+
+        $navigation = $runtime['navigation'] ?? ($runtime['navigationMode'] ?? null);
+
+        if (is_string($navigation) && trim($navigation) !== '') {
+            $public['navigation'] = strtolower(trim($navigation));
+        }
+
+        return $public;
+    }
+
+    /**
      * @param array<int, string> $methods
      * @param array<string, mixed> $runtime
      * @return array<int, string>
@@ -232,5 +269,14 @@ final class FrontendRouteManifestStore
         }
 
         return hash('sha256', $payload);
+    }
+
+    private function normalizeDocumentContract(string $document): string
+    {
+        return match (strtolower(trim($document))) {
+            'reload-only', 'static', 'non-spa', 'document' => 'reload',
+            'interactive', 'reactive' => 'spa',
+            default => strtolower(trim($document)),
+        };
     }
 }

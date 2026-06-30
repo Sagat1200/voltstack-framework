@@ -12,6 +12,12 @@
     navigationController: null,
     navigationCache: new Map(),
     navigationInFlight: new Map(),
+    frontendRouteManifest: {
+      loadedAt: null,
+      checksum: null,
+      routes: null,
+      promise: null,
+    },
     persistentFragments: new Map(),
     navigationPreloadHints: new Set(),
     navigationPrefetchInterest: new Map(),

@@ -15,6 +15,12 @@
     navigationController: null,
     navigationCache: new Map(),
     navigationInFlight: new Map(),
+    frontendRouteManifest: {
+      loadedAt: null,
+      checksum: null,
+      routes: null,
+      promise: null,
+    },
     persistentFragments: new Map(),
     navigationPreloadHints: new Set(),
     navigationPrefetchInterest: new Map(),
@@ -5655,6 +5661,8 @@
       entry.cacheControl || navigationCacheControlForDocument(documentPayload);
     const navigationMode =
       entry.navigationMode || navigationModeForDocument(documentPayload);
+    const documentContract =
+      entry.documentContract || documentContractForDocument(documentPayload);
     const pageTransition =
       entry.pageTransition ||
       pageTransitionForPayload({
@@ -5676,12 +5684,215 @@
       aliases: navigationCacheAliases(entry),
       cacheControl: cacheControl,
       navigationMode: navigationMode,
+      documentContract: documentContract,
       pageTransition: pageTransition,
       spaNavigation:
         entry.spaNavigation && typeof entry.spaNavigation === "object"
           ? entry.spaNavigation
           : null,
     };
+  }
+
+  function frontendRouteManifestEndpoint() {
+    return normalizeNavigationUrl("/_volt/routes-manifest.json");
+  }
+
+  function isValidFrontendRouteManifest(payload) {
+    if (!payload || typeof payload !== "object") {
+      return false;
+    }
+
+    const protocol =
+      payload.protocol && typeof payload.protocol === "object"
+        ? payload.protocol
+        : null;
+
+    return (
+      !!protocol &&
+      protocol.name === "VoltStack Frontend Manifest" &&
+      typeof protocol.version === "string" &&
+      Array.isArray(payload.routes)
+    );
+  }
+
+  async function loadFrontendRouteManifest(options) {
+    const settings = options && typeof options === "object" ? options : {};
+    const state = runtime.frontendRouteManifest;
+
+    if (
+      settings.reload !== true &&
+      state &&
+      Array.isArray(state.routes) &&
+      state.routes.length >= 0
+    ) {
+      return state;
+    }
+
+    if (state && state.promise) {
+      return state.promise;
+    }
+
+    const request = fetch(frontendRouteManifestEndpoint(), {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "VoltStack",
+      },
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          return null;
+        }
+
+        return response.json().catch(function () {
+          return null;
+        });
+      })
+      .then(function (payload) {
+        if (!isValidFrontendRouteManifest(payload)) {
+          return null;
+        }
+
+        state.loadedAt = Date.now();
+        state.checksum =
+          payload.version && typeof payload.version === "object"
+            ? payload.version.checksum || null
+            : null;
+        state.routes = payload.routes;
+        return state;
+      })
+      .catch(function () {
+        return null;
+      })
+      .finally(function () {
+        if (state) {
+          state.promise = null;
+        }
+      });
+
+    if (state) {
+      state.promise = request;
+    }
+
+    return request;
+  }
+
+  function escapeFrontendRoutePatternSegment(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function frontendRoutePatternToRegExp(path) {
+    if (typeof path !== "string" || path.trim() === "") {
+      return null;
+    }
+
+    const normalizedPath = path.trim();
+
+    if (normalizedPath === "/") {
+      return /^\/$/;
+    }
+
+    const pattern = normalizedPath
+      .split("/")
+      .map(function (segment, index) {
+        if (index === 0) {
+          return "";
+        }
+
+        if (/^\{[^/]+\}$/.test(segment)) {
+          return "[^/]+";
+        }
+
+        return escapeFrontendRoutePatternSegment(segment);
+      })
+      .join("/");
+
+    return new RegExp("^" + pattern + "/?$");
+  }
+
+  function frontendManifestRouteForUrl(manifestState, url, method) {
+    if (
+      !manifestState ||
+      !Array.isArray(manifestState.routes) ||
+      typeof url !== "string" ||
+      url === ""
+    ) {
+      return null;
+    }
+
+    const targetUrl = new URL(url, window.location.href);
+    const normalizedMethod =
+      typeof method === "string" && method.trim() !== ""
+        ? method.trim().toUpperCase()
+        : "GET";
+
+    for (let index = 0; index < manifestState.routes.length; index += 1) {
+      const route = manifestState.routes[index];
+
+      if (!route || typeof route !== "object") {
+        continue;
+      }
+
+      const methods = Array.isArray(route.methods) ? route.methods : [];
+
+      if (methods.indexOf(normalizedMethod) === -1) {
+        continue;
+      }
+
+      const matcher = frontendRoutePatternToRegExp(route.path || "");
+
+      if (!matcher) {
+        continue;
+      }
+
+      if (matcher.test(targetUrl.pathname)) {
+        return route;
+      }
+    }
+
+    return null;
+  }
+
+  async function resolveFrontendManifestRoute(url, method) {
+    const manifestState = await loadFrontendRouteManifest();
+
+    if (!manifestState) {
+      return null;
+    }
+
+    return frontendManifestRouteForUrl(manifestState, url, method || "GET");
+  }
+
+  function frontendManifestRouteAllowsPrefetch(route) {
+    if (!route || typeof route !== "object") {
+      return true;
+    }
+
+    const capabilities = Array.isArray(route.capabilities) ? route.capabilities : [];
+    return capabilities.indexOf("prefetch") !== -1;
+  }
+
+  function frontendManifestRouteNavigationMode(route) {
+    const policy =
+      route && route.policy && typeof route.policy === "object" ? route.policy : null;
+
+    if (!policy || typeof policy.navigation !== "string") {
+      return null;
+    }
+
+    return parseNavigationMode(policy.navigation, "manifest");
+  }
+
+  function frontendManifestRouteDocumentContract(route) {
+    const policy =
+      route && route.policy && typeof route.policy === "object" ? route.policy : null;
+
+    if (!policy || typeof policy.document !== "string") {
+      return null;
+    }
+
+    return parseDocumentContract(policy.document, "manifest");
   }
 
   function parseSpaNavigationHeader(value) {
@@ -5769,6 +5980,36 @@
     }
 
     return createPageTransition(runtime.transition, null, null, "protocol", null);
+  }
+
+  function spaNavigationNavigationMode(spaNavigation) {
+    const policy =
+      spaNavigation &&
+      spaNavigation.policy &&
+      typeof spaNavigation.policy === "object"
+        ? spaNavigation.policy
+        : null;
+
+    if (!policy || typeof policy.navigation !== "string") {
+      return null;
+    }
+
+    return parseNavigationMode(policy.navigation, "protocol");
+  }
+
+  function spaNavigationDocumentContract(spaNavigation) {
+    const policy =
+      spaNavigation &&
+      spaNavigation.policy &&
+      typeof spaNavigation.policy === "object"
+        ? spaNavigation.policy
+        : null;
+
+    if (!policy || typeof policy.document !== "string") {
+      return null;
+    }
+
+    return parseDocumentContract(policy.document, "protocol");
   }
 
   function pruneNavigationCache() {
@@ -5901,6 +6142,10 @@
         payload.navigationMode && typeof payload.navigationMode === "object"
           ? payload.navigationMode
           : navigationModeForDocument(parseNavigationDocument(payload.html)),
+      documentContract:
+        payload.documentContract && typeof payload.documentContract === "object"
+          ? payload.documentContract
+          : documentContractForDocument(parseNavigationDocument(payload.html)),
       hydrate:
         payload.hydrate && typeof payload.hydrate === "object"
           ? payload.hydrate
@@ -6204,6 +6449,9 @@
           payload.document,
         );
         const responseMode = navigationModeForDocument(payload.document);
+        const responseDocumentContract = documentContractForDocument(
+          payload.document,
+        );
         const responseHydrate = hydrationForDocument(payload.document);
         const responsePageTransition = pageTransitionForDocument(
           payload.document,
@@ -6216,6 +6464,9 @@
         const spaTransition = spaNavigationPageTransition(spaNavigation);
         const spaHydrate = spaNavigationHydrate(spaNavigation);
         const spaLayout = spaNavigationLayout(spaNavigation);
+        const spaNavigationMode = spaNavigationNavigationMode(spaNavigation);
+        const spaDocumentContract =
+          spaNavigationDocumentContract(spaNavigation);
         const responseRedirect =
           spaNavigation &&
           spaNavigation.redirect &&
@@ -6243,7 +6494,17 @@
           redirect: responseRedirect,
           layout: responseLayout || spaLayout,
           navigationMode:
-            responseMode.mode !== "auto" ? responseMode : requestedMode,
+            responseMode.mode !== "auto"
+              ? responseMode
+              : spaNavigationMode && spaNavigationMode.mode !== "auto"
+                ? spaNavigationMode
+                : requestedMode,
+          documentContract:
+            responseDocumentContract.mode !== "auto"
+              ? responseDocumentContract
+              : spaDocumentContract && spaDocumentContract.mode !== "auto"
+                ? spaDocumentContract
+                : responseDocumentContract,
           hydrate:
             responseHydrate && responseHydrate.declared ? responseHydrate : spaHydrate || responseHydrate,
           pageTransition:
@@ -6325,9 +6586,20 @@
       mode: cacheControl.mode,
     });
 
-    return requestNavigationPayload(normalizedUrl, undefined, "prefetch", {
-      cacheControl: cacheControl,
-      navigationMode: navigationMode,
+    return resolveFrontendManifestRoute(normalizedUrl, "GET").then(function (route) {
+      if (route && !frontendManifestRouteAllowsPrefetch(route)) {
+        emitNavigationCacheEvent("volt:cache-skip", {
+          url: normalizedUrl,
+          source: "prefetch",
+          reason: "manifest-prefetch-disabled",
+        });
+        return null;
+      }
+
+      return requestNavigationPayload(normalizedUrl, undefined, "prefetch", {
+        cacheControl: cacheControl,
+        navigationMode: navigationMode,
+      });
     });
   }
 
@@ -10935,6 +11207,35 @@
     let resolvedRoute = null;
 
     try {
+      const manifestRoute = await resolveFrontendManifestRoute(normalizedUrl, "GET");
+      const manifestNavigationMode = frontendManifestRouteNavigationMode(
+        manifestRoute,
+      );
+      const manifestDocumentContract =
+        frontendManifestRouteDocumentContract(manifestRoute);
+
+      if (manifestDocumentContract && manifestDocumentContract.mode === "reload") {
+        resolvedDocumentContract = manifestDocumentContract.mode;
+        outcome = "document-fallback";
+        fallbackReason = "manifest-document-reload";
+
+        if (settings.fallback !== false) {
+          window.location.assign(normalizedUrl);
+          return;
+        }
+      }
+
+      if (manifestNavigationMode && manifestNavigationMode.mode === "reload") {
+        resolvedNavigationMode = manifestNavigationMode.mode;
+        outcome = "policy-reload";
+        fallbackReason = "manifest-policy-reload";
+
+        if (settings.fallback !== false) {
+          window.location.assign(normalizedUrl);
+          return;
+        }
+      }
+
       if (
         cacheControl.mode === "reload" ||
         cacheControl.mode === "invalidate"
@@ -11140,9 +11441,16 @@
           : payload.navigationMode && typeof payload.navigationMode === "object"
             ? payload.navigationMode
             : requestedNavigationMode;
-      const payloadDocumentContract = payload.document
+      const documentPayloadContract = payload.document
         ? documentContractForDocument(payload.document)
         : parseDocumentContract("", "default");
+      const payloadDocumentContract =
+        documentPayloadContract.mode !== "auto"
+          ? documentPayloadContract
+          : payload.documentContract &&
+              typeof payload.documentContract === "object"
+            ? payload.documentContract
+            : documentPayloadContract;
       const documentHydrate = payload.document
         ? hydrationForDocument(payload.document)
         : {
@@ -11223,6 +11531,7 @@
           url: normalizedUrl,
           finalUrl: finalUrl,
           navigationMode: resolvedNavigationMode,
+          documentContract: resolvedDocumentContract,
           hydrateEnabled:
             payloadHydrate && typeof payloadHydrate.enabled === "boolean"
               ? payloadHydrate.enabled
@@ -11309,6 +11618,7 @@
           finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
           navigationMode: resolvedNavigationMode,
+          documentContract: resolvedDocumentContract,
           hydrateEnabled:
             payloadHydrate && typeof payloadHydrate.enabled === "boolean"
               ? payloadHydrate.enabled
