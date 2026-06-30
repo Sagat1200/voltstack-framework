@@ -134,6 +134,8 @@
     let outcome = "success";
     let fallbackReason = null;
     let resolvedRoute = null;
+    let navigationTarget = normalizedUrl;
+    let payloadHydrate = null;
 
     try {
       const manifestRoute = await resolveFrontendManifestRoute(normalizedUrl, "GET");
@@ -275,7 +277,7 @@
             }
           }
         })());
-      const navigationTarget =
+      navigationTarget =
         payload && typeof payload.target === "string" && payload.target !== ""
           ? payload.target
           : normalizedUrl;
@@ -389,7 +391,7 @@
             source: "default",
             declared: false,
           };
-      const payloadHydrate =
+      payloadHydrate =
         documentHydrate && documentHydrate.declared
           ? documentHydrate
           : payload.hydrate && typeof payload.hydrate === "object"
