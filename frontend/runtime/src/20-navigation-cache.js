@@ -159,7 +159,98 @@
       cacheControl: cacheControl,
       navigationMode: navigationMode,
       pageTransition: pageTransition,
+      spaNavigation:
+        entry.spaNavigation && typeof entry.spaNavigation === "object"
+          ? entry.spaNavigation
+          : null,
     };
+  }
+
+  function parseSpaNavigationHeader(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    try {
+      const payload = JSON.parse(value);
+
+      if (!payload || typeof payload !== "object") {
+        return null;
+      }
+
+      const protocol =
+        payload.protocol && typeof payload.protocol === "object"
+          ? payload.protocol
+          : null;
+
+      if (
+        !protocol ||
+        protocol.name !== "VoltStack SPA Routing" ||
+        typeof protocol.version !== "string" ||
+        protocol.version.trim() === ""
+      ) {
+        return null;
+      }
+
+      return payload;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function spaNavigationLayout(spaNavigation) {
+    const runtime =
+      spaNavigation &&
+      spaNavigation.runtime &&
+      typeof spaNavigation.runtime === "object"
+        ? spaNavigation.runtime
+        : null;
+
+    if (!runtime || typeof runtime.layout !== "string" || runtime.layout === "") {
+      return null;
+    }
+
+    return runtime.layout;
+  }
+
+  function spaNavigationHydrate(spaNavigation) {
+    const runtime =
+      spaNavigation &&
+      spaNavigation.runtime &&
+      typeof spaNavigation.runtime === "object"
+        ? spaNavigation.runtime
+        : null;
+
+    if (!runtime || typeof runtime.hydrate !== "boolean") {
+      return null;
+    }
+
+    return {
+      enabled: runtime.hydrate,
+      strategy: null,
+      dirtyState: null,
+      source: "protocol",
+      declared: true,
+    };
+  }
+
+  function spaNavigationPageTransition(spaNavigation) {
+    const runtime =
+      spaNavigation &&
+      spaNavigation.runtime &&
+      typeof spaNavigation.runtime === "object"
+        ? spaNavigation.runtime
+        : null;
+
+    if (
+      !runtime ||
+      typeof runtime.transition !== "string" ||
+      runtime.transition === ""
+    ) {
+      return null;
+    }
+
+    return createPageTransition(runtime.transition, null, null, "protocol", null);
   }
 
   function pruneNavigationCache() {
@@ -303,6 +394,10 @@
               html: payload.html,
               document: parseNavigationDocument(payload.html),
             }),
+      spaNavigation:
+        payload.spaNavigation && typeof payload.spaNavigation === "object"
+          ? payload.spaNavigation
+          : null,
     };
 
     aliases.forEach(function (alias) {
@@ -596,8 +691,21 @@
           payload.document,
         );
         const responseLayout = documentLayoutIdentity(payload.document);
+        const spaNavigation =
+          payload.spaNavigation && typeof payload.spaNavigation === "object"
+            ? payload.spaNavigation
+            : null;
+        const spaTransition = spaNavigationPageTransition(spaNavigation);
+        const spaHydrate = spaNavigationHydrate(spaNavigation);
+        const spaLayout = spaNavigationLayout(spaNavigation);
         const responseRedirect =
-          payload.finalUrl && payload.finalUrl !== normalizedUrl
+          spaNavigation &&
+          spaNavigation.redirect &&
+          typeof spaNavigation.redirect === "object" &&
+          typeof spaNavigation.redirect.location === "string" &&
+          spaNavigation.redirect.location !== ""
+            ? normalizeNavigationUrl(spaNavigation.redirect.location)
+            : payload.finalUrl && payload.finalUrl !== normalizedUrl
             ? payload.finalUrl
             : null;
         const effectiveControl = mergeNavigationCacheControl(
@@ -605,14 +713,26 @@
           responseControl,
         );
         const enrichedPayload = Object.assign({}, payload, {
-          target: normalizedUrl,
+          target:
+            spaNavigation &&
+            spaNavigation.navigation &&
+            typeof spaNavigation.navigation === "object" &&
+            typeof spaNavigation.navigation.target === "string" &&
+            spaNavigation.navigation.target !== ""
+              ? normalizeNavigationUrl(spaNavigation.navigation.target)
+              : normalizedUrl,
           cacheControl: effectiveControl,
           redirect: responseRedirect,
-          layout: responseLayout,
+          layout: responseLayout || spaLayout,
           navigationMode:
             responseMode.mode !== "auto" ? responseMode : requestedMode,
-          hydrate: responseHydrate,
-          pageTransition: responsePageTransition,
+          hydrate:
+            responseHydrate && responseHydrate.declared ? responseHydrate : spaHydrate || responseHydrate,
+          pageTransition:
+            responsePageTransition && responsePageTransition.declared
+              ? responsePageTransition
+              : spaTransition || responsePageTransition,
+          spaNavigation: spaNavigation,
         });
 
         if (

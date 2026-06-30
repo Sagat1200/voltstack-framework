@@ -456,7 +456,10 @@ Estado de integracion:
 
 - el runtime actual sigue navegando con HTML y parseo de documento como camino principal
 - `7.2` ya queda definido y emitido como contrato publico minimo sin acoplar el runtime a internals del router
-- el siguiente paso natural de `V2` es consumir `X-Volt-Navigation` desde el runtime para reducir dependencia del parseo HTML cuando corresponda
+- el runtime ya consume `X-Volt-Navigation` como fuente complementaria para `target`, `route`, `redirect` y proyecciones runtime publicas
+- los marcadores explicitos del documento siguen siendo la fuente primaria para `layout`, `transition` y `hydrate` cuando el HTML declara overrides
+- la deteccion de cambio de layout en `visit()` ya puede apoyarse en el `layout` del contrato SPA cuando el documento destino no declara `data-volt-layout`
+- el siguiente paso natural de `V2` es profundizar el consumo del contrato SPA en el runtime para reducir aun mas la dependencia del parseo HTML cuando no existan overrides explicitos
 
 ### 7.3 Integracion Con Runtime SPA Reactivo
 

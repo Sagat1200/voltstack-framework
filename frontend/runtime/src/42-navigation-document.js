@@ -562,9 +562,13 @@
     return null;
   }
 
-  function shouldFallbackForLayoutChange(doc) {
+  function shouldFallbackForLayoutChange(doc, nextLayoutHint) {
     const currentLayout = currentLayoutIdentity();
-    const nextLayout = documentLayoutIdentity(doc);
+    const hintedLayout =
+      typeof nextLayoutHint === "string" && nextLayoutHint !== ""
+        ? nextLayoutHint
+        : null;
+    const nextLayout = documentLayoutIdentity(doc) || hintedLayout;
 
     if (!currentLayout && !nextLayout) {
       return false;

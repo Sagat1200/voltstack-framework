@@ -1064,6 +1064,10 @@ final class HttpKernelTest extends TestCase
         self::assertStringContainsString('volt:component-destroyed', $response->content());
         self::assertStringContainsString('window.Volt.visit = function (url, options) {', $response->content());
         self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $response->content());
+        self::assertStringContainsString('response.headers.get("X-Volt-Navigation")', $response->content());
+        self::assertStringContainsString('protocol.name !== "VoltStack SPA Routing"', $response->content());
+        self::assertStringContainsString('const payloadLayout =', $response->content());
+        self::assertStringContainsString('shouldFallbackForLayoutChange(payload.document, payloadLayout)', $response->content());
     }
 
     public function test_it_serves_the_frontend_route_manifest_as_a_cacheable_json_asset(): void

@@ -29,14 +29,33 @@
     });
 
     const html = await response.text();
+    const spaNavigation = parseSpaNavigationHeader(
+      response.headers.get("X-Volt-Navigation"),
+    );
     const payload = {
       html: html,
       document: parseNavigationDocument(html),
       finalUrl: response.url || url,
+      spaNavigation: spaNavigation,
     };
 
+    if (
+      spaNavigation &&
+      spaNavigation.navigation &&
+      typeof spaNavigation.navigation === "object" &&
+      typeof spaNavigation.navigation.target === "string" &&
+      spaNavigation.navigation.target !== ""
+    ) {
+      payload.target = normalizeNavigationUrl(spaNavigation.navigation.target);
+    }
+
     if (!response.ok) {
-      payload.error = navigationErrorPayload(response.status, response.statusText);
+      payload.error =
+        spaNavigation &&
+        spaNavigation.error &&
+        typeof spaNavigation.error === "object"
+          ? spaNavigation.error
+          : navigationErrorPayload(response.status, response.statusText);
       return payload;
     }
 
@@ -114,6 +133,7 @@
 
     let outcome = "success";
     let fallbackReason = null;
+    let resolvedRoute = null;
 
     try {
       if (
@@ -230,6 +250,18 @@
         payload && typeof payload.target === "string" && payload.target !== ""
           ? payload.target
           : normalizedUrl;
+      const spaNavigation =
+        payload && payload.spaNavigation && typeof payload.spaNavigation === "object"
+          ? payload.spaNavigation
+          : null;
+      resolvedRoute =
+        spaNavigation &&
+        spaNavigation.screen &&
+        typeof spaNavigation.screen === "object" &&
+        typeof spaNavigation.screen.route === "string" &&
+        spaNavigation.screen.route !== ""
+          ? spaNavigation.screen.route
+          : null;
 
       finalUrl =
         payload && payload.finalUrl
@@ -318,13 +350,17 @@
           : payload.pageTransition && typeof payload.pageTransition === "object"
             ? payload.pageTransition
             : parsePageTransition("", "default");
+      const payloadLayout =
+        payload && typeof payload.layout === "string" && payload.layout !== ""
+          ? payload.layout
+          : null;
       resolvedNavigationMode =
         payloadNavigationMode && payloadNavigationMode.mode
           ? payloadNavigationMode.mode
           : requestedNavigationMode.mode;
       resolvedDocumentContract = payloadDocumentContract.mode;
 
-      if (shouldFallbackForLayoutChange(payload.document)) {
+      if (shouldFallbackForLayoutChange(payload.document, payloadLayout)) {
         outcome = "layout-fallback";
         fallbackReason = "layout-mismatch";
 
@@ -364,6 +400,7 @@
         "volt:before-navigate",
         {
           target: navigationTarget,
+          route: resolvedRoute,
           url: normalizedUrl,
           finalUrl: finalUrl,
           navigationMode: resolvedNavigationMode,
@@ -439,6 +476,7 @@
         "volt:navigated",
         {
           target: navigationTarget,
+          route: resolvedRoute,
           url: normalizedUrl,
           finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
@@ -549,6 +587,7 @@
 
       const finishDetail = requestHookDetail("navigation", requestMeta, {
         target: navigationTarget,
+        route: resolvedRoute,
         url: normalizedUrl,
         finalUrl: finalUrl,
         outcome: outcome,

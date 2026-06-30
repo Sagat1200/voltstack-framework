@@ -5677,7 +5677,98 @@
       cacheControl: cacheControl,
       navigationMode: navigationMode,
       pageTransition: pageTransition,
+      spaNavigation:
+        entry.spaNavigation && typeof entry.spaNavigation === "object"
+          ? entry.spaNavigation
+          : null,
     };
+  }
+
+  function parseSpaNavigationHeader(value) {
+    if (typeof value !== "string" || value.trim() === "") {
+      return null;
+    }
+
+    try {
+      const payload = JSON.parse(value);
+
+      if (!payload || typeof payload !== "object") {
+        return null;
+      }
+
+      const protocol =
+        payload.protocol && typeof payload.protocol === "object"
+          ? payload.protocol
+          : null;
+
+      if (
+        !protocol ||
+        protocol.name !== "VoltStack SPA Routing" ||
+        typeof protocol.version !== "string" ||
+        protocol.version.trim() === ""
+      ) {
+        return null;
+      }
+
+      return payload;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function spaNavigationLayout(spaNavigation) {
+    const runtime =
+      spaNavigation &&
+      spaNavigation.runtime &&
+      typeof spaNavigation.runtime === "object"
+        ? spaNavigation.runtime
+        : null;
+
+    if (!runtime || typeof runtime.layout !== "string" || runtime.layout === "") {
+      return null;
+    }
+
+    return runtime.layout;
+  }
+
+  function spaNavigationHydrate(spaNavigation) {
+    const runtime =
+      spaNavigation &&
+      spaNavigation.runtime &&
+      typeof spaNavigation.runtime === "object"
+        ? spaNavigation.runtime
+        : null;
+
+    if (!runtime || typeof runtime.hydrate !== "boolean") {
+      return null;
+    }
+
+    return {
+      enabled: runtime.hydrate,
+      strategy: null,
+      dirtyState: null,
+      source: "protocol",
+      declared: true,
+    };
+  }
+
+  function spaNavigationPageTransition(spaNavigation) {
+    const runtime =
+      spaNavigation &&
+      spaNavigation.runtime &&
+      typeof spaNavigation.runtime === "object"
+        ? spaNavigation.runtime
+        : null;
+
+    if (
+      !runtime ||
+      typeof runtime.transition !== "string" ||
+      runtime.transition === ""
+    ) {
+      return null;
+    }
+
+    return createPageTransition(runtime.transition, null, null, "protocol", null);
   }
 
   function pruneNavigationCache() {
@@ -5821,6 +5912,10 @@
               html: payload.html,
               document: parseNavigationDocument(payload.html),
             }),
+      spaNavigation:
+        payload.spaNavigation && typeof payload.spaNavigation === "object"
+          ? payload.spaNavigation
+          : null,
     };
 
     aliases.forEach(function (alias) {
@@ -6114,8 +6209,21 @@
           payload.document,
         );
         const responseLayout = documentLayoutIdentity(payload.document);
+        const spaNavigation =
+          payload.spaNavigation && typeof payload.spaNavigation === "object"
+            ? payload.spaNavigation
+            : null;
+        const spaTransition = spaNavigationPageTransition(spaNavigation);
+        const spaHydrate = spaNavigationHydrate(spaNavigation);
+        const spaLayout = spaNavigationLayout(spaNavigation);
         const responseRedirect =
-          payload.finalUrl && payload.finalUrl !== normalizedUrl
+          spaNavigation &&
+          spaNavigation.redirect &&
+          typeof spaNavigation.redirect === "object" &&
+          typeof spaNavigation.redirect.location === "string" &&
+          spaNavigation.redirect.location !== ""
+            ? normalizeNavigationUrl(spaNavigation.redirect.location)
+            : payload.finalUrl && payload.finalUrl !== normalizedUrl
             ? payload.finalUrl
             : null;
         const effectiveControl = mergeNavigationCacheControl(
@@ -6123,14 +6231,26 @@
           responseControl,
         );
         const enrichedPayload = Object.assign({}, payload, {
-          target: normalizedUrl,
+          target:
+            spaNavigation &&
+            spaNavigation.navigation &&
+            typeof spaNavigation.navigation === "object" &&
+            typeof spaNavigation.navigation.target === "string" &&
+            spaNavigation.navigation.target !== ""
+              ? normalizeNavigationUrl(spaNavigation.navigation.target)
+              : normalizedUrl,
           cacheControl: effectiveControl,
           redirect: responseRedirect,
-          layout: responseLayout,
+          layout: responseLayout || spaLayout,
           navigationMode:
             responseMode.mode !== "auto" ? responseMode : requestedMode,
-          hydrate: responseHydrate,
-          pageTransition: responsePageTransition,
+          hydrate:
+            responseHydrate && responseHydrate.declared ? responseHydrate : spaHydrate || responseHydrate,
+          pageTransition:
+            responsePageTransition && responsePageTransition.declared
+              ? responsePageTransition
+              : spaTransition || responsePageTransition,
+          spaNavigation: spaNavigation,
         });
 
         if (
@@ -9819,9 +9939,13 @@
     return null;
   }
 
-  function shouldFallbackForLayoutChange(doc) {
+  function shouldFallbackForLayoutChange(doc, nextLayoutHint) {
     const currentLayout = currentLayoutIdentity();
-    const nextLayout = documentLayoutIdentity(doc);
+    const hintedLayout =
+      typeof nextLayoutHint === "string" && nextLayoutHint !== ""
+        ? nextLayoutHint
+        : null;
+    const nextLayout = documentLayoutIdentity(doc) || hintedLayout;
 
     if (!currentLayout && !nextLayout) {
       return false;
@@ -10656,14 +10780,33 @@
     });
 
     const html = await response.text();
+    const spaNavigation = parseSpaNavigationHeader(
+      response.headers.get("X-Volt-Navigation"),
+    );
     const payload = {
       html: html,
       document: parseNavigationDocument(html),
       finalUrl: response.url || url,
+      spaNavigation: spaNavigation,
     };
 
+    if (
+      spaNavigation &&
+      spaNavigation.navigation &&
+      typeof spaNavigation.navigation === "object" &&
+      typeof spaNavigation.navigation.target === "string" &&
+      spaNavigation.navigation.target !== ""
+    ) {
+      payload.target = normalizeNavigationUrl(spaNavigation.navigation.target);
+    }
+
     if (!response.ok) {
-      payload.error = navigationErrorPayload(response.status, response.statusText);
+      payload.error =
+        spaNavigation &&
+        spaNavigation.error &&
+        typeof spaNavigation.error === "object"
+          ? spaNavigation.error
+          : navigationErrorPayload(response.status, response.statusText);
       return payload;
     }
 
@@ -10741,6 +10884,7 @@
 
     let outcome = "success";
     let fallbackReason = null;
+    let resolvedRoute = null;
 
     try {
       if (
@@ -10857,6 +11001,18 @@
         payload && typeof payload.target === "string" && payload.target !== ""
           ? payload.target
           : normalizedUrl;
+      const spaNavigation =
+        payload && payload.spaNavigation && typeof payload.spaNavigation === "object"
+          ? payload.spaNavigation
+          : null;
+      resolvedRoute =
+        spaNavigation &&
+        spaNavigation.screen &&
+        typeof spaNavigation.screen === "object" &&
+        typeof spaNavigation.screen.route === "string" &&
+        spaNavigation.screen.route !== ""
+          ? spaNavigation.screen.route
+          : null;
 
       finalUrl =
         payload && payload.finalUrl
@@ -10945,13 +11101,17 @@
           : payload.pageTransition && typeof payload.pageTransition === "object"
             ? payload.pageTransition
             : parsePageTransition("", "default");
+      const payloadLayout =
+        payload && typeof payload.layout === "string" && payload.layout !== ""
+          ? payload.layout
+          : null;
       resolvedNavigationMode =
         payloadNavigationMode && payloadNavigationMode.mode
           ? payloadNavigationMode.mode
           : requestedNavigationMode.mode;
       resolvedDocumentContract = payloadDocumentContract.mode;
 
-      if (shouldFallbackForLayoutChange(payload.document)) {
+      if (shouldFallbackForLayoutChange(payload.document, payloadLayout)) {
         outcome = "layout-fallback";
         fallbackReason = "layout-mismatch";
 
@@ -10991,6 +11151,7 @@
         "volt:before-navigate",
         {
           target: navigationTarget,
+          route: resolvedRoute,
           url: normalizedUrl,
           finalUrl: finalUrl,
           navigationMode: resolvedNavigationMode,
@@ -11066,6 +11227,7 @@
         "volt:navigated",
         {
           target: navigationTarget,
+          route: resolvedRoute,
           url: normalizedUrl,
           finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
@@ -11176,6 +11338,7 @@
 
       const finishDetail = requestHookDetail("navigation", requestMeta, {
         target: navigationTarget,
+        route: resolvedRoute,
         url: normalizedUrl,
         finalUrl: finalUrl,
         outcome: outcome,
