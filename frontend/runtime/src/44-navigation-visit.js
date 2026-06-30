@@ -344,12 +344,32 @@
       const payloadDocumentContract = payload.document
         ? documentContractForDocument(payload.document)
         : parseDocumentContract("", "default");
+      const documentHydrate = payload.document
+        ? hydrationForDocument(payload.document)
+        : {
+            enabled: false,
+            strategy: null,
+            dirtyState: null,
+            source: "default",
+            declared: false,
+          };
+      const payloadHydrate =
+        documentHydrate && documentHydrate.declared
+          ? documentHydrate
+          : payload.hydrate && typeof payload.hydrate === "object"
+            ? payload.hydrate
+            : documentHydrate;
+      const documentPageTransition = payload.document
+        ? pageTransitionForDocument(payload.document)
+        : parsePageTransition("", "default");
       const payloadPageTransition =
-        payload.document || (payload && typeof payload.html === "string")
-          ? pageTransitionForPayload(payload)
+        documentPageTransition && documentPageTransition.declared
+          ? documentPageTransition
           : payload.pageTransition && typeof payload.pageTransition === "object"
             ? payload.pageTransition
-            : parsePageTransition("", "default");
+            : payload.document || (payload && typeof payload.html === "string")
+              ? pageTransitionForPayload(payload)
+              : parsePageTransition("", "default");
       const payloadLayout =
         payload && typeof payload.layout === "string" && payload.layout !== ""
           ? payload.layout
@@ -404,6 +424,14 @@
           url: normalizedUrl,
           finalUrl: finalUrl,
           navigationMode: resolvedNavigationMode,
+          hydrateEnabled:
+            payloadHydrate && typeof payloadHydrate.enabled === "boolean"
+              ? payloadHydrate.enabled
+              : null,
+          hydrateSource:
+            payloadHydrate && typeof payloadHydrate.source === "string"
+              ? payloadHydrate.source
+              : null,
           pageTransition: pageTransition.name,
           pageTransitionSource: pageTransition.source || "default",
           pageTransitionMode: pageTransition.mode || "out-in",
@@ -429,6 +457,7 @@
             url: normalizedUrl,
             finalUrl: finalUrl,
             cacheControl: payload.cacheControl,
+            hydrate: payloadHydrate,
             pageTransition: pageTransition,
           });
         },
@@ -481,6 +510,14 @@
           finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
           navigationMode: resolvedNavigationMode,
+          hydrateEnabled:
+            payloadHydrate && typeof payloadHydrate.enabled === "boolean"
+              ? payloadHydrate.enabled
+              : null,
+          hydrateSource:
+            payloadHydrate && typeof payloadHydrate.source === "string"
+              ? payloadHydrate.source
+              : null,
           pageTransition: pageTransition.name,
           pageTransitionSource: pageTransition.source || "default",
           pageTransitionMode: pageTransition.mode || "out-in",
@@ -596,6 +633,14 @@
         cacheHit: cacheHit,
         navigationMode: resolvedNavigationMode,
         documentContract: resolvedDocumentContract,
+        hydrateEnabled:
+          payloadHydrate && typeof payloadHydrate.enabled === "boolean"
+            ? payloadHydrate.enabled
+            : null,
+        hydrateSource:
+          payloadHydrate && typeof payloadHydrate.source === "string"
+            ? payloadHydrate.source
+            : null,
         pageTransition: resolvedPageTransition,
         timeoutMs: timeoutMs,
         retryCount: retryCount,

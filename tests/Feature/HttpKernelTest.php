@@ -1068,6 +1068,13 @@ final class HttpKernelTest extends TestCase
         self::assertStringContainsString('protocol.name !== "VoltStack SPA Routing"', $response->content());
         self::assertStringContainsString('const payloadLayout =', $response->content());
         self::assertStringContainsString('shouldFallbackForLayoutChange(payload.document, payloadLayout)', $response->content());
+        self::assertStringContainsString('const payloadHydrate =', $response->content());
+        self::assertStringContainsString('payload.pageTransition && typeof payload.pageTransition === "object"', $response->content());
+        self::assertStringContainsString('hydrateEnabled:', $response->content());
+        self::assertStringContainsString('hydrateSource:', $response->content());
+        self::assertStringContainsString('function applyHydrationFallbackToBody(payloadHydrate)', $response->content());
+        self::assertStringContainsString('applyHydrationFallbackToBody(payloadHydrate);', $response->content());
+        self::assertStringContainsString('"data-volt-hydrate",', $response->content());
     }
 
     public function test_it_serves_the_frontend_route_manifest_as_a_cacheable_json_asset(): void

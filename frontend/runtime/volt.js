@@ -9460,6 +9460,49 @@
     });
   }
 
+  function applyHydrationFallbackToBody(payloadHydrate) {
+    if (!document.body || !payloadHydrate || typeof payloadHydrate !== "object") {
+      return;
+    }
+
+    const currentHydration = hydrationForDocument(document);
+
+    if (currentHydration && currentHydration.declared) {
+      return;
+    }
+
+    if (typeof payloadHydrate.enabled === "boolean") {
+      document.body.setAttribute(
+        "data-volt-hydrate",
+        payloadHydrate.enabled ? "true" : "false",
+      );
+    }
+
+    if (
+      typeof payloadHydrate.strategy === "string" &&
+      payloadHydrate.strategy !== ""
+    ) {
+      document.body.setAttribute(
+        "data-volt-hydrate-strategy",
+        payloadHydrate.strategy,
+      );
+    } else {
+      document.body.removeAttribute("data-volt-hydrate-strategy");
+    }
+
+    if (
+      typeof payloadHydrate.dirtyState === "string" &&
+      payloadHydrate.dirtyState !== ""
+    ) {
+      document.body.setAttribute(
+        "data-volt-hydrate-dirty-state",
+        payloadHydrate.dirtyState,
+      );
+    } else {
+      document.body.removeAttribute("data-volt-hydrate-dirty-state");
+    }
+  }
+
   function preservedFragmentAttribute(element) {
     return directiveAttribute(element, [
       "data-volt-preserve",
@@ -10157,6 +10200,10 @@
     const fragmentControl = fragmentControlForDocument(doc);
     const pageTransition =
       payloadMeta.pageTransition || parsePageTransition("", "default");
+    const payloadHydrate =
+      payloadMeta.hydrate && typeof payloadMeta.hydrate === "object"
+        ? payloadMeta.hydrate
+        : null;
     const fragmentSummary = {
       preservedCount: 0,
       discardedCount: 0,
@@ -10190,6 +10237,7 @@
       );
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
+      applyHydrationFallbackToBody(payloadHydrate);
       const restoredPersistent = shouldRestorePreservedFragments(
         fragmentControl,
         payloadMeta,
@@ -11095,12 +11143,32 @@
       const payloadDocumentContract = payload.document
         ? documentContractForDocument(payload.document)
         : parseDocumentContract("", "default");
+      const documentHydrate = payload.document
+        ? hydrationForDocument(payload.document)
+        : {
+            enabled: false,
+            strategy: null,
+            dirtyState: null,
+            source: "default",
+            declared: false,
+          };
+      const payloadHydrate =
+        documentHydrate && documentHydrate.declared
+          ? documentHydrate
+          : payload.hydrate && typeof payload.hydrate === "object"
+            ? payload.hydrate
+            : documentHydrate;
+      const documentPageTransition = payload.document
+        ? pageTransitionForDocument(payload.document)
+        : parsePageTransition("", "default");
       const payloadPageTransition =
-        payload.document || (payload && typeof payload.html === "string")
-          ? pageTransitionForPayload(payload)
+        documentPageTransition && documentPageTransition.declared
+          ? documentPageTransition
           : payload.pageTransition && typeof payload.pageTransition === "object"
             ? payload.pageTransition
-            : parsePageTransition("", "default");
+            : payload.document || (payload && typeof payload.html === "string")
+              ? pageTransitionForPayload(payload)
+              : parsePageTransition("", "default");
       const payloadLayout =
         payload && typeof payload.layout === "string" && payload.layout !== ""
           ? payload.layout
@@ -11155,6 +11223,14 @@
           url: normalizedUrl,
           finalUrl: finalUrl,
           navigationMode: resolvedNavigationMode,
+          hydrateEnabled:
+            payloadHydrate && typeof payloadHydrate.enabled === "boolean"
+              ? payloadHydrate.enabled
+              : null,
+          hydrateSource:
+            payloadHydrate && typeof payloadHydrate.source === "string"
+              ? payloadHydrate.source
+              : null,
           pageTransition: pageTransition.name,
           pageTransitionSource: pageTransition.source || "default",
           pageTransitionMode: pageTransition.mode || "out-in",
@@ -11180,6 +11256,7 @@
             url: normalizedUrl,
             finalUrl: finalUrl,
             cacheControl: payload.cacheControl,
+            hydrate: payloadHydrate,
             pageTransition: pageTransition,
           });
         },
@@ -11232,6 +11309,14 @@
           finalUrl: finalUrl,
           historyMode: settings.historyMode || "push",
           navigationMode: resolvedNavigationMode,
+          hydrateEnabled:
+            payloadHydrate && typeof payloadHydrate.enabled === "boolean"
+              ? payloadHydrate.enabled
+              : null,
+          hydrateSource:
+            payloadHydrate && typeof payloadHydrate.source === "string"
+              ? payloadHydrate.source
+              : null,
           pageTransition: pageTransition.name,
           pageTransitionSource: pageTransition.source || "default",
           pageTransitionMode: pageTransition.mode || "out-in",
@@ -11347,6 +11432,14 @@
         cacheHit: cacheHit,
         navigationMode: resolvedNavigationMode,
         documentContract: resolvedDocumentContract,
+        hydrateEnabled:
+          payloadHydrate && typeof payloadHydrate.enabled === "boolean"
+            ? payloadHydrate.enabled
+            : null,
+        hydrateSource:
+          payloadHydrate && typeof payloadHydrate.source === "string"
+            ? payloadHydrate.source
+            : null,
         pageTransition: resolvedPageTransition,
         timeoutMs: timeoutMs,
         retryCount: retryCount,

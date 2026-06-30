@@ -83,6 +83,49 @@
     });
   }
 
+  function applyHydrationFallbackToBody(payloadHydrate) {
+    if (!document.body || !payloadHydrate || typeof payloadHydrate !== "object") {
+      return;
+    }
+
+    const currentHydration = hydrationForDocument(document);
+
+    if (currentHydration && currentHydration.declared) {
+      return;
+    }
+
+    if (typeof payloadHydrate.enabled === "boolean") {
+      document.body.setAttribute(
+        "data-volt-hydrate",
+        payloadHydrate.enabled ? "true" : "false",
+      );
+    }
+
+    if (
+      typeof payloadHydrate.strategy === "string" &&
+      payloadHydrate.strategy !== ""
+    ) {
+      document.body.setAttribute(
+        "data-volt-hydrate-strategy",
+        payloadHydrate.strategy,
+      );
+    } else {
+      document.body.removeAttribute("data-volt-hydrate-strategy");
+    }
+
+    if (
+      typeof payloadHydrate.dirtyState === "string" &&
+      payloadHydrate.dirtyState !== ""
+    ) {
+      document.body.setAttribute(
+        "data-volt-hydrate-dirty-state",
+        payloadHydrate.dirtyState,
+      );
+    } else {
+      document.body.removeAttribute("data-volt-hydrate-dirty-state");
+    }
+  }
+
   function preservedFragmentAttribute(element) {
     return directiveAttribute(element, [
       "data-volt-preserve",
@@ -780,6 +823,10 @@
     const fragmentControl = fragmentControlForDocument(doc);
     const pageTransition =
       payloadMeta.pageTransition || parsePageTransition("", "default");
+    const payloadHydrate =
+      payloadMeta.hydrate && typeof payloadMeta.hydrate === "object"
+        ? payloadMeta.hydrate
+        : null;
     const fragmentSummary = {
       preservedCount: 0,
       discardedCount: 0,
@@ -813,6 +860,7 @@
       );
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
+      applyHydrationFallbackToBody(payloadHydrate);
       const restoredPersistent = shouldRestorePreservedFragments(
         fragmentControl,
         payloadMeta,

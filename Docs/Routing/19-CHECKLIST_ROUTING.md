@@ -459,6 +459,9 @@ Estado de integracion:
 - el runtime ya consume `X-Volt-Navigation` como fuente complementaria para `target`, `route`, `redirect` y proyecciones runtime publicas
 - los marcadores explicitos del documento siguen siendo la fuente primaria para `layout`, `transition` y `hydrate` cuando el HTML declara overrides
 - la deteccion de cambio de layout en `visit()` ya puede apoyarse en el `layout` del contrato SPA cuando el documento destino no declara `data-volt-layout`
+- `visit()` ya puede resolver `pageTransition` desde el contrato SPA cuando el documento no declara una transicion explicita
+- la informacion de `hydrate` del contrato SPA ya se proyecta en hooks y telemetria de navegacion aunque el parcheo del documento siga siendo HTML-first
+- `applyDocumentPayload()` ya materializa `hydrate` del contrato SPA como atributos `data-volt-hydrate*` sobre `body` cuando el HTML destino no declara hidratacion explicita
 - el siguiente paso natural de `V2` es profundizar el consumo del contrato SPA en el runtime para reducir aun mas la dependencia del parseo HTML cuando no existan overrides explicitos
 
 ### 7.3 Integracion Con Runtime SPA Reactivo
