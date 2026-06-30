@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Quantum\HttpKernel;
 
+use JsonException;
 use Quantum\Http\JsonResponse;
 use Quantum\Http\HtmlDocumentBootstrapper;
 use Quantum\Http\Request;
@@ -14,6 +15,8 @@ use Quantum\HttpKernel\MiddlewareStack;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\Router;
 use Quantum\Routing\Dispatching\ResponseNormalizer;
+use Quantum\Routing\SpaNavigationPayloadFactory;
+use RuntimeException;
 use Throwable;
 use VoltStack\Framework\Application;
 use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
@@ -86,6 +89,7 @@ class HttpKernel implements KernelContract
         }
 
         $response = $this->bootstrapHtmlResponse($request, $response);
+        $response = $this->decorateVoltNavigationResponse($request, $response);
 
         if ($request->method() === 'HEAD') {
             $response->setContent('');
@@ -103,6 +107,26 @@ class HttpKernel implements KernelContract
         }
 
         return $bootstrapper->bootstrap($request, $response);
+    }
+
+    private function decorateVoltNavigationResponse(Request $request, Response $response): Response
+    {
+        if (! $request->isVoltRequest() || ! $request->isVoltNavigation() || $request->isInternalEndpoint()) {
+            return $response;
+        }
+
+        $factory = $this->app->make(SpaNavigationPayloadFactory::class);
+
+        try {
+            $payload = json_encode(
+                $factory->fromRequestAndResponse($request, $response)->toArray(),
+                JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            );
+        } catch (JsonException $exception) {
+            throw new RuntimeException('Unable to encode the Volt navigation payload.', 0, $exception);
+        }
+
+        return $response->header('X-Volt-Navigation', $payload);
     }
 
     public function compiledMiddlewarePipeline(): CompiledMiddlewarePipeline

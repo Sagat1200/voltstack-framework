@@ -379,7 +379,7 @@ Nota del corte actual:
 
 ### 7.2 SPA Routing Protocol Minimo
 
-- `[ ]` definir payload de navegacion minima
+- `[x]` definir payload de navegacion minima
 - `[x]` incluir `target`
 - `[x]` incluir `layout`
 - `[x]` incluir `transition`
@@ -439,6 +439,24 @@ Dependencia formal recomendada:
 - no marcar `7.2` como cerrado antes de cerrar `7.1`
 - todo campo de `layout`, `transition` y `hydrate` debe poder justificarse previamente en el manifiesto publico
 - si un dato no puede exponerse de forma publica y estable en `7.1`, no debe entrar todavia al payload minimo
+
+Nota del corte actual:
+
+- existe `SpaNavigationPayload` como contrato serializable minimo del protocolo SPA
+- existe `SpaNavigationPayloadFactory` para construir el payload desde `Request` y `Response`
+- el payload actual se expone en el header `X-Volt-Navigation` solo para requests con `X-Requested-With: VoltStack` y `X-Volt-Navigate: true`
+- el bloque `navigation` actual expone `target` y `method`
+- el bloque `screen` actual expone `route`
+- el bloque `runtime` actual expone `layout`, `transition` y `hydrate`
+- el bloque `redirect` actual se proyecta desde respuestas `3xx` con header `Location`
+- el bloque `error` actual se proyecta uniformemente desde respuestas `4xx/5xx`
+- hay pruebas focalizadas para exito, redirect y error del payload minimo
+
+Estado de integracion:
+
+- el runtime actual sigue navegando con HTML y parseo de documento como camino principal
+- `7.2` ya queda definido y emitido como contrato publico minimo sin acoplar el runtime a internals del router
+- el siguiente paso natural de `V2` es consumir `X-Volt-Navigation` desde el runtime para reducir dependencia del parseo HTML cuando corresponda
 
 ### 7.3 Integracion Con Runtime SPA Reactivo
 

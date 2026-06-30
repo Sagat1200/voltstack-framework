@@ -7,6 +7,7 @@ namespace VoltStack\Test\Feature;
 use PHPUnit\Framework\TestCase;
 use Quantum\Config\ConfigRepository;
 use Quantum\Actions\Action;
+use Quantum\Http\RedirectResponse;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
@@ -1132,6 +1133,127 @@ final class HttpKernelTest extends TestCase
         self::assertStringNotContainsString('"middleware"', $response->content());
         self::assertStringNotContainsString('"auth"', $response->content());
         self::assertStringNotContainsString('"document"', $response->content());
+    }
+
+    public function test_it_emits_a_minimal_spa_navigation_payload_for_volt_navigation_requests(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/spa-navigation/users/{user}', TestStringController::class . '@show')
+            ->name('spa.navigation.users.show')
+            ->meta([
+                'runtime' => [
+                    'layout' => 'app-shell',
+                    'transition' => [
+                        'name' => 'fade',
+                        'profile' => 'smooth',
+                    ],
+                    'hydrate' => [
+                        'enabled' => true,
+                        'strategy' => 'partial',
+                    ],
+                ],
+            ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/spa-navigation/users/15',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) ($response->headers()['X-Volt-Navigation'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('VoltStack SPA Routing', $payload['protocol']['name'] ?? null);
+        self::assertSame('1.0', $payload['protocol']['version'] ?? null);
+        self::assertSame('/spa-navigation/users/15', $payload['navigation']['target'] ?? null);
+        self::assertSame('GET', $payload['navigation']['method'] ?? null);
+        self::assertSame('spa.navigation.users.show', $payload['screen']['route'] ?? null);
+        self::assertSame('app-shell', $payload['runtime']['layout'] ?? null);
+        self::assertSame('fade', $payload['runtime']['transition'] ?? null);
+        self::assertTrue($payload['runtime']['hydrate'] ?? false);
+        self::assertNull($payload['redirect'] ?? null);
+        self::assertNull($payload['error'] ?? null);
+    }
+
+    public function test_it_emits_redirect_information_in_the_spa_navigation_payload(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/spa-navigation/login-redirect', fn() => new RedirectResponse('/login'))
+            ->name('spa.navigation.login.redirect')
+            ->meta([
+                'runtime' => [
+                    'layout' => 'auth-shell',
+                    'hydrate' => false,
+                ],
+            ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/spa-navigation/login-redirect',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) ($response->headers()['X-Volt-Navigation'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(302, $response->statusCode());
+        self::assertSame('/login', $payload['navigation']['target'] ?? null);
+        self::assertSame('spa.navigation.login.redirect', $payload['screen']['route'] ?? null);
+        self::assertSame('auth-shell', $payload['runtime']['layout'] ?? null);
+        self::assertFalse($payload['runtime']['hydrate'] ?? true);
+        self::assertSame([
+            'location' => '/login',
+            'status' => 302,
+        ], $payload['redirect'] ?? null);
+        self::assertNull($payload['error'] ?? null);
+    }
+
+    public function test_it_emits_error_information_in_the_spa_navigation_payload(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/spa-navigation/boom', static function (): never {
+            throw new \RuntimeException('Boom');
+        })->name('spa.navigation.boom');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/spa-navigation/boom',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) ($response->headers()['X-Volt-Navigation'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(500, $response->statusCode());
+        self::assertSame('/spa-navigation/boom', $payload['navigation']['target'] ?? null);
+        self::assertSame('spa.navigation.boom', $payload['screen']['route'] ?? null);
+        self::assertNull($payload['redirect'] ?? null);
+        self::assertSame([
+            'code' => 500,
+            'message' => 'Server Error',
+        ], $payload['error'] ?? null);
     }
 
     public function test_it_preserves_declared_document_navigation_mode_when_bootstrapping_html(): void

@@ -19,6 +19,7 @@ use Quantum\Routing\Dispatching\ResponseNormalizer;
 use Quantum\Routing\CollectionArtifactStore;
 use Quantum\Routing\MetadataArtifactStore;
 use Quantum\Routing\FrontendRouteManifestStore;
+use Quantum\Routing\SpaNavigationPayloadFactory;
 use Quantum\Middlewares\CsrfMiddleware;
 use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
@@ -297,6 +298,10 @@ class Application extends Container
 
         if (! isset($this->bindings[FrontendRouteManifestStore::class])) {
             $this->singleton(FrontendRouteManifestStore::class, fn(Application $app) => new FrontendRouteManifestStore($app));
+        }
+
+        if (! isset($this->bindings[SpaNavigationPayloadFactory::class])) {
+            $this->singleton(SpaNavigationPayloadFactory::class);
         }
 
         if (! isset($this->bindings[TreeArtifactStore::class])) {
