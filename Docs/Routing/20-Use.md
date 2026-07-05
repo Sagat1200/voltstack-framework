@@ -230,7 +230,9 @@ Alcance de esta primera capa:
 - deriva el parametro desde el ultimo segmento del recurso, con singularizacion basica
 - permite filtrar acciones con `only()` y `except()`
 - expone `apiResource()` como atajo para excluir `create` y `edit`
-- no expone todavia customizacion avanzada de nombres o parametros
+- permite personalizar nombres puntuales con `names([...])`
+- permite renombrar el placeholder singular con `parameter(...)`
+- permite renombrar el placeholder por clave de recurso con `parameters([...])`
 
 Ejemplos:
 
@@ -241,6 +243,20 @@ Route::resource('posts', PostController::class)
 Route::resource('posts', PostController::class)
     ->except(['destroy']);
 
+Route::resource('posts', PostController::class)
+    ->names([
+        'index' => 'content.posts.list',
+        'show' => 'content.posts.view',
+    ]);
+
+Route::resource('posts', PostController::class)
+    ->parameter('entry');
+
+Route::apiResource('posts', ApiPostController::class)
+    ->parameters([
+        'posts' => 'entry',
+    ]);
+
 Route::apiResource('posts', ApiPostController::class);
 ```
 
@@ -248,6 +264,8 @@ Notas:
 
 - cuando una misma path sigue existiendo con otros metodos, el runtime devolvera `405 Method Not Allowed` en lugar de `404`
 - `apiResource()` reserva `create` para que `GET /posts/create` no sea capturado por `show`
+- `names([...])` reemplaza solo las acciones declaradas; las demas conservan `resource.action`
+- `parameter(...)` y `parameters([...])` cambian el nombre publico del placeholder para generacion de URLs, pero el controlador puede seguir recibiendo el nombre original del argumento mientras el dispatcher resuelve el alias internamente
 
 ---
 

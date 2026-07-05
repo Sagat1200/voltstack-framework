@@ -83,6 +83,28 @@ final class Route extends CompiledRoute
         return $this;
     }
 
+    public function renameParameter(string $from, string $to): static
+    {
+        $previousUri = $this->definition()->uri();
+        $definition = $this->definition()->renameParameter($from, $to);
+
+        if ($definition === $this->definition()) {
+            return $this;
+        }
+
+        if ($this->collection !== null) {
+            $this->collection->validateRoutePath($this, $definition->uri());
+        }
+
+        $this->replaceDefinition($definition);
+
+        if ($this->collection !== null) {
+            $this->collection->syncRoutePath($this, $previousUri);
+        }
+
+        return $this;
+    }
+
     public function where(string|array $parameter, ?string $pattern = null): static
     {
         if (is_array($parameter)) {

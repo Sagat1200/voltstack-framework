@@ -19,16 +19,23 @@ final class RouteArgumentResolver
 
     /**
      * @param array<string, mixed> $parameters
+     * @param array<string, string> $parameterAliases
      */
-    public function forCallable(callable $callable, Request $request, array $parameters, string $routeUri): array
-    {
+    public function forCallable(
+        callable $callable,
+        Request $request,
+        array $parameters,
+        string $routeUri,
+        array $parameterAliases = [],
+    ): array {
         $reflection = new ReflectionFunction(Closure::fromCallable($callable));
 
-        return $this->resolveParameters($reflection->getParameters(), $request, $parameters, $routeUri);
+        return $this->resolveParameters($reflection->getParameters(), $request, $parameters, $routeUri, $parameterAliases);
     }
 
     /**
      * @param array<string, mixed> $parameters
+     * @param array<string, string> $parameterAliases
      */
     public function forMethod(
         object $instance,
@@ -36,15 +43,17 @@ final class RouteArgumentResolver
         Request $request,
         array $parameters,
         string $routeUri,
+        array $parameterAliases = [],
     ): array {
         $reflection = new ReflectionMethod($instance, $method);
 
-        return $this->resolveParameters($reflection->getParameters(), $request, $parameters, $routeUri);
+        return $this->resolveParameters($reflection->getParameters(), $request, $parameters, $routeUri, $parameterAliases);
     }
 
     /**
      * @param array<int, ReflectionParameter> $reflectionParameters
      * @param array<string, mixed> $parameters
+     * @param array<string, string> $parameterAliases
      * @return array<int, mixed>
      */
     private function resolveParameters(
@@ -52,11 +61,12 @@ final class RouteArgumentResolver
         Request $request,
         array $parameters,
         string $routeUri,
+        array $parameterAliases,
     ): array {
         $arguments = [];
 
         foreach ($reflectionParameters as $parameter) {
-            $arguments[] = $this->resolveParameter($parameter, $request, $parameters, $routeUri);
+            $arguments[] = $this->resolveParameter($parameter, $request, $parameters, $routeUri, $parameterAliases);
         }
 
         return $arguments;
@@ -64,15 +74,23 @@ final class RouteArgumentResolver
 
     /**
      * @param array<string, mixed> $parameters
+     * @param array<string, string> $parameterAliases
      */
     private function resolveParameter(
         ReflectionParameter $parameter,
         Request $request,
         array $parameters,
         string $routeUri,
+        array $parameterAliases,
     ): mixed {
         if (array_key_exists($parameter->getName(), $parameters)) {
             return $parameters[$parameter->getName()];
+        }
+
+        $aliasedParameter = $parameterAliases[$parameter->getName()] ?? null;
+
+        if (is_string($aliasedParameter) && array_key_exists($aliasedParameter, $parameters)) {
+            return $parameters[$aliasedParameter];
         }
 
         $type = $parameter->getType();

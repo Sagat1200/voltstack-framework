@@ -20,12 +20,14 @@ final class ControllerDispatcher implements DispatcherInterface
     public function dispatch(RouteMatch $match, Request $request): mixed
     {
         [$instance, $method] = $this->resolveTarget($match->route()->action());
+        $parameterAliases = $match->route()->routeMetadata()->get('parameter_aliases', []);
         $arguments = $this->arguments->forMethod(
             $instance,
             $method,
             $request,
             $match->parameters(),
             $match->route()->uri(),
+            is_array($parameterAliases) ? $parameterAliases : [],
         );
 
         return $instance->{$method}(...$arguments);

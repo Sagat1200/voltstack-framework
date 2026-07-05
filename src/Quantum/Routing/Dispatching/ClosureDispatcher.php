@@ -17,11 +17,13 @@ final class ClosureDispatcher implements DispatcherInterface
     {
         /** @var Closure $action */
         $action = $match->route()->action();
+        $parameterAliases = $match->route()->routeMetadata()->get('parameter_aliases', []);
         $arguments = $this->arguments->forCallable(
             $action,
             $request,
             $match->parameters(),
             $match->route()->uri(),
+            is_array($parameterAliases) ? $parameterAliases : [],
         );
 
         return $action(...$arguments);

@@ -62,6 +62,17 @@ final class RouteCompilationTest extends TestCase
         self::assertSame(['id' => '[0-9]+'], $definition->constraints());
     }
 
+    public function test_route_definition_can_rename_parameters_and_move_constraints(): void
+    {
+        $definition = RouteDefinition::make(['GET'], '/posts/{post}', 'handler')
+            ->withConstraint('post', '[0-9]+')
+            ->renameParameter('post', 'entry');
+
+        self::assertSame('/posts/{entry}', $definition->uri());
+        self::assertSame(['entry' => '[0-9]+'], $definition->constraints());
+        self::assertSame(['post' => 'entry'], $definition->metadata()['parameter_aliases']);
+    }
+
     public function test_route_definition_can_store_and_merge_metadata(): void
     {
         $definition = RouteDefinition::make(['GET'], '/users', 'handler')

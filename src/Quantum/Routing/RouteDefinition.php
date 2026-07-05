@@ -141,6 +141,83 @@ final class RouteDefinition
         );
     }
 
+    public function renameParameter(string $from, string $to): self
+    {
+        $normalizedFrom = trim($from);
+        $normalizedTo = trim($to);
+
+        if ($normalizedFrom === '' || $normalizedTo === '') {
+            throw new \InvalidArgumentException('Route parameter names cannot be empty.');
+        }
+
+        if ($normalizedFrom === $normalizedTo) {
+            return $this;
+        }
+
+        if (! in_array($normalizedFrom, $this->parameterNames(), true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route parameter [%s] is not defined for route [%s].',
+                $normalizedFrom,
+                $this->uri,
+            ));
+        }
+
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $normalizedTo) !== 1) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route parameter name [%s] is invalid.',
+                $normalizedTo,
+            ));
+        }
+
+        if (in_array($normalizedTo, $this->parameterNames(), true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route parameter [%s] already exists on route [%s].',
+                $normalizedTo,
+                $this->uri,
+            ));
+        }
+
+        $constraints = [];
+
+        foreach ($this->constraints as $parameter => $pattern) {
+            $constraints[$parameter === $normalizedFrom ? $normalizedTo : $parameter] = $pattern;
+        }
+
+        $metadata = $this->metadata;
+        $aliases = $this->parameterAliases();
+
+        foreach ($aliases as $alias => $target) {
+            if ($target === $normalizedFrom) {
+                $aliases[$alias] = $normalizedTo;
+            }
+        }
+
+        $aliases[$normalizedFrom] = $normalizedTo;
+
+        foreach ($aliases as $alias => $target) {
+            if ($alias === $target) {
+                unset($aliases[$alias]);
+            }
+        }
+
+        if ($aliases === []) {
+            unset($metadata['parameter_aliases']);
+        } else {
+            $metadata['parameter_aliases'] = $aliases;
+        }
+
+        return new self(
+            $this->methods,
+            $this->renamePlaceholder($this->uri, $normalizedFrom, $normalizedTo),
+            $this->domain === null ? null : $this->renamePlaceholder($this->domain, $normalizedFrom, $normalizedTo),
+            $this->action,
+            $this->name,
+            $constraints,
+            $this->middlewares,
+            $metadata,
+        );
+    }
+
     public function withConstraint(string $parameter, string $pattern): self
     {
         $normalizedParameter = trim($parameter);
@@ -285,6 +362,30 @@ final class RouteDefinition
         return array_values(array_unique([...$pathParameters, ...$domainParameters]));
     }
 
+    /**
+     * @return array<string, string>
+     */
+    private function parameterAliases(): array
+    {
+        $aliases = $this->metadata['parameter_aliases'] ?? null;
+
+        if (! is_array($aliases)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($aliases as $alias => $target) {
+            if (! is_string($alias) || ! is_string($target)) {
+                continue;
+            }
+
+            $normalized[trim($alias)] = trim($target);
+        }
+
+        return $normalized;
+    }
+
     private static function normalizeUri(string $uri): string
     {
         if ($uri === '') {
@@ -303,5 +404,10 @@ final class RouteDefinition
         $normalized = rtrim($normalized, '/');
 
         return explode(':', $normalized, 2)[0];
+    }
+
+    private function renamePlaceholder(string $template, string $from, string $to): string
+    {
+        return str_replace('{' . $from . '}', '{' . $to . '}', $template);
     }
 }

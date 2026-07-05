@@ -482,6 +482,56 @@ final class HttpKernelTest extends TestCase
         $router->resource('posts', TestResourceController::class)->only(['publish']);
     }
 
+    public function test_it_can_customize_resource_route_names(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts', TestResourceController::class)->names([
+            'index' => 'content.posts.list',
+            'show' => 'content.posts.view',
+        ]);
+
+        self::assertCount(7, $routes);
+        self::assertNull($router->collection()->named('posts.index'));
+        self::assertNull($router->collection()->named('posts.show'));
+        self::assertNotNull($router->collection()->named('content.posts.list'));
+        self::assertNotNull($router->collection()->named('content.posts.view'));
+        self::assertSame('/posts/5', $router->route('content.posts.view', ['post' => 5]));
+    }
+
+    public function test_it_can_customize_resource_parameter_names(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts', TestResourceController::class)
+            ->parameter('entry');
+
+        self::assertCount(7, $routes);
+        self::assertSame('/posts/{entry}', $router->collection()->named('posts.show')?->uri());
+        self::assertSame('/posts/8', $router->route('posts.show', ['entry' => 8]));
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/8'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('show:8', $response->content());
+    }
+
+    public function test_it_can_customize_resource_parameters_by_resource_key(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->apiResource('posts', TestResourceController::class)
+            ->parameters(['posts' => 'entry']);
+
+        self::assertCount(5, $routes);
+        self::assertSame('/posts/{entry}', $router->collection()->named('posts.show')?->uri());
+        self::assertSame('/posts/12', $router->route('posts.show', ['entry' => 12]));
+
+        $createResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/create'));
+        $showResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/12'));
+
+        self::assertSame(404, $createResponse->statusCode());
+        self::assertSame(200, $showResponse->statusCode());
+        self::assertSame('show:12', $showResponse->content());
+    }
+
     public function test_it_resolves_global_middleware_aliases_before_runtime(): void
     {
         $kernel = $this->app->make(HttpKernel::class);

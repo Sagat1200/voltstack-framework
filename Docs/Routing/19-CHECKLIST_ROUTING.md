@@ -522,18 +522,23 @@ No iniciar estos bloques antes de cerrar `V1` y `V2`:
 
 Seguir este orden de trabajo:
 
-1. `[-]` `RouteDefinition + RouteCollection + Fluent API`
-2. `[ ]` `Compiler` minimo
-3. `[ ]` `Matcher` multi-metodo
-4. `[ ]` `404 / 405 / Allow / HEAD / OPTIONS`
-5. `[ ]` `Dispatcher` basico
-6. `[ ]` `Middleware Pipeline`
-7. `[ ]` `Metadata` minima
-8. `[ ]` `Artifacts`
-9. `[ ]` `URL Generator`
-10. `[ ]` `Route Attributes`
-11. `[ ]` `Frontend Manifest` minimo
-12. `[ ]` `SPA Routing Protocol` minimo
+1. `[x]` `RouteDefinition + RouteCollection + Fluent API`
+2. `[x]` `Compiler` minimo
+3. `[x]` `Matcher` multi-metodo
+4. `[x]` `404 / 405 / Allow / HEAD / OPTIONS`
+5. `[x]` `Dispatcher` basico
+6. `[x]` `Middleware Pipeline`
+7. `[x]` `Metadata` minima
+8. `[x]` `Artifacts`
+9. `[x]` `URL Generator`
+10. `[x]` `Route Attributes`
+11. `[x]` `Frontend Manifest` minimo
+12. `[x]` `SPA Routing Protocol` minimo
+
+Estado real del corte actual:
+
+- `V1 Core Routing`, `V1.1` y el bloque SPA minimo (`7.1`, `7.2`, `7.3`) ya quedaron cerrados
+- el siguiente trabajo recomendado ya no es infraestructura base, sino ergonomia publica y consolidacion documental del router
 
 ---
 
@@ -601,3 +606,4 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` existe una primera capa de `Route::resource()` para el set REST convencional (`index/create/store/show/edit/update/destroy`), con nombres `resource.action`, herencia de `prefix/name/domain` de grupo y guia practica actualizada en `Docs/Routing/20-Use.md`
 - `[x]` `Route::resource()` ya soporta filtrado minimo con `only()` y `except()`, mientras `Route::apiResource()` excluye `create/edit` sin romper el matcher de `show` para literales reservados como `create`; la guia publica ya documenta estos matices y las pruebas cubren tanto `404/405` como el registro real
 - `[x]` la app skeleton ya adopta la API fluida en `routes/web.php` para el laboratorio `routing-lab`, agrupando `prefix('/routing-lab')->name('routing.lab')->group(...)` sin cambiar paths ni nombres publicos; esto valida el uso real de la fachada `Route` fuera de las pruebas del framework
+- `[x]` `Route::resource()` ya soporta una capa minima de personalizacion con `names([...])`, `parameter(...)` y `parameters([...])`; el placeholder publico puede renombrarse sin romper el despacho de controladores existentes porque el binder conserva aliases internos del parametro original durante la resolucion de argumentos

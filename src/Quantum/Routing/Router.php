@@ -148,6 +148,7 @@ final class Router
             throw new \InvalidArgumentException('Router::resource expects a non-empty resource name.');
         }
 
+        $resourceKey = $this->resourceKey($resource);
         $parameter = $this->resourceParameterName($resource);
         $resourceName = str_replace('/', '.', $resource);
         $routes = [
@@ -160,7 +161,7 @@ final class Router
             'destroy' => $this->delete($resource . '/{' . $parameter . '}', $controller . '@destroy')->name($resourceName . '.destroy'),
         ];
 
-        return new PendingResourceRegistration($this->routes, $parameter, $routes);
+        return new PendingResourceRegistration($this->routes, $resourceKey, $parameter, $routes);
     }
 
     public function apiResource(string $resource, string $controller): PendingResourceRegistration
@@ -507,8 +508,7 @@ final class Router
 
     private function resourceParameterName(string $resource): string
     {
-        $segment = basename(str_replace('\\', '/', $resource));
-        $segment = str_replace('-', '_', $segment);
+        $segment = $this->resourceKey($resource);
 
         if (str_ends_with($segment, 'ies') && strlen($segment) > 3) {
             return substr($segment, 0, -3) . 'y';
@@ -517,6 +517,14 @@ final class Router
         if (str_ends_with($segment, 's') && ! str_ends_with($segment, 'ss') && strlen($segment) > 1) {
             return substr($segment, 0, -1);
         }
+
+        return $segment;
+    }
+
+    private function resourceKey(string $resource): string
+    {
+        $segment = basename(str_replace('\\', '/', $resource));
+        $segment = str_replace('-', '_', $segment);
 
         return $segment;
     }
