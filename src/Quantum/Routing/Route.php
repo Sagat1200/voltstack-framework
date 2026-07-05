@@ -6,11 +6,15 @@ namespace Quantum\Routing;
 
 final class Route extends CompiledRoute
 {
+    private const CONTEXT_HTTP = 'http';
+    private const CONTEXT_SPA = 'spa';
+    private const CONTEXT_API = 'api';
     private const UUID_PATTERN = '[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[1-5][0-9a-fA-F]{3}\-[89abAB][0-9a-fA-F]{3}\-[0-9a-fA-F]{12}';
     private const ALPHA_PATTERN = '[A-Za-z]+';
     private const ALPHA_NUMERIC_PATTERN = '[A-Za-z0-9]+';
     private const NUMBER_PATTERN = '[0-9]+';
     private const SLUG_PATTERN = '[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*';
+    private const ULID_PATTERN = '[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}';
 
     private ?RouteCollection $collection = null;
     private $middlewareResolver = null;
@@ -112,9 +116,72 @@ final class Route extends CompiledRoute
         return $this->applyNamedConstraint($parameter, self::UUID_PATTERN);
     }
 
+    public function whereUlid(string|array $parameter): static
+    {
+        return $this->applyNamedConstraint($parameter, self::ULID_PATTERN);
+    }
+
     public function whereSlug(string|array $parameter): static
     {
         return $this->applyNamedConstraint($parameter, self::SLUG_PATTERN);
+    }
+
+    /**
+     * @param array<int, scalar|\UnitEnum> $allowed
+     */
+    public function whereIn(string $parameter, array $allowed): static
+    {
+        if ($allowed === []) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route constraint allowed values for [%s] cannot be empty.',
+                $parameter,
+            ));
+        }
+
+        $escaped = array_map(function (mixed $value) use ($parameter): string {
+            if ($value instanceof \BackedEnum) {
+                return preg_quote((string) $value->value, '/');
+            }
+
+            if ($value instanceof \UnitEnum) {
+                return preg_quote($value->name, '/');
+            }
+
+            if (! is_scalar($value)) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Route constraint value for [%s] must be scalar or enum backed by a scalar value.',
+                    $parameter,
+                ));
+            }
+
+            return preg_quote((string) $value, '/');
+        }, array_values($allowed));
+
+        return $this->where($parameter, implode('|', $escaped));
+    }
+
+    /**
+     * @param class-string<\UnitEnum> $enumClass
+     */
+    public function whereEnum(string $parameter, string $enumClass): static
+    {
+        if (! enum_exists($enumClass)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route enum constraint [%s] must be a valid enum class.',
+                $enumClass,
+            ));
+        }
+
+        $cases = $enumClass::cases();
+
+        if ($cases === []) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route enum constraint [%s] must define at least one case.',
+                $enumClass,
+            ));
+        }
+
+        return $this->whereIn($parameter, $cases);
     }
 
     public function middleware(mixed $middleware): static
@@ -170,6 +237,26 @@ final class Route extends CompiledRoute
         return $this->meta('runtime', $value);
     }
 
+    public function context(string $context): static
+    {
+        return $this->meta('context', $this->normalizeContext($context));
+    }
+
+    public function http(): static
+    {
+        return $this->context(self::CONTEXT_HTTP);
+    }
+
+    public function spa(): static
+    {
+        return $this->context(self::CONTEXT_SPA);
+    }
+
+    public function api(): static
+    {
+        return $this->context(self::CONTEXT_API);
+    }
+
     private function resolveMiddlewareInput(mixed $middleware): mixed
     {
         if ($this->middlewareResolver === null) {
@@ -196,5 +283,23 @@ final class Route extends CompiledRoute
         }
 
         return $this->where($parameter, $pattern);
+    }
+
+    private function normalizeContext(string $context): string
+    {
+        $normalized = strtolower(trim($context));
+
+        if (! in_array($normalized, [
+            self::CONTEXT_HTTP,
+            self::CONTEXT_SPA,
+            self::CONTEXT_API,
+        ], true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Route context [%s] is invalid. Supported contexts are [http, spa, api].',
+                $context,
+            ));
+        }
+
+        return $normalized;
     }
 }

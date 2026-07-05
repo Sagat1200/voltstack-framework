@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace VoltStack\Test\Feature;
 
 use PHPUnit\Framework\TestCase;
+use DateInterval;
+use DateTimeImmutable;
 use Quantum\Config\ConfigRepository;
 use Quantum\Actions\Action;
 use Quantum\Http\RedirectResponse;
@@ -12,6 +14,14 @@ use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\HttpKernel\HttpKernel;
+use Quantum\Routing\Attributes\Delete;
+use Quantum\Routing\Attributes\Domain;
+use Quantum\Routing\Attributes\Get;
+use Quantum\Routing\Attributes\Middleware;
+use Quantum\Routing\Attributes\Name;
+use Quantum\Routing\Attributes\Patch;
+use Quantum\Routing\Attributes\Post;
+use Quantum\Routing\Attributes\Put;
 use Quantum\Routing\CollectionArtifactStore;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
@@ -60,6 +70,45 @@ final class HttpKernelTest extends TestCase
         self::assertSame('VoltStack Home', $response->content());
     }
 
+    public function test_it_registers_and_resolves_a_static_get_route(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/health', fn() => 'ok')->name('health');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/health'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('ok', $response->content());
+    }
+
+    public function test_it_registers_and_resolves_a_dynamic_get_route(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/users/{id}', fn(string $id) => 'user:' . $id)
+            ->name('users.show')
+            ->whereNumber('id');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/users/42'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('user:42', $response->content());
+    }
+
+    public function test_it_registers_and_resolves_a_domain_specific_route(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/reports', fn() => 'tenant-reports')
+            ->name('tenant.reports')
+            ->domain('tenant.example.com');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/reports', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'tenant.example.com',
+        ]));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('tenant-reports', $response->content());
+    }
+
     public function test_it_resolves_invokable_route_actions_and_route_parameters(): void
     {
         $router = $this->app->make(Router::class);
@@ -93,6 +142,49 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(200, $response->statusCode());
         self::assertSame('attributes:42', $response->content());
+    }
+
+    public function test_it_registers_basic_http_routes_from_controller_attributes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->attributeRoutes(TestHttpAttributeRoutesController::class);
+
+        $kernel = $this->app->make(HttpKernel::class);
+
+        self::assertSame('attribute:get', $kernel->handle(Request::create('/attribute-routes/users'))->content());
+        self::assertSame('attribute:post', $kernel->handle(Request::create('/attribute-routes/users', 'POST'))->content());
+        self::assertSame('attribute:put:42', $kernel->handle(Request::create('/attribute-routes/users/42', 'PUT'))->content());
+        self::assertSame('attribute:patch:42', $kernel->handle(Request::create('/attribute-routes/users/42', 'PATCH'))->content());
+        self::assertSame('attribute:delete:42', $kernel->handle(Request::create('/attribute-routes/users/42', 'DELETE'))->content());
+    }
+
+    public function test_it_registers_name_domain_and_middleware_from_controller_attributes(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+
+        $router = $this->app->make(Router::class);
+        $router->attributeRoutes(TestHttpAttributeMetadataController::class);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/attribute-meta/users/42',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            ['HTTP_HOST' => 'tenant.example.com'],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('attribute:meta:42', $response->content());
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+        self::assertSame('passed', $response->headers()['X-Secondary-Middleware']);
+        self::assertSame('https://tenant.example.com/attribute-meta/users/42', route('attribute.meta.show', [
+            'id' => 42,
+        ], true));
     }
 
     public function test_it_dispatches_action_routes(): void
@@ -163,6 +255,27 @@ final class HttpKernelTest extends TestCase
             'route-after',
             'global-after',
         ], TestExecutionTrace::all());
+    }
+
+    public function test_it_exposes_route_context_to_route_middlewares(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/context-http', fn() => new Response('ok'))
+            ->middleware(TestContextHeaderMiddleware::class);
+        $router->get('/context-spa', fn() => new Response('ok'))
+            ->spa()
+            ->middleware(TestContextHeaderMiddleware::class);
+        $router->get('/context-api', fn() => new Response('ok'))
+            ->api()
+            ->middleware(TestContextHeaderMiddleware::class);
+
+        $httpResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/context-http'));
+        $spaResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/context-spa'));
+        $apiResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/context-api'));
+
+        self::assertSame('http', $httpResponse->headers()['X-Route-Context']);
+        self::assertSame('spa', $spaResponse->headers()['X-Route-Context']);
+        self::assertSame('api', $apiResponse->headers()['X-Route-Context']);
     }
 
     public function test_it_applies_group_middlewares_to_registered_routes(): void
@@ -328,6 +441,54 @@ final class HttpKernelTest extends TestCase
 
         self::assertSame(200, $response->statusCode());
         self::assertSame('attributes:99', $response->content());
+    }
+
+    public function test_it_dispatches_attribute_registered_routes_from_collection_artifacts(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->attributeRoutes(TestHttpAttributeRoutesController::class);
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $router->reloadCollectionArtifacts();
+
+        $kernel = $this->app->make(HttpKernel::class);
+
+        self::assertSame('attribute:get', $kernel->handle(Request::create('/attribute-routes/users'))->content());
+        self::assertSame('attribute:delete:77', $kernel->handle(Request::create('/attribute-routes/users/77', 'DELETE'))->content());
+    }
+
+    public function test_it_dispatches_attribute_metadata_routes_from_collection_and_pipeline_artifacts(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+
+        $router = $this->app->make(Router::class);
+        $router->attributeRoutes(TestHttpAttributeMetadataController::class);
+
+        $this->app->make(CollectionArtifactStore::class)->compileAndWrite($router);
+        $this->app->make(PipelineArtifactStore::class)->compileAndWrite($router);
+        $router->reloadCollectionArtifacts();
+        $router->reloadPipelineArtifacts();
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/attribute-meta/users/77',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            ['HTTP_HOST' => 'tenant.example.com'],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('attribute:meta:77', $response->content());
+        self::assertSame('passed', $response->headers()['X-Middleware']);
+        self::assertSame('passed', $response->headers()['X-Secondary-Middleware']);
+        self::assertSame('https://tenant.example.com/attribute-meta/users/77', route('attribute.meta.show', [
+            'id' => 77,
+        ], true));
     }
 
     public function test_it_can_match_requests_using_a_loaded_tree_artifact(): void
@@ -541,6 +702,252 @@ final class HttpKernelTest extends TestCase
         $router->reloadCollectionArtifacts();
 
         self::assertSame('/artifact-url/42', $router->route('artifact.url', ['id' => 42]));
+    }
+
+    public function test_it_generates_signed_route_urls(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/unsubscribe/{user}', fn() => 'ok')->name('unsubscribe');
+
+        $url = $router->signedRoute('unsubscribe', [
+            'user' => 42,
+            'channel' => 'email',
+            '_fragment' => 'confirm',
+        ]);
+
+        self::assertStringStartsWith('https://framework.test/unsubscribe/42?', $url);
+        self::assertStringContainsString('channel=email', $url);
+        self::assertStringContainsString('signature=', $url);
+        self::assertStringEndsWith('#confirm', $url);
+    }
+
+    public function test_it_validates_signed_route_requests(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/unsubscribe/{user}', fn() => 'ok')->name('unsubscribe');
+
+        $signedUrl = $router->signedRoute('unsubscribe', [
+            'user' => 42,
+            'channel' => 'email',
+        ]);
+
+        self::assertTrue($router->hasValidSignature(Request::create($signedUrl)));
+        self::assertFalse($router->hasValidSignature(Request::create(str_replace('channel=email', 'channel=sms', $signedUrl))));
+        self::assertFalse($router->hasValidSignature(Request::create('https://framework.test/unsubscribe/42?channel=email')));
+    }
+
+    public function test_it_exposes_a_signed_route_helper(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/invitations/{invitation}', fn() => 'ok')->name('invitations.accept');
+
+        $url = signed_route('invitations.accept', [
+            'invitation' => 'abc123',
+            'via' => 'mail',
+        ]);
+
+        self::assertStringStartsWith('https://framework.test/invitations/abc123?', $url);
+        self::assertStringContainsString('via=mail', $url);
+        self::assertStringContainsString('signature=', $url);
+    }
+
+    public function test_it_generates_temporary_signed_route_urls(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/magic-login/{user}', fn() => 'ok')->name('magic.login');
+
+        $url = $router->temporarySignedRoute(
+            'magic.login',
+            new DateTimeImmutable('2030-01-01T00:00:00+00:00'),
+            [
+                'user' => 42,
+                'via' => 'mail',
+                '_fragment' => 'confirm',
+            ],
+        );
+
+        self::assertStringStartsWith('https://framework.test/magic-login/42?', $url);
+        self::assertStringContainsString('via=mail', $url);
+        self::assertStringContainsString('expires=1893456000', $url);
+        self::assertStringContainsString('signature=', $url);
+        self::assertStringEndsWith('#confirm', $url);
+    }
+
+    public function test_it_validates_temporary_signed_route_requests_and_rejects_expired_urls(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/magic-login/{user}', fn() => 'ok')->name('magic.login');
+
+        $validUrl = $router->temporarySignedRoute(
+            'magic.login',
+            new DateTimeImmutable('+1 day'),
+            [
+                'user' => 42,
+                'via' => 'mail',
+            ],
+        );
+
+        $expiredUrl = $router->temporarySignedRoute(
+            'magic.login',
+            new DateTimeImmutable('-1 day'),
+            [
+                'user' => 42,
+                'via' => 'mail',
+            ],
+        );
+
+        self::assertTrue($router->hasValidSignature(Request::create($validUrl)));
+        self::assertFalse($router->hasValidSignature(Request::create($expiredUrl)));
+        self::assertFalse($router->hasValidSignature(Request::create(str_replace('expires=', 'expires=abc', $validUrl))));
+    }
+
+    public function test_it_accepts_cache_style_expiration_inputs_for_temporary_signed_routes(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/invites/{code}', fn() => 'ok')->name('invites.accept');
+
+        $intervalUrl = $router->temporarySignedRoute(
+            'invites.accept',
+            new DateInterval('PT1H'),
+            ['code' => 'abc123'],
+        );
+        $ttlUrl = $router->temporarySignedRoute(
+            'invites.accept',
+            3600,
+            ['code' => 'xyz789'],
+        );
+
+        self::assertStringContainsString('expires=', $intervalUrl);
+        self::assertStringContainsString('signature=', $intervalUrl);
+        self::assertStringContainsString('expires=', $ttlUrl);
+        self::assertStringContainsString('signature=', $ttlUrl);
+    }
+
+    public function test_it_exposes_a_temporary_signed_route_helper(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/downloads/{file}', fn() => 'ok')->name('downloads.secure');
+
+        $url = temporary_signed_route(
+            'downloads.secure',
+            new DateTimeImmutable('2030-01-01T00:00:00+00:00'),
+            [
+                'file' => 'report.pdf',
+                'disposition' => 'attachment',
+            ],
+        );
+
+        self::assertStringStartsWith('https://framework.test/downloads/report.pdf?', $url);
+        self::assertStringContainsString('disposition=attachment', $url);
+        self::assertStringContainsString('expires=1893456000', $url);
+        self::assertStringContainsString('signature=', $url);
+    }
+
+    public function test_it_allows_signed_route_requests_through_the_signed_middleware(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/secure-download/{file}', fn(string $file) => 'download:' . $file)
+            ->name('secure.download')
+            ->middleware('signed');
+
+        $signedUrl = $router->signedRoute('secure.download', [
+            'file' => 'report.pdf',
+        ]);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create($signedUrl));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('download:report.pdf', $response->content());
+    }
+
+    public function test_it_rejects_invalid_signed_route_requests_through_the_signed_middleware(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/secure-download/{file}', fn(string $file) => 'download:' . $file)
+            ->name('secure.download')
+            ->middleware('signed');
+
+        $signedUrl = $router->signedRoute('secure.download', [
+            'file' => 'report.pdf',
+            'via' => 'mail',
+        ]);
+        $tamperedUrl = str_replace('via=mail', 'via=sms', $signedUrl);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create($tamperedUrl));
+
+        self::assertSame(403, $response->statusCode());
+        self::assertSame('text/html; charset=UTF-8', $response->headers()['Content-Type']);
+        self::assertStringContainsString('Forbidden', $response->content());
+        self::assertStringContainsString('Invalid signature.', $response->content());
+    }
+
+    public function test_it_rejects_expired_temporary_signed_route_requests_through_the_signed_middleware(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/secure-magic-login/{user}', fn(string $user) => 'login:' . $user)
+            ->name('secure.magic.login')
+            ->middleware('signed');
+
+        $expiredUrl = $router->temporarySignedRoute(
+            'secure.magic.login',
+            new DateTimeImmutable('-5 minutes'),
+            ['user' => '42'],
+        );
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create($expiredUrl));
+
+        self::assertSame(403, $response->statusCode());
+        self::assertStringContainsString('Invalid signature.', $response->content());
     }
 
     public function test_it_marks_internal_volt_routes_with_explicit_transport_metadata(): void
@@ -1460,6 +1867,52 @@ final class TestAttributedController
     }
 }
 
+final class TestHttpAttributeRoutesController
+{
+    #[Get('/attribute-routes/users')]
+    public function index(): string
+    {
+        return 'attribute:get';
+    }
+
+    #[Post('/attribute-routes/users')]
+    public function store(): string
+    {
+        return 'attribute:post';
+    }
+
+    #[Put('/attribute-routes/users/{id}')]
+    public function update(string $id): string
+    {
+        return 'attribute:put:' . $id;
+    }
+
+    #[Patch('/attribute-routes/users/{id}')]
+    public function sync(string $id): string
+    {
+        return 'attribute:patch:' . $id;
+    }
+
+    #[Delete('/attribute-routes/users/{id}')]
+    public function destroy(string $id): string
+    {
+        return 'attribute:delete:' . $id;
+    }
+}
+
+#[Domain('tenant.example.com')]
+final class TestHttpAttributeMetadataController
+{
+    #[Get('/attribute-meta/users/{id}')]
+    #[Name('attribute.meta.show')]
+    #[Middleware(TestHeaderMiddleware::class)]
+    #[Middleware(TestSecondaryHeaderMiddleware::class)]
+    public function show(string $id): Response
+    {
+        return new Response('attribute:meta:' . $id);
+    }
+}
+
 final class TestMetadataEchoController
 {
     public function show(Request $request): array
@@ -1515,6 +1968,34 @@ final class TestHeaderMiddleware implements MiddlewareInterface
 
         if ($response instanceof Response) {
             $response->header('X-Middleware', 'passed');
+        }
+
+        return $response;
+    }
+}
+
+final class TestSecondaryHeaderMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        $response = $next($request);
+
+        if ($response instanceof Response) {
+            $response->header('X-Secondary-Middleware', 'passed');
+        }
+
+        return $response;
+    }
+}
+
+final class TestContextHeaderMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        $response = $next($request);
+
+        if ($response instanceof Response) {
+            $response->header('X-Route-Context', $request->routeContext());
         }
 
         return $response;

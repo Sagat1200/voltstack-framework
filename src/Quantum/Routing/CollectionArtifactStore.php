@@ -10,7 +10,7 @@ use VoltStack\Framework\Application;
 
 final class CollectionArtifactStore
 {
-    private const ARTIFACT_VERSION = 1;
+    private const ARTIFACT_VERSION = 2;
 
     public function __construct(
         private readonly Application $app,
@@ -40,6 +40,7 @@ final class CollectionArtifactStore
         foreach ($router->routes() as $route) {
             $routes[] = [
                 'methods' => $route->methods(),
+                'path' => $route->path(),
                 'uri' => $route->uri(),
                 'domain' => $route->routeDomain(),
                 'action' => $this->serializeAction($route->action(), $route->uri()),

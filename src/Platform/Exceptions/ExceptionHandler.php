@@ -10,6 +10,7 @@ use Quantum\Http\Response;
 use Quantum\Routing\Exceptions\MethodNotAllowedException;
 use Quantum\Routing\Exceptions\RouteNotFoundException;
 use Quantum\Security\Exceptions\CsrfTokenMismatchException;
+use Quantum\Security\Exceptions\InvalidSignatureException;
 use Quantum\Validation\Exceptions\ValidationException;
 use Throwable;
 use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
@@ -41,6 +42,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
         return match (true) {
             $exception instanceof RouteNotFoundException => 404,
             $exception instanceof MethodNotAllowedException => 405,
+            $exception instanceof InvalidSignatureException => 403,
             $exception instanceof CsrfTokenMismatchException => 419,
             $exception instanceof InvalidSnapshotException => 422,
             $exception instanceof ValidationException => 422,
@@ -104,6 +106,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
     private function htmlResponse(Throwable $exception, int $status): string
     {
         $title = match ($status) {
+            403 => 'Forbidden',
             404 => 'Page Not Found',
             405 => 'Method Not Allowed',
             419 => 'Page Expired',
@@ -114,6 +117,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
         $body = $exception instanceof ValidationException
             ? $this->renderValidationErrors($exception)
             : '<p>' . match ($status) {
+                403 => 'Invalid signature.',
                 404 => 'The requested page could not be found.',
                 405 => 'The requested HTTP method is not allowed for this route.',
                 419 => 'CSRF token mismatch.',
@@ -147,7 +151,9 @@ final class ExceptionHandler implements ExceptionHandlerContract
         return match (true) {
             $exception instanceof ValidationException => $exception->getMessage(),
             $exception instanceof CsrfTokenMismatchException => $exception->getMessage(),
+            $exception instanceof InvalidSignatureException => $exception->getMessage(),
             $exception instanceof InvalidSnapshotException => $exception->getMessage(),
+            $status === 403 => 'Forbidden',
             $status === 404 => 'Not Found',
             $status === 405 => 'Method Not Allowed',
             default => 'Server Error',
@@ -159,6 +165,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
         return match (true) {
             $exception instanceof RouteNotFoundException => 'route.not_found',
             $exception instanceof MethodNotAllowedException => 'route.method_not_allowed',
+            $exception instanceof InvalidSignatureException => 'security.invalid_signature',
             $exception instanceof CsrfTokenMismatchException => 'security.csrf_token_mismatch',
             $exception instanceof InvalidSnapshotException => 'runtime.invalid_snapshot',
             $exception instanceof ValidationException => 'runtime.validation_failed',

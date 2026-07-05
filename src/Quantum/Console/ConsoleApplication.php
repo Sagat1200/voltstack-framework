@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Quantum\Console;
 
 use Quantum\Bootstrap\Bootstrapper;
+use Quantum\Console\Commands\RouteCacheCommand;
+use Quantum\Console\Commands\RouteClearCommand;
 use Quantum\Console\Commands\ServeCommand;
 use Quantum\Console\Commands\RouteListCommand;
 use Quantum\Console\Commands\MakeControllerCommand;
@@ -53,6 +55,8 @@ final class ConsoleApplication
         if (! $registered) {
             $this->add(new ServeCommand($basePath));
             $this->add(new RouteListCommand($basePath));
+            $this->add(new RouteCacheCommand($basePath));
+            $this->add(new RouteClearCommand($basePath));
             $this->add(new MakeControllerCommand($basePath));
             $this->add(new MakeComponentCommand($basePath));
             $this->add(new MakeLayoutCommand($basePath));

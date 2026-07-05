@@ -57,6 +57,11 @@ final class RouteDefinition
         return $this->uri;
     }
 
+    public function path(): string
+    {
+        return $this->uri;
+    }
+
     public function action(): mixed
     {
         return $this->action;

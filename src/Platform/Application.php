@@ -15,6 +15,7 @@ use Quantum\Http\Request;
 use Quantum\Http\ResponseFactory;
 use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\HttpKernel;
+use Quantum\Middlewares\ValidateSignatureMiddleware;
 use Quantum\Routing\Dispatching\ResponseNormalizer;
 use Quantum\Routing\CollectionArtifactStore;
 use Quantum\Routing\MetadataArtifactStore;
@@ -207,10 +208,15 @@ class Application extends Container
             $this->singleton(CsrfMiddleware::class);
         }
 
+        if (! isset($this->bindings[ValidateSignatureMiddleware::class])) {
+            $this->singleton(ValidateSignatureMiddleware::class);
+        }
+
         if (! isset($this->bindings[MiddlewareAliasRegistry::class])) {
             $this->singleton(MiddlewareAliasRegistry::class, function (): MiddlewareAliasRegistry {
                 $registry = new MiddlewareAliasRegistry();
                 $registry->alias('csrf', CsrfMiddleware::class);
+                $registry->alias('signed', ValidateSignatureMiddleware::class);
 
                 return $registry;
             });
@@ -265,16 +271,19 @@ class Application extends Container
             $this->singleton(Router::class, function (Application $app): Router {
                 $router = new Router($app);
                 $router->get('/_volt/runtime.js', RuntimeAssetController::class)->meta([
+                    'context' => 'spa',
                     'transport' => 'internal',
                     'endpoint' => 'volt.runtime.asset',
                     'protocol' => 'volt',
                 ]);
                 $router->get('/_volt/routes-manifest.json', FrontendRouteManifestController::class)->meta([
+                    'context' => 'spa',
                     'transport' => 'internal',
                     'endpoint' => 'volt.routes.manifest',
                     'protocol' => 'volt',
                 ]);
                 $router->post('/_volt/action', ProtocolController::class)->meta([
+                    'context' => 'spa',
                     'transport' => 'internal',
                     'endpoint' => 'volt.protocol.action',
                     'protocol' => 'volt',

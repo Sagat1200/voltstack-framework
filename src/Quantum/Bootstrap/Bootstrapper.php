@@ -52,6 +52,11 @@ final class Bootstrapper
             throw new \RuntimeException('Bootstrapper::loadRoutes expects a route file that returns a callable or a callable loader.');
         }
 
-        $loader($router);
+        $closure = \Closure::fromCallable($loader);
+        $parameters = (new \ReflectionFunction($closure))->getNumberOfParameters() === 0
+            ? []
+            : [$router];
+
+        $loader(...$parameters);
     }
 }

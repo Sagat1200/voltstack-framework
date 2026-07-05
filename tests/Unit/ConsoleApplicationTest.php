@@ -12,6 +12,8 @@ use Quantum\Console\Commands\MakeLayoutCommand;
 use Quantum\Console\Commands\MakeControllerCommand;
 use Quantum\Console\Commands\MakePageCommand;
 use Quantum\Console\Commands\MakeViewCommand;
+use Quantum\Console\Commands\RouteCacheCommand;
+use Quantum\Console\Commands\RouteClearCommand;
 use Quantum\Console\Commands\RouteListCommand;
 use Quantum\Console\Commands\ServeCommand;
 use Quantum\Console\Commands\ViewCacheCommand;
@@ -39,6 +41,8 @@ final class ConsoleApplicationTest extends TestCase
         self::assertStringContainsString('Generators:', $output->stdout());
         self::assertStringContainsString('Cache:', $output->stdout());
         self::assertStringContainsString('serve', $output->stdout());
+        self::assertStringContainsString('route:cache', $output->stdout());
+        self::assertStringContainsString('route:clear', $output->stdout());
         self::assertStringContainsString('make:controller', $output->stdout());
         self::assertStringContainsString('make:layout', $output->stdout());
         self::assertStringContainsString('[aliases: routes]', $output->stdout());
@@ -78,6 +82,23 @@ final class ConsoleApplicationTest extends TestCase
         self::assertStringContainsString('Command: view:cache', $output->stdout());
         self::assertStringContainsString('Usage: php volt view:cache [--verbose]', $output->stdout());
         self::assertStringContainsString('--verbose', $output->stdout());
+    }
+
+    public function test_it_renders_route_cache_help(): void
+    {
+        $output = new Output();
+        $application = $this->application($output);
+
+        $exitCode = $application->run([
+            'volt',
+            'help',
+            'route:cache',
+        ]);
+
+        self::assertSame(0, $exitCode);
+        self::assertStringContainsString('Command: route:cache', $output->stdout());
+        self::assertStringContainsString('Usage: php volt route:cache [--verbose]', $output->stdout());
+        self::assertStringContainsString('Aliases: routes:cache', $output->stdout());
     }
 
     public function test_it_renders_argument_help_for_make_commands(): void
@@ -155,6 +176,8 @@ final class ConsoleApplicationTest extends TestCase
             [
                 new ServeCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new RouteListCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
+                new RouteCacheCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
+                new RouteClearCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakeControllerCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakeComponentCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),
                 new MakeLayoutCommand('C:\\W4\\Packages\\VoltStack\\app-skeleton'),

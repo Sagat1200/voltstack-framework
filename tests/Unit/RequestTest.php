@@ -62,7 +62,10 @@ final class RequestTest extends TestCase
         self::assertTrue($request->isVoltActionRequest());
         self::assertTrue($request->isInternalEndpoint());
         self::assertFalse($request->isConventionalHttpRequest());
+        self::assertTrue($request->isSpaRouteContext());
+        self::assertFalse($request->isHttpRouteContext());
         self::assertSame('volt.protocol.action', $request->routeEndpoint());
+        self::assertSame('spa', $request->routeContext());
         self::assertSame('internal', $request->routeTransport());
     }
 
@@ -90,6 +93,7 @@ final class RequestTest extends TestCase
     {
         $request = Request::create('/custom/internal', 'POST');
         $request->setRouteMetadata([
+            'context' => 'spa',
             'transport' => 'internal',
             'endpoint' => 'volt.protocol.action',
             'protocol' => 'volt',
@@ -98,6 +102,31 @@ final class RequestTest extends TestCase
         self::assertTrue($request->isInternalEndpoint());
         self::assertFalse($request->isConventionalHttpRequest());
         self::assertTrue($request->isVoltActionRequest());
+        self::assertTrue($request->isSpaRouteContext());
         self::assertSame('volt.protocol.action', $request->routeEndpoint());
+        self::assertSame('spa', $request->routeContext());
+    }
+
+    public function test_it_defaults_conventional_requests_to_http_route_context(): void
+    {
+        $request = Request::create('/users', 'GET');
+
+        self::assertTrue($request->isHttpRouteContext());
+        self::assertFalse($request->isSpaRouteContext());
+        self::assertFalse($request->isApiRouteContext());
+        self::assertSame('http', $request->routeContext());
+    }
+
+    public function test_it_prefers_explicit_route_context_metadata_for_api_requests(): void
+    {
+        $request = Request::create('/api/users', 'GET');
+        $request->setRouteMetadata([
+            'context' => 'api',
+        ]);
+
+        self::assertTrue($request->isApiRouteContext());
+        self::assertFalse($request->isHttpRouteContext());
+        self::assertFalse($request->isSpaRouteContext());
+        self::assertSame('api', $request->routeContext());
     }
 }

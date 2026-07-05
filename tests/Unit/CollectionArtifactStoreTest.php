@@ -56,8 +56,9 @@ final class CollectionArtifactStoreTest extends TestCase
 
         self::assertSame($this->app->cachePath('routes/collection.php'), $path);
         self::assertNotNull($artifact);
-        self::assertSame(1, $artifact->version());
+        self::assertSame(2, $artifact->version());
         self::assertCount(count($router->routes()), $artifact->routes());
+        self::assertSame('/users/{id}', $this->artifactRouteByName($artifact->routes(), 'users.show')['path']);
         self::assertSame([
             'tenant' => '[A-Za-z0-9]+',
             'id' => '[0-9]+',
@@ -69,6 +70,7 @@ final class CollectionArtifactStoreTest extends TestCase
         self::assertNotNull($compiledRoute);
         self::assertNotSame($route, $compiledRoute);
         self::assertSame(['GET'], $compiledRoute->methods());
+        self::assertSame('/users/{id}', $compiledRoute->path());
         self::assertSame('/users/{id}', $compiledRoute->uri());
         self::assertSame('{tenant}.example.com', $compiledRoute->routeDomain());
         self::assertSame(TestSerializedCollectionController::class . '@show', $compiledRoute->action());

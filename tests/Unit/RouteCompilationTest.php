@@ -26,9 +26,18 @@ final class RouteCompilationTest extends TestCase
         $definition = RouteDefinition::make(['get', 'post', 'GET'], 'users/{id}', 'handler');
 
         self::assertSame(['GET', 'POST'], $definition->methods());
+        self::assertSame('/users/{id}', $definition->path());
         self::assertSame('/users/{id}', $definition->uri());
         self::assertSame('handler', $definition->action());
         self::assertNull($definition->name());
+    }
+
+    public function test_compiled_route_exposes_path_as_an_explicit_alias_of_uri(): void
+    {
+        $route = new CompiledRoute(RouteDefinition::make(['GET'], '/users/{id}', 'handler'));
+
+        self::assertSame('/users/{id}', $route->path());
+        self::assertSame($route->uri(), $route->path());
     }
 
     public function test_route_definition_can_return_a_named_copy(): void
@@ -66,6 +75,24 @@ final class RouteCompilationTest extends TestCase
             'auth' => 'session',
             'runtime' => 'spa',
         ], $definition->metadata());
+    }
+
+    public function test_route_can_store_an_explicit_execution_context(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/users', 'handler'));
+        $route->api();
+
+        self::assertSame('api', $route->routeMetadata()->get('context'));
+    }
+
+    public function test_route_rejects_invalid_execution_contexts(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/users', 'handler'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Route context [queue] is invalid. Supported contexts are [http, spa, api].');
+
+        $route->context('queue');
     }
 
     public function test_compiled_route_exposes_precompiled_pattern_and_parameter_names(): void
@@ -110,6 +137,44 @@ final class RouteCompilationTest extends TestCase
             'slug' => 'foo',
             'id' => '42',
         ], $route->matchPath('/posts/foo/42'));
+    }
+
+    public function test_compiled_route_can_match_allowed_values_with_where_in(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/reports/{format}', 'handler'));
+        $route->whereIn('format', ['csv', 'json', 'xml']);
+
+        self::assertSame('/^\/reports\/(csv|json|xml)$/', $route->pattern());
+        self::assertSame(['format' => 'json'], $route->matchPath('/reports/json'));
+        self::assertNull($route->matchPath('/reports/pdf'));
+    }
+
+    public function test_compiled_route_can_match_ulids_with_where_ulid(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/events/{event}', 'handler'));
+        $route->whereUlid('event');
+
+        self::assertSame(['event' => '01ARZ3NDEKTSV4RRFFQ69G5FAV'], $route->matchPath('/events/01ARZ3NDEKTSV4RRFFQ69G5FAV'));
+        self::assertNull($route->matchPath('/events/not-a-ulid'));
+    }
+
+    public function test_compiled_route_can_match_enum_cases_with_where_enum(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/posts/{status}', 'handler'));
+        $route->whereEnum('status', TestPostStatus::class);
+
+        self::assertSame(['status' => 'published'], $route->matchPath('/posts/published'));
+        self::assertNull($route->matchPath('/posts/drafts'));
+    }
+
+    public function test_route_rejects_invalid_enum_constraint_classes(): void
+    {
+        $route = new Route(RouteDefinition::make(['GET'], '/posts/{status}', 'handler'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Route enum constraint [stdClass] must be a valid enum class.');
+
+        $route->whereEnum('status', \stdClass::class);
     }
 
     public function test_compiled_route_exposes_a_formally_compiled_pipeline(): void
@@ -261,7 +326,7 @@ final class RouteCompilationTest extends TestCase
         $route->name('users.show');
         $route->domain('api.example.com');
         $route->middleware('auth');
-        $route->meta([
+        $route->spa()->meta([
             'auth' => true,
             'runtime' => 'spa',
         ]);
@@ -277,9 +342,11 @@ final class RouteCompilationTest extends TestCase
             'methods' => ['GET'],
             'domain' => 'api.example.com',
             'middleware' => ['auth'],
+            'context' => 'spa',
             'auth' => true,
             'runtime' => 'spa',
         ], $match->metadata()->all());
+        self::assertSame('spa', $match->metadata()->get('context'));
         self::assertSame('spa', $match->metadata()->get('runtime'));
     }
 
@@ -390,6 +457,18 @@ final class RouteCompilationTest extends TestCase
         ], $match->parameters());
     }
 
+    public function test_route_matcher_supports_enum_constraints(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/posts/{status}', 'handler')));
+        $route->whereEnum('status', TestPostStatus::class);
+
+        $match = (new RouteMatcher())->match(Request::create('/posts/archived'), $collection->compiled());
+
+        self::assertSame($route, $match->route());
+        self::assertSame(['status' => 'archived'], $match->parameters());
+    }
+
     public function test_route_matcher_supports_static_domains(): void
     {
         $collection = new RouteCollection();
@@ -439,4 +518,11 @@ final class TestAttributedMatcherController
     {
         return $id;
     }
+}
+
+enum TestPostStatus: string
+{
+    case Draft = 'draft';
+    case Published = 'published';
+    case Archived = 'archived';
 }

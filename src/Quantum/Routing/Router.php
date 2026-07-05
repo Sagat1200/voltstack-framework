@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Quantum\Routing;
 
+use DateInterval;
+use DateTimeImmutable;
+use DateTimeInterface;
 use Quantum\HttpKernel\CompiledMiddlewarePipeline;
 use Quantum\HttpKernel\MiddlewareAliasRegistry;
 use Quantum\HttpKernel\MiddlewareStack;
@@ -90,6 +93,11 @@ final class Router
     public function any(string $uri, mixed $action): Route
     {
         return $this->addRoute(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], $uri, $action);
+    }
+
+    public function attributeRoutes(string|array $controllers): void
+    {
+        (new AttributeRouteRegistrar($this))->register($controllers);
     }
 
     public function aliasMiddleware(string $alias, mixed $middleware): void
@@ -210,11 +218,11 @@ final class Router
 
     public function canServeCompiledRoutesWithoutLiveRegistration(): bool
     {
-        if (! $this->shouldUseArtifactsInProduction()) {
+        if (! $this->artifactsEnabledForRuntime()) {
             return false;
         }
 
-        if (! $this->artifactsEnabledForRuntime()) {
+        if (! $this->shouldUseArtifactsInProduction()) {
             return false;
         }
 
@@ -263,6 +271,58 @@ final class Router
             : $this->relativeRouteUrl($path, $host);
 
         return $this->appendQueryStringAndFragment($url, $queryParameters, $fragment);
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    public function signedRoute(string $name, array $parameters = [], bool $absolute = true): string
+    {
+        $unsignedUrl = $this->route($name, $parameters, $absolute);
+        $fragment = parse_url($unsignedUrl, PHP_URL_FRAGMENT);
+        $signature = $this->signUrl($this->canonicalUrlForSignature($unsignedUrl, $absolute));
+
+        return $this->appendQueryStringAndFragment(
+            $this->withoutFragment($unsignedUrl),
+            ['signature' => $signature],
+            is_string($fragment) && $fragment !== '' ? $fragment : null,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    public function temporarySignedRoute(
+        string $name,
+        DateInterval|DateTimeInterface|int $expiration,
+        array $parameters = [],
+        bool $absolute = true,
+    ): string {
+        return $this->signedRoute(
+            $name,
+            array_replace($parameters, [
+                'expires' => $this->signatureExpirationTimestamp($expiration),
+            ]),
+            $absolute,
+        );
+    }
+
+    public function hasValidSignature(Request $request, bool $absolute = true): bool
+    {
+        $signature = $request->queryParam('signature');
+
+        if (! is_string($signature) || trim($signature) === '') {
+            return false;
+        }
+
+        if ($this->hasExpiredSignature($request)) {
+            return false;
+        }
+
+        return hash_equals(
+            $this->signUrl($this->canonicalUrlForRequestSignature($request, $absolute)),
+            $signature,
+        );
     }
 
     public function dispatch(Request $request): mixed
@@ -482,7 +542,8 @@ final class Router
             $query = http_build_query($queryParameters, '', '&', PHP_QUERY_RFC3986);
 
             if ($query !== '') {
-                $url .= '?' . $query;
+                $separator = str_contains($url, '?') ? '&' : '?';
+                $url .= $separator . $query;
             }
         }
 
@@ -491,6 +552,166 @@ final class Router
         }
 
         return $url;
+    }
+
+    private function withoutFragment(string $url): string
+    {
+        $fragmentPosition = strpos($url, '#');
+
+        if ($fragmentPosition === false) {
+            return $url;
+        }
+
+        return substr($url, 0, $fragmentPosition);
+    }
+
+    private function signUrl(string $payload): string
+    {
+        return hash_hmac('sha256', $payload, $this->urlSigningSecret());
+    }
+
+    private function hasExpiredSignature(Request $request): bool
+    {
+        $expires = $request->queryParam('expires');
+
+        if ($expires === null) {
+            return false;
+        }
+
+        $expiration = $this->normalizeExpirationTimestamp($expires);
+
+        if ($expiration === null) {
+            return true;
+        }
+
+        return $expiration <= time();
+    }
+
+    private function signatureExpirationTimestamp(DateInterval|DateTimeInterface|int $expiration): int
+    {
+        if ($expiration instanceof DateInterval) {
+            return (new DateTimeImmutable())->add($expiration)->getTimestamp();
+        }
+
+        if ($expiration instanceof DateTimeInterface) {
+            return $expiration->getTimestamp();
+        }
+
+        return time() + $expiration;
+    }
+
+    private function normalizeExpirationTimestamp(mixed $expiration): ?int
+    {
+        if (is_int($expiration)) {
+            return $expiration;
+        }
+
+        if (! is_string($expiration)) {
+            return null;
+        }
+
+        $normalized = trim($expiration);
+
+        if ($normalized === '' || ! ctype_digit($normalized)) {
+            return null;
+        }
+
+        return (int) $normalized;
+    }
+
+    private function urlSigningSecret(): string
+    {
+        $secret = (string) $this->app->config('app.key', '');
+
+        if ($secret !== '') {
+            return $secret;
+        }
+
+        return 'voltstack|' . $this->app->basePath();
+    }
+
+    private function canonicalUrlForSignature(string $url, bool $absolute): string
+    {
+        $parts = parse_url($this->withoutFragment($url));
+
+        if (! is_array($parts)) {
+            return $this->withoutFragment($url);
+        }
+
+        return $this->canonicalizeUrlParts($parts, $absolute);
+    }
+
+    private function canonicalUrlForRequestSignature(Request $request, bool $absolute): string
+    {
+        $parts = [
+            'path' => $request->path(),
+            'query' => http_build_query($this->queryWithoutSignature($request->query()), '', '&', PHP_QUERY_RFC3986),
+        ];
+
+        if ($absolute) {
+            $parts['scheme'] = $this->requestScheme($request);
+            $parts['host'] = $request->host();
+        }
+
+        return $this->canonicalizeUrlParts($parts, $absolute);
+    }
+
+    /**
+     * @param array<string, mixed> $query
+     * @return array<string, mixed>
+     */
+    private function queryWithoutSignature(array $query): array
+    {
+        unset($query['signature']);
+
+        $this->sortQueryParameters($query);
+
+        return $query;
+    }
+
+    /**
+     * @param array<string, mixed> $parts
+     */
+    private function canonicalizeUrlParts(array $parts, bool $absolute): string
+    {
+        $queryString = '';
+
+        if (isset($parts['query']) && is_string($parts['query']) && $parts['query'] !== '') {
+            parse_str($parts['query'], $query);
+            $normalizedQuery = is_array($query) ? $this->queryWithoutSignature($query) : [];
+            $queryString = http_build_query($normalizedQuery, '', '&', PHP_QUERY_RFC3986);
+        }
+
+        $path = (string) ($parts['path'] ?? '/');
+        $path = $path === '' ? '/' : $path;
+
+        $url = $path;
+
+        if ($absolute) {
+            $scheme = strtolower((string) ($parts['scheme'] ?? 'https'));
+            $host = strtolower((string) ($parts['host'] ?? ''));
+            $url = $scheme . '://' . $host . $path;
+        }
+
+        if ($queryString !== '') {
+            $url .= '?' . $queryString;
+        }
+
+        return $url;
+    }
+
+    /**
+     * @param array<string, mixed> $query
+     */
+    private function sortQueryParameters(array &$query): void
+    {
+        ksort($query);
+
+        foreach ($query as &$value) {
+            if (is_array($value)) {
+                $this->sortQueryParameters($value);
+            }
+        }
     }
 
     private function relativeRouteUrl(string $path, ?string $host): string
@@ -887,12 +1108,6 @@ final class Router
      */
     private function routeArtifactPaths(): array
     {
-        return [
-            $this->app->make(CollectionArtifactStore::class)->path(),
-            $this->app->make(TreeArtifactStore::class)->path(),
-            $this->app->make(MetadataArtifactStore::class)->path(),
-            $this->app->make(PipelineArtifactStore::class)->path(),
-            $this->app->make(VersionArtifactStore::class)->path(),
-        ];
+        return array_values($this->app->make(RouteArtifactManager::class)->paths());
     }
 }

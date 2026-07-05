@@ -50,7 +50,7 @@ Resultado esperado del primer ciclo:
 - `[x]` definir `RouteBuilder` o API fluida minima para registrar rutas
 - `[x]` soportar al menos `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `ANY`
 - `[x]` soportar nombre de ruta
-- `[ ]` soportar path
+- `[x]` soportar path
 - `[x]` soportar dominio opcional
 - `[x]` soportar middleware declarativo por ruta
 - `[x]` soportar metadata minima asociada a la ruta
@@ -133,7 +133,7 @@ Criterio de cierre:
 - `[x]` ordenar middleware de forma deterministica
 - `[x]` eliminar duplicados simples durante compilacion
 - `[x]` soportar contexto `HTTP`
-- `[ ]` reservar extension futura para `SPA` y `API` sin bloquear `V1`
+- `[x]` reservar extension futura para `SPA` y `API` sin bloquear `V1`
 
 Criterio de cierre:
 
@@ -190,7 +190,7 @@ Criterio de cierre:
 - `[x]` guardar `metadata`
 - `[x]` guardar `pipeline`
 - `[x]` guardar `version` o checksum minimo
-- `[-]` implementar loader de artifacts para runtime
+- `[x]` implementar loader de artifacts para runtime
 - `[x]` implementar invalidacion basica en desarrollo
 - `[x]` evitar recompilacion durante request en produccion
 
@@ -233,9 +233,9 @@ Criterio de cierre:
 
 ### 4.1 Pruebas Funcionales Minimas
 
-- `[ ]` registrar y resolver ruta estatica `GET`
-- `[ ]` registrar y resolver ruta dinamica `GET /users/{id}`
-- `[ ]` registrar ruta con dominio especifico
+- `[x]` registrar y resolver ruta estatica `GET`
+- `[x]` registrar y resolver ruta dinamica `GET /users/{id}`
+- `[x]` registrar ruta con dominio especifico
 - `[x]` confirmar que una ruta inexistente devuelve `404`
 - `[x]` confirmar que ruta existente con verbo incorrecto devuelve `405`
 - `[x]` confirmar que `405` incluye cabecera `Allow`
@@ -288,12 +288,12 @@ Marcar `V1 Core Routing` como cerrado solo si todas estas condiciones se cumplen
 
 Estas piezas pueden entrar justo despues de `V1`, pero no deben bloquearlo:
 
-- `[ ]` `Route Attributes` HTTP basicos
-- `[ ]` `Name`, `Domain` y `Middleware` por atributos
-- `[ ]` signed URLs si el modulo de seguridad ya esta listo
-- `[ ]` temporary URLs si el contrato de expiracion ya es estable
-- `[ ]` constraints mas ricos
-- `[ ]` mejores herramientas de compilacion e invalidacion
+- `[x]` `Route Attributes` HTTP basicos
+- `[x]` `Name`, `Domain` y `Middleware` por atributos
+- `[x]` signed URLs si el modulo de seguridad ya esta listo
+- `[x]` temporary URLs si el contrato de expiracion ya es estable
+- `[x]` constraints mas ricos
+- `[x]` mejores herramientas de compilacion e invalidacion
 
 ---
 
@@ -589,3 +589,11 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` `hydrate` ya forma parte del contrato minimo reutilizable desde metadata compilada: `HtmlDocumentBootstrapper` proyecta `runtime.hydrate` (`enabled`, `strategy`, `dirtyState`) al documento, `frontend/runtime/volt.js` lo expone como `payload.hydrate` en navegacion, y el HTML explicito mantiene prioridad sobre metadata inyectada
 - `[x]` `redirect` ya forma parte del contrato minimo de navegacion: `frontend/runtime/volt.js` expone `payload.redirect` cuando una navegacion `GET` termina en una URL distinta por redirect HTTP, mantiene `finalUrl` como fuente principal y usa `redirect` como fallback explicito del protocolo
 - `[x]` `error` ya forma parte del contrato minimo de navegacion: una respuesta HTTP fallida en navegacion `GET` produce `payload.error = { code, message }`, no entra al cache SPA y `visit()` reutiliza ese contrato uniforme antes de aplicar fallback o rethrow
+- `[x]` `signed URLs` minimas ya operan con `Router::signedRoute(...)`, `Router::hasValidSignature(...)` y helper `signed_route(...)`, usando firma `HMAC-SHA256` sobre URL canonica, exclusiones de `fragment`/`signature` en la recomputacion y pruebas focalizadas para generacion, validacion positiva y deteccion de tampering
+- `[x]` `temporary signed URLs` ya operan con `Router::temporarySignedRoute(...)` y helper `temporary_signed_route(...)`, aceptando expiracion como `DateInterval`, `DateTimeInterface` o `int` TTL, proyectando `expires` en la URL firmada y reutilizando `hasValidSignature(...)` para rechazar expiraciones vencidas o mal formadas
+- `[x]` la guia operativa `Docs/Routing/20-Use.md` ya documenta el uso practico de `signed URLs` y `temporary signed URLs`, incluyendo generacion, validacion en runtime y escenarios manuales para pruebas en la app cliente
+- `[x]` existe un consumer HTTP reutilizable para firmas mediante el middleware alias `signed`, con `403 Forbidden` uniforme para firmas invalidas o expiradas y cobertura de integracion sobre rutas protegidas
+- `[x]` el bootstrap de rutas ya soporta loaders con fachada `Quantum\Facades\Route`, permitiendo registrar rutas como `Route::get(...)` en `routes/web.php` sin depender del parametro `$router`
+- `[x]` `RouteDefinition`, `CompiledRoute` y `collection.php` ya exponen `path` como contrato explicito del sistema, manteniendo `uri()` como alias retrocompatible para no romper matcher, generator, artifacts ni consumers ya existentes
+- `[x]` el loader de artifacts para runtime ya queda cerrado: `Bootstrapper::loadRoutes()` omite route files cuando existen artifacts validos en produccion, arranca una instancia nueva sin `reload*Artifacts()` manual y cae correctamente al registro vivo cuando `version.php` invalida `collection/tree/metadata`
+- `[x]` el pipeline HTTP ya expone un contrato minimo de `context` para reserva futura (`http`, `spa`, `api`): `Route::context()/http()/spa()/api()` lo proyectan a metadata compilada, `Request::routeContext()` lo resuelve con default `http` y los endpoints internos Volt quedan marcados como `spa`, permitiendo a middleware y futuros consumers diferenciar contexto sin abrir todavia pipelines o dispatchers paralelos

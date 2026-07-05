@@ -13,6 +13,7 @@ use Quantum\Http\Response;
 use Quantum\HttpKernel\HttpKernel;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\CollectionArtifactStore;
+use Quantum\Routing\FrontendRouteManifestStore;
 use Quantum\Routing\MetadataArtifactStore;
 use Quantum\Routing\PipelineArtifactStore;
 use Quantum\Routing\Router;
@@ -53,6 +54,19 @@ final class BootstrapperTest extends TestCase
 
         self::assertNotNull($route);
         self::assertSame('/from-route-file', $route->uri());
+    }
+
+    public function test_it_can_load_route_files_using_the_route_facade_without_injecting_the_router_argument(): void
+    {
+        $app = new Application($this->basePath);
+        $bootstrapper = new Bootstrapper($app);
+
+        $bootstrapper->loadRoutes($this->writeFacadeRouteFile('route.facade', '/from-route-facade'));
+
+        $route = $app->make(Router::class)->collection()->named('route.facade');
+
+        self::assertNotNull($route);
+        self::assertSame('/from-route-facade', $route->uri());
     }
 
     public function test_it_skips_route_file_interpretation_when_compiled_route_artifacts_are_available(): void
@@ -128,6 +142,67 @@ final class BootstrapperTest extends TestCase
         self::assertSame(['mode' => 'spa'], $payload['runtime']);
     }
 
+    public function test_it_falls_back_to_live_route_loading_when_the_runtime_artifact_manifest_is_invalid(): void
+    {
+        $builderApp = new Application($this->basePath);
+        /** @var ConfigRepository $builderConfig */
+        $builderConfig = $builderApp->make(ConfigRepository::class);
+        $builderConfig->set('app.env', 'production');
+
+        $builderRouter = $builderApp->make(Router::class);
+        $builderRouter->get('/from-artifact', TestBootstrapController::class . '@show')->name('artifact.route');
+
+        $builderApp->make(CollectionArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(TreeArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(MetadataArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(PipelineArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(VersionArtifactStore::class)->compileAndWrite($builderRouter);
+
+        file_put_contents(
+            $builderApp->make(CollectionArtifactStore::class)->path(),
+            "<?php\n\nreturn ['version' => 999, 'routes' => []];\n",
+        );
+
+        $runtimeApp = new Application($this->basePath);
+        /** @var ConfigRepository $runtimeConfig */
+        $runtimeConfig = $runtimeApp->make(ConfigRepository::class);
+        $runtimeConfig->set('app.env', 'production');
+
+        $bootstrapper = new Bootstrapper($runtimeApp);
+        $bootstrapper->loadRoutes($this->writeRouteFile('route.file', '/from-route-file'));
+
+        $runtimeRouter = $runtimeApp->make(Router::class);
+
+        self::assertNotNull($runtimeRouter->collection()->named('route.file'));
+        self::assertSame('/from-route-file', $runtimeRouter->compiledCollection()->named('route.file')?->uri());
+        self::assertNull($runtimeRouter->compiledCollection()->named('artifact.route'));
+    }
+
+    public function test_it_invalidates_the_frontend_route_manifest_in_development(): void
+    {
+        $builderApp = new Application($this->basePath);
+        $builderApp->make(ConfigRepository::class)->set('app.env', 'local');
+        $builderRouter = $builderApp->make(Router::class);
+        $builderRouter->get('/from-artifact', TestBootstrapController::class . '@show')->name('artifact.route');
+
+        $builderApp->make(CollectionArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(TreeArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(MetadataArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(PipelineArtifactStore::class)->compileAndWrite($builderRouter);
+        $builderApp->make(VersionArtifactStore::class)->compileAndWrite($builderRouter);
+        $manifestPath = $builderApp->make(FrontendRouteManifestStore::class)->compileAndWrite($builderRouter);
+
+        self::assertFileExists($manifestPath);
+
+        $runtimeApp = new Application($this->basePath);
+        $runtimeApp->make(ConfigRepository::class)->set('app.env', 'local');
+        $bootstrapper = new Bootstrapper($runtimeApp);
+        $bootstrapper->loadRoutes($this->writeRouteFile('route.file', '/from-route-file'));
+
+        self::assertFileDoesNotExist($manifestPath);
+        self::assertSame('/from-route-file', $runtimeApp->make(Router::class)->collection()->named('route.file')?->uri());
+    }
+
     private function writeRouteFile(string $name, string $uri): string
     {
         $path = $this->basePath . DIRECTORY_SEPARATOR . 'routes.php';
@@ -143,6 +218,29 @@ use Quantum\Routing\Router;
 
 return static function (Router \$router): void {
     \$router->get({$routeUri}, {$action})->name({$routeName});
+};
+PHP;
+
+        file_put_contents($path, $contents);
+
+        return $path;
+    }
+
+    private function writeFacadeRouteFile(string $name, string $uri): string
+    {
+        $path = $this->basePath . DIRECTORY_SEPARATOR . 'routes-facade.php';
+        $action = var_export(TestBootstrapController::class . '@show', true);
+        $routeName = var_export($name, true);
+        $routeUri = var_export($uri, true);
+        $contents = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+use Quantum\Facades\Route;
+
+return static function (): void {
+    Route::get({$routeUri}, {$action})->name({$routeName});
 };
 PHP;
 

@@ -11,6 +11,7 @@ final class CollectionArtifact
     /**
      * @param array<int, array{
      *     methods: array<int, string>,
+     *     path?: string,
      *     uri: string,
      *     domain: ?string,
      *     action: array{kind: string, value: string|array<int, string>},
@@ -45,6 +46,7 @@ final class CollectionArtifact
     /**
      * @return array<int, array{
      *     methods: array<int, string>,
+     *     path?: string,
      *     uri: string,
      *     domain: ?string,
      *     action: array{kind: string, value: string|array<int, string>},
@@ -64,9 +66,15 @@ final class CollectionArtifact
         $compiledRoutes = [];
 
         foreach ($this->routes as $route) {
+            $path = $route['path'] ?? $route['uri'] ?? null;
+
+            if (! is_string($path) || $path === '') {
+                throw new RuntimeException('Collection artifact route path is invalid.');
+            }
+
             $compiledRoutes[] = new CompiledRoute(new RouteDefinition(
                 $route['methods'],
-                $route['uri'],
+                $path,
                 $route['domain'],
                 $this->restoreAction($route['action']),
                 $route['name'],
@@ -82,6 +90,7 @@ final class CollectionArtifact
     /**
      * @return array{version: int, routes: array<int, array{
      *     methods: array<int, string>,
+     *     path?: string,
      *     uri: string,
      *     domain: ?string,
      *     action: array{kind: string, value: string|array<int, string>},

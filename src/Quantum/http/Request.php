@@ -7,6 +7,9 @@ namespace Quantum\Http;
 final class Request
 {
     private const METHOD_OVERRIDE_WHITELIST = ['PUT', 'PATCH', 'DELETE'];
+    private const ROUTE_CONTEXT_HTTP = 'http';
+    private const ROUTE_CONTEXT_SPA = 'spa';
+    private const ROUTE_CONTEXT_API = 'api';
     private const INTERNAL_ROUTE_ENDPOINTS = [
         '/_volt/runtime.js' => 'volt.runtime.asset',
         '/_volt/routes-manifest.json' => 'volt.routes.manifest',
@@ -66,6 +69,7 @@ final class Request
         ?string $content = null,
     ): self {
         $server = array_change_key_case($server, CASE_UPPER);
+        $query = array_replace(self::queryFromUri($uri), $query);
         $server['REQUEST_METHOD'] = strtoupper($method);
         $server['REQUEST_URI'] = $uri;
 
@@ -333,6 +337,34 @@ final class Request
         return $this->routeTransport() === 'internal';
     }
 
+    public function routeContext(): string
+    {
+        $context = $this->normalizeRouteContext($this->routeMeta('context'));
+
+        if ($context !== null) {
+            return $context;
+        }
+
+        return $this->routeEndpoint() === null
+            ? self::ROUTE_CONTEXT_HTTP
+            : self::ROUTE_CONTEXT_SPA;
+    }
+
+    public function isHttpRouteContext(): bool
+    {
+        return $this->routeContext() === self::ROUTE_CONTEXT_HTTP;
+    }
+
+    public function isSpaRouteContext(): bool
+    {
+        return $this->routeContext() === self::ROUTE_CONTEXT_SPA;
+    }
+
+    public function isApiRouteContext(): bool
+    {
+        return $this->routeContext() === self::ROUTE_CONTEXT_API;
+    }
+
     public function isConventionalHttpRequest(): bool
     {
         return ! $this->isInternalEndpoint();
@@ -376,6 +408,22 @@ final class Request
         return is_array($decoded) ? $decoded : $input;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private static function queryFromUri(string $uri): array
+    {
+        $query = parse_url($uri, PHP_URL_QUERY);
+
+        if (! is_string($query) || $query === '') {
+            return [];
+        }
+
+        parse_str($query, $parsed);
+
+        return is_array($parsed) ? $parsed : [];
+    }
+
     private function canOverrideMethod(): bool
     {
         return $this->originalMethod() === 'POST' && $this->isConventionalHttpRequest();
@@ -405,5 +453,24 @@ final class Request
         }
 
         return $normalizedMethod;
+    }
+
+    private function normalizeRouteContext(mixed $context): ?string
+    {
+        if (! is_string($context)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($context));
+
+        if (! in_array($normalized, [
+            self::ROUTE_CONTEXT_HTTP,
+            self::ROUTE_CONTEXT_SPA,
+            self::ROUTE_CONTEXT_API,
+        ], true)) {
+            return null;
+        }
+
+        return $normalized;
     }
 }

@@ -55,6 +55,11 @@ class CompiledRoute
         return $this->definition->uri();
     }
 
+    public function path(): string
+    {
+        return $this->definition->path();
+    }
+
     public function action(): mixed
     {
         return $this->definition->action();

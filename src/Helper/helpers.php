@@ -132,6 +132,30 @@ if (! function_exists('route')) {
     }
 }
 
+if (! function_exists('signed_route')) {
+    function signed_route(string $name, array $parameters = [], bool $absolute = true): string
+    {
+        /** @var Router $router */
+        $router = app(Router::class);
+
+        return $router->signedRoute($name, $parameters, $absolute);
+    }
+}
+
+if (! function_exists('temporary_signed_route')) {
+    function temporary_signed_route(
+        string $name,
+        \DateInterval|\DateTimeInterface|int $expiration,
+        array $parameters = [],
+        bool $absolute = true,
+    ): string {
+        /** @var Router $router */
+        $router = app(Router::class);
+
+        return $router->temporarySignedRoute($name, $expiration, $parameters, $absolute);
+    }
+}
+
 if (! function_exists('cache')) {
     function cache(?string $key = null, mixed $default = null): mixed
     {

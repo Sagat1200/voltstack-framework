@@ -33,6 +33,8 @@ Hoy el sistema de rutas ya soporta:
 - metadata compilada por ruta
 - artifacts AOT para runtime
 - generacion de URLs por nombre con `route()`
+- generacion de `signed URLs` con `signed_route()`
+- generacion de `temporary signed URLs` con `temporary_signed_route()`
 - `Frontend Route Manifest` publico en `/_volt/routes-manifest.json`
 - header `X-Volt-Navigation` para requests de navegacion Volt
 - bootstrap HTML-first con atributos `data-volt-*` inyectados desde metadata runtime
@@ -58,6 +60,27 @@ return static function (Router $router): void {
 
 El bootstrap de la app ya carga este archivo desde `bootstrap/app.php`.
 
+Tambien puedes registrar rutas usando la fachada:
+
+```php
+// routes/web.php
+<?php
+
+declare(strict_types=1);
+
+use Quantum\Facades\Route;
+
+return static function (): void {
+    Route::get('/', fn() => 'home')->name('home');
+};
+```
+
+Recomendacion practica:
+
+- usa `use Quantum\Facades\Route;` dentro del route file
+- usa el estilo con fachada cuando quieras un archivo de rutas mas declarativo
+- usa el estilo con `Router $router` cuando necesites inyeccion explicita o prefieras dejar claro el dependency flow
+
 ---
 
 ## 4. API Basica
@@ -70,28 +93,28 @@ El bootstrap de la app ya carga este archivo desde `bootstrap/app.php`.
 declare(strict_types=1);
 
 use App\Controllers\HomeController;
-use Quantum\Routing\Router;
+use Quantum\Facades\Route;
 
-return static function (Router $router): void {
-    $router->get('/', HomeController::class)->name('home');
+return static function (): void {
+    Route::get('/', HomeController::class)->name('home');
 };
 ```
 
 ### 4.2 Ruta dinamica
 
 ```php
-$router->get('/users/{user}', UserShowController::class)
+Route::get('/users/{user}', UserShowController::class)
     ->name('users.show');
 ```
 
 ### 4.3 Constraints
 
 ```php
-$router->get('/users/{user}', UserShowController::class)
+Route::get('/users/{user}', UserShowController::class)
     ->name('users.show')
     ->whereNumber('user');
 
-$router->get('/blog/{slug}', BlogShowController::class)
+Route::get('/blog/{slug}', BlogShowController::class)
     ->name('blog.show')
     ->whereSlug('slug');
 ```
@@ -108,9 +131,17 @@ Helpers disponibles hoy:
 ### 4.4 Middleware por ruta
 
 ```php
-$router->get('/dashboard', DashboardController::class)
+Route::get('/dashboard', DashboardController::class)
     ->name('dashboard')
     ->middleware(AuthMiddleware::class);
+```
+
+Hoy tambien existe el alias `signed` para proteger enlaces firmados:
+
+```php
+$router->get('/downloads/{file}', DownloadController::class)
+    ->name('downloads.secure')
+    ->middleware('signed');
 ```
 
 ### 4.5 Grupos
@@ -154,6 +185,10 @@ La metadata se declara con `->meta()` o mediante helpers como:
 - `->csrf()`
 - `->throttle()`
 - `->runtime()`
+- `->context()`
+- `->http()`
+- `->spa()`
+- `->api()`
 
 Ejemplo general:
 
@@ -195,6 +230,29 @@ $router->get('/users/{user}', UserShowController::class)
         'hydrate' => true,
     ]);
 ```
+
+Tambien puedes reservar un contexto de ejecucion explicito para middleware y futuros consumers:
+
+```php
+Route::get('/dashboard', DashboardController::class)
+    ->name('dashboard')
+    ->http();
+
+Route::get('/spa/profile', ProfileController::class)
+    ->name('spa.profile')
+    ->spa();
+
+Route::get('/api/users', ApiUsersController::class)
+    ->name('api.users.index')
+    ->api();
+```
+
+Contrato actual:
+
+- `http` es el contexto por defecto para rutas convencionales
+- `spa` y `api` quedan disponibles como metadata explicita de la ruta
+- este contexto no cambia todavia el dispatcher ni crea un pipeline paralelo por si mismo
+- sirve para que middleware y consumers futuros no dependan de inferencias ad hoc
 
 ---
 
@@ -733,6 +791,138 @@ Recomendacion:
 
 - nombra las rutas que quieras usar desde tooling, manifest o pruebas cliente
 
+### 12.1 Signed URLs
+
+Si necesitas emitir un enlace firmado sin expiracion, usa:
+
+```php
+signed_route('users.show', [
+    'user' => 15,
+    'via' => 'mail',
+]);
+```
+
+Tambien puedes incluir fragment:
+
+```php
+signed_route('users.show', [
+    'user' => 15,
+    'via' => 'mail',
+    '_fragment' => 'summary',
+]);
+```
+
+Comportamiento actual:
+
+- `signed_route()` genera URL absoluta por defecto
+- agrega `signature` como query param firmado con `HMAC-SHA256`
+- el `_fragment` no participa en la firma
+- durante la validacion, `signature` se excluye de la recomputacion
+
+Ejemplo esperado:
+
+```text
+https://example.test/users/15?via=mail&signature=...
+```
+
+### 12.2 Temporary Signed URLs
+
+Si necesitas un enlace firmado con expiracion, usa:
+
+```php
+temporary_signed_route('downloads.secure', 3600, [
+    'file' => 'report.pdf',
+]);
+```
+
+Tambien acepta `DateInterval` o `DateTimeInterface`:
+
+```php
+temporary_signed_route('downloads.secure', new DateInterval('PT1H'), [
+    'file' => 'report.pdf',
+]);
+
+temporary_signed_route('downloads.secure', new DateTimeImmutable('2030-01-01T00:00:00+00:00'), [
+    'file' => 'report.pdf',
+]);
+```
+
+Comportamiento actual:
+
+- el query param `expires` queda reservado para el timestamp UNIX de expiracion
+- `temporary_signed_route()` reutiliza la misma firma canonica de `signed_route()`
+- `hasValidSignature()` rechaza enlaces vencidos
+- `hasValidSignature()` tambien rechaza `expires` mal formado
+
+Ejemplo esperado:
+
+```text
+https://example.test/downloads/report.pdf?expires=1893456000&signature=...
+```
+
+### 12.3 Validacion En Runtime
+
+Para validar una request firmada dentro de un controller o middleware:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Quantum\Http\Request;
+use Quantum\Http\Response;
+use Quantum\Routing\Router;
+
+final class DownloadController
+{
+    public function __construct(
+        private readonly Router $router,
+    ) {}
+
+    public function show(Request $request): Response
+    {
+        if (! $this->router->hasValidSignature($request)) {
+            return new Response('Invalid signature.', 403);
+        }
+
+        return new Response('ok');
+    }
+}
+```
+
+Recomendaciones practicas:
+
+- usa `signed_route()` para flujos sin vencimiento inmediato, como enlaces de desuscripcion
+- usa `temporary_signed_route()` para descargas, invitaciones o magic links
+- si quieres enforcement automatico por ruta, usa `->middleware('signed')`
+- no sobrescribas manualmente `signature` ni `expires` en `_query`
+- si cambias cualquier query firmada despues de generar la URL, la validacion fallara
+
+### 12.4 Middleware `signed`
+
+Si prefieres no llamar manualmente a `hasValidSignature()` en el controller, puedes proteger la ruta con el alias `signed`:
+
+```php
+$router->get('/downloads/{file}', DownloadController::class)
+    ->name('downloads.secure')
+    ->middleware('signed');
+```
+
+Y generar el enlace asi:
+
+```php
+temporary_signed_route('downloads.secure', 3600, [
+    'file' => 'report.pdf',
+]);
+```
+
+Comportamiento actual:
+
+- si la firma es valida, la request continua normalmente
+- si la firma fue alterada, la ruta devuelve `403 Forbidden`
+- si la URL temporal ya expiro, la ruta devuelve `403 Forbidden`
+- el alias `signed` reutiliza internamente `Router::hasValidSignature(...)`
+
 ---
 
 ## 13. Recomendaciones Para Armar Pruebas Cliente
@@ -742,6 +932,7 @@ Recomendacion:
 - prueba primero con `GET` y enlaces `volt:navigate`
 - declara `runtime.document` y `runtime.navigation` de forma explicita cuando quieras probar fallback a `reload`
 - declara `runtime.layout`, `runtime.transition` y `runtime.hydrate` cuando quieras validar el contrato publico
+- usa `signed_route()` y `temporary_signed_route()` para probar enlaces protegidos sin depender de concatenacion manual
 - usa `prefetch` solo en rutas `GET` que realmente quieras publicar como navegables
 - no bases pruebas cliente en metadata privada como `middleware` o `auth`, porque no forman parte del contrato publico
 
