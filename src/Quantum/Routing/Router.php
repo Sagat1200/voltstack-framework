@@ -37,7 +37,7 @@ final class Router
     private array $artifactPipelines = [];
     private bool $artifactPipelinesLoaded = false;
     /**
-     * @var array<int, array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}>
+     * @var array<int, array{prefix: string, name: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}>
      */
     private array $groupStack = [];
 
@@ -105,6 +105,21 @@ final class Router
         $this->middlewareAliases()->alias($alias, $middleware);
     }
 
+    public function prefix(string $prefix): PendingRouteGroup
+    {
+        return new PendingRouteGroup($this, ['prefix' => $prefix]);
+    }
+
+    public function name(string $name): PendingRouteGroup
+    {
+        return new PendingRouteGroup($this, ['name' => $name]);
+    }
+
+    public function domain(string $domain): PendingRouteGroup
+    {
+        return new PendingRouteGroup($this, ['domain' => $domain]);
+    }
+
     public function group(array|callable $attributes, ?callable $callback = null): void
     {
         if (is_callable($attributes) && $callback === null) {
@@ -119,10 +134,38 @@ final class Router
         $this->groupStack[] = $this->mergeGroupAttributes($this->currentGroupAttributes(), $attributes);
 
         try {
-            $callback($this);
+            $this->invokeGroupCallback($callback);
         } finally {
             array_pop($this->groupStack);
         }
+    }
+
+    public function resource(string $resource, string $controller): PendingResourceRegistration
+    {
+        $resource = trim($resource, '/');
+
+        if ($resource === '') {
+            throw new \InvalidArgumentException('Router::resource expects a non-empty resource name.');
+        }
+
+        $parameter = $this->resourceParameterName($resource);
+        $resourceName = str_replace('/', '.', $resource);
+        $routes = [
+            'index' => $this->get($resource, $controller . '@index')->name($resourceName . '.index'),
+            'create' => $this->get($resource . '/create', $controller . '@create')->name($resourceName . '.create'),
+            'store' => $this->post($resource, $controller . '@store')->name($resourceName . '.store'),
+            'show' => $this->get($resource . '/{' . $parameter . '}', $controller . '@show')->name($resourceName . '.show'),
+            'edit' => $this->get($resource . '/{' . $parameter . '}/edit', $controller . '@edit')->name($resourceName . '.edit'),
+            'update' => $this->match(['PUT', 'PATCH'], $resource . '/{' . $parameter . '}', $controller . '@update')->name($resourceName . '.update'),
+            'destroy' => $this->delete($resource . '/{' . $parameter . '}', $controller . '@destroy')->name($resourceName . '.destroy'),
+        ];
+
+        return new PendingResourceRegistration($this->routes, $parameter, $routes);
+    }
+
+    public function apiResource(string $resource, string $controller): PendingResourceRegistration
+    {
+        return $this->resource($resource, $controller)->except(['create', 'edit']);
     }
 
     /**
@@ -137,6 +180,7 @@ final class Router
             $action,
         ));
         $route->attachMiddlewareResolver(fn(mixed $middleware): mixed => $this->middlewareAliases()->resolve($middleware));
+        $route->attachNamePrefix($groupAttributes['name']);
 
         if ($groupAttributes['domain'] !== null) {
             $route->domain($groupAttributes['domain']);
@@ -352,19 +396,19 @@ final class Router
     }
 
     /**
-     * @return array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}
+     * @return array{prefix: string, name: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}
      */
     private function currentGroupAttributes(): array
     {
         return $this->groupStack === []
-            ? ['prefix' => '', 'domain' => null, 'middleware' => [], 'metadata' => []]
+            ? ['prefix' => '', 'name' => '', 'domain' => null, 'middleware' => [], 'metadata' => []]
             : $this->groupStack[array_key_last($this->groupStack)];
     }
 
     /**
-     * @param array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>} $parent
+     * @param array{prefix: string, name: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>} $parent
      * @param array<string, mixed> $attributes
-     * @return array{prefix: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}
+     * @return array{prefix: string, name: string, domain: ?string, middleware: array<int, mixed>, metadata: array<string, mixed>}
      */
     private function mergeGroupAttributes(array $parent, array $attributes): array
     {
@@ -372,6 +416,12 @@ final class Router
 
         if (isset($attributes['prefix']) && is_string($attributes['prefix'])) {
             $prefix = $this->mergeGroupPrefix($prefix, $attributes['prefix']);
+        }
+
+        $name = $parent['name'];
+
+        if (isset($attributes['name']) && is_string($attributes['name'])) {
+            $name = $this->mergeGroupNamePrefix($name, $attributes['name']);
         }
 
         $domain = $parent['domain'];
@@ -403,6 +453,7 @@ final class Router
 
         return [
             'prefix' => $prefix,
+            'name' => $name,
             'domain' => $domain,
             'middleware' => $middlewares,
             'metadata' => $metadata,
@@ -423,6 +474,51 @@ final class Router
         }
 
         return $normalizedPrefix . '/' . $normalizedUri;
+    }
+
+    private function mergeGroupNamePrefix(string $prefix, string $name): string
+    {
+        $normalizedPrefix = trim($prefix, " \t\n\r\0\x0B.");
+        $normalizedName = trim($name, " \t\n\r\0\x0B.");
+
+        if ($normalizedPrefix === '') {
+            return $normalizedName;
+        }
+
+        if ($normalizedName === '') {
+            return $normalizedPrefix;
+        }
+
+        return $normalizedPrefix . '.' . $normalizedName;
+    }
+
+    private function invokeGroupCallback(callable $callback): void
+    {
+        $reflection = new \ReflectionFunction(\Closure::fromCallable($callback));
+
+        if ($reflection->getNumberOfParameters() === 0) {
+            $callback();
+
+            return;
+        }
+
+        $callback($this);
+    }
+
+    private function resourceParameterName(string $resource): string
+    {
+        $segment = basename(str_replace('\\', '/', $resource));
+        $segment = str_replace('-', '_', $segment);
+
+        if (str_ends_with($segment, 'ies') && strlen($segment) > 3) {
+            return substr($segment, 0, -3) . 'y';
+        }
+
+        if (str_ends_with($segment, 's') && ! str_ends_with($segment, 'ss') && strlen($segment) > 1) {
+            return substr($segment, 0, -1);
+        }
+
+        return $segment;
     }
 
     private function middlewareAliases(): MiddlewareAliasRegistry

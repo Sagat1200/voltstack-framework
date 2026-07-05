@@ -163,6 +163,27 @@ $router->group([
 });
 ```
 
+Tambien puedes construir grupos de forma mas expresiva:
+
+```php
+use Quantum\Facades\Route;
+
+Route::prefix('/admin')
+    ->name('admin')
+    ->domain('admin.example.com')
+    ->group(function (): void {
+        Route::get('/users', AdminUsersController::class)
+            ->name('users.index');
+    });
+```
+
+Notas del contrato actual:
+
+- `prefix()` compone paths anidados
+- `name()` compone prefijos de nombre de forma acumulativa
+- `domain()` aplica el dominio al grupo completo
+- el callback del grupo puede declarar `0` o `1` parametro
+
 ### 4.6 Dominio por ruta o grupo
 
 ```php
@@ -173,6 +194,60 @@ $router->group([
         ->name('admin.reports.index');
 });
 ```
+
+### 4.7 Resource Routes Minimas
+
+La primera capa de `resource()` ya registra el set REST convencional sobre un controlador:
+
+```php
+Route::resource('posts', PostController::class);
+```
+
+Eso genera estas rutas:
+
+- `GET /posts` -> `posts.index`
+- `GET /posts/create` -> `posts.create`
+- `POST /posts` -> `posts.store`
+- `GET /posts/{post}` -> `posts.show`
+- `GET /posts/{post}/edit` -> `posts.edit`
+- `PUT|PATCH /posts/{post}` -> `posts.update`
+- `DELETE /posts/{post}` -> `posts.destroy`
+
+Tambien funciona dentro de grupos fluidos:
+
+```php
+Route::prefix('/admin')
+    ->name('admin')
+    ->domain('admin.example.com')
+    ->group(function (Router $router): void {
+        $router->resource('posts', AdminPostController::class);
+    });
+```
+
+Alcance de esta primera capa:
+
+- usa nombres convencionales `resource.action`
+- deriva el parametro desde el ultimo segmento del recurso, con singularizacion basica
+- permite filtrar acciones con `only()` y `except()`
+- expone `apiResource()` como atajo para excluir `create` y `edit`
+- no expone todavia customizacion avanzada de nombres o parametros
+
+Ejemplos:
+
+```php
+Route::resource('posts', PostController::class)
+    ->only(['index', 'show']);
+
+Route::resource('posts', PostController::class)
+    ->except(['destroy']);
+
+Route::apiResource('posts', ApiPostController::class);
+```
+
+Notas:
+
+- cuando una misma path sigue existiendo con otros metodos, el runtime devolvera `405 Method Not Allowed` en lugar de `404`
+- `apiResource()` reserva `create` para que `GET /posts/create` no sea capturado por `show`
 
 ---
 

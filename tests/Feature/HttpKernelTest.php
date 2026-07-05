@@ -345,6 +345,143 @@ final class HttpKernelTest extends TestCase
         self::assertSame('admin', $response->content());
     }
 
+    public function test_it_supports_fluent_group_builders_for_prefix_name_and_domain(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->prefix('/admin')
+            ->name('admin')
+            ->domain('admin.example.com')
+            ->group(function (Router $router): void {
+                $router->get('/users', fn() => 'users')->name('users.index');
+            });
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/admin/users', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'admin.example.com',
+        ]));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('users', $response->content());
+        self::assertSame('//admin.example.com/admin/users', $router->route('admin.users.index'));
+    }
+
+    public function test_it_registers_conventional_resource_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts', TestResourceController::class);
+
+        self::assertCount(7, $routes);
+        self::assertSame('/posts', $router->collection()->named('posts.index')?->uri());
+        self::assertSame('/posts/{post}', $router->collection()->named('posts.show')?->uri());
+        self::assertSame('/posts/{post}/edit', $router->collection()->named('posts.edit')?->uri());
+        self::assertSame('/posts/42', $router->route('posts.show', ['post' => 42]));
+
+        $indexResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts'));
+        $storeResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts', 'POST'));
+        $showResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/42'));
+        $updateResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/42', 'PATCH'));
+        $deleteResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/42', 'DELETE'));
+
+        self::assertSame('index', $indexResponse->content());
+        self::assertSame('store', $storeResponse->content());
+        self::assertSame('show:42', $showResponse->content());
+        self::assertSame('update:42', $updateResponse->content());
+        self::assertSame('destroy:42', $deleteResponse->content());
+    }
+
+    public function test_resource_routes_inherit_fluent_group_prefixes_names_and_domains(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->prefix('/admin')
+            ->name('admin')
+            ->domain('admin.example.com')
+            ->group(function (Router $router): void {
+                $router->resource('posts', TestResourceController::class);
+            });
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/admin/posts/7', 'GET', [], [], [], [], [], [
+            'HTTP_HOST' => 'admin.example.com',
+        ]));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('show:7', $response->content());
+        self::assertSame('//admin.example.com/admin/posts/7', $router->route('admin.posts.show', ['post' => 7]));
+    }
+
+    public function test_it_can_limit_resource_routes_with_only(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts', TestResourceController::class)
+            ->only(['index', 'show']);
+
+        self::assertCount(2, $routes);
+        self::assertNotNull($router->collection()->named('posts.index'));
+        self::assertNotNull($router->collection()->named('posts.show'));
+        self::assertNull($router->collection()->named('posts.create'));
+        self::assertNull($router->collection()->named('posts.store'));
+
+        $indexResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts'));
+        $showResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/9'));
+        $storeResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts', 'POST'));
+
+        self::assertSame(200, $indexResponse->statusCode());
+        self::assertSame('index', $indexResponse->content());
+        self::assertSame(200, $showResponse->statusCode());
+        self::assertSame('show:9', $showResponse->content());
+        self::assertSame(405, $storeResponse->statusCode());
+    }
+
+    public function test_it_can_exclude_resource_routes_with_except(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts', TestResourceController::class)
+            ->except(['destroy', 'edit']);
+
+        self::assertCount(5, $routes);
+        self::assertNull($router->collection()->named('posts.destroy'));
+        self::assertNull($router->collection()->named('posts.edit'));
+        self::assertNotNull($router->collection()->named('posts.update'));
+
+        $editResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4/edit'));
+        $deleteResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4', 'DELETE'));
+        $updateResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4', 'PATCH'));
+
+        self::assertSame(404, $editResponse->statusCode());
+        self::assertSame(405, $deleteResponse->statusCode());
+        self::assertSame(200, $updateResponse->statusCode());
+        self::assertSame('update:4', $updateResponse->content());
+    }
+
+    public function test_it_can_register_api_resource_routes_without_create_and_edit(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->apiResource('posts', TestResourceController::class);
+
+        self::assertCount(5, $routes);
+        self::assertNull($router->collection()->named('posts.create'));
+        self::assertNull($router->collection()->named('posts.edit'));
+        self::assertNotNull($router->collection()->named('posts.index'));
+        self::assertNotNull($router->collection()->named('posts.destroy'));
+
+        $createResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/create'));
+        $editResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4/edit'));
+        $showResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4'));
+
+        self::assertSame(404, $createResponse->statusCode());
+        self::assertSame(404, $editResponse->statusCode());
+        self::assertSame(200, $showResponse->statusCode());
+        self::assertSame('show:4', $showResponse->content());
+    }
+
+    public function test_it_rejects_invalid_resource_actions_in_only_and_except(): void
+    {
+        $router = $this->app->make(Router::class);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Resource action [publish] is not supported.');
+
+        $router->resource('posts', TestResourceController::class)->only(['publish']);
+    }
+
     public function test_it_resolves_global_middleware_aliases_before_runtime(): void
     {
         $kernel = $this->app->make(HttpKernel::class);
@@ -1985,6 +2122,44 @@ final class TestSecondaryHeaderMiddleware implements MiddlewareInterface
         }
 
         return $response;
+    }
+}
+
+final class TestResourceController
+{
+    public function index(): string
+    {
+        return 'index';
+    }
+
+    public function create(): string
+    {
+        return 'create';
+    }
+
+    public function store(): string
+    {
+        return 'store';
+    }
+
+    public function show(string $post): string
+    {
+        return 'show:' . $post;
+    }
+
+    public function edit(string $post): string
+    {
+        return 'edit:' . $post;
+    }
+
+    public function update(string $post): string
+    {
+        return 'update:' . $post;
+    }
+
+    public function destroy(string $post): string
+    {
+        return 'destroy:' . $post;
     }
 }
 

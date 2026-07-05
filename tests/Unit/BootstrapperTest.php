@@ -69,6 +69,20 @@ final class BootstrapperTest extends TestCase
         self::assertSame('/from-route-facade', $route->uri());
     }
 
+    public function test_it_can_load_route_files_using_fluent_group_builders_through_the_route_facade(): void
+    {
+        $app = new Application($this->basePath);
+        $bootstrapper = new Bootstrapper($app);
+
+        $bootstrapper->loadRoutes($this->writeFacadeGroupedRouteFile());
+
+        $route = $app->make(Router::class)->collection()->named('admin.users.index');
+
+        self::assertNotNull($route);
+        self::assertSame('/admin/users', $route->uri());
+        self::assertSame('admin.example.com', $route->routeDomain());
+    }
+
     public function test_it_skips_route_file_interpretation_when_compiled_route_artifacts_are_available(): void
     {
         $builderApp = new Application($this->basePath);
@@ -241,6 +255,32 @@ use Quantum\Facades\Route;
 
 return static function (): void {
     Route::get({$routeUri}, {$action})->name({$routeName});
+};
+PHP;
+
+        file_put_contents($path, $contents);
+
+        return $path;
+    }
+
+    private function writeFacadeGroupedRouteFile(): string
+    {
+        $path = $this->basePath . DIRECTORY_SEPARATOR . 'routes-facade-group.php';
+        $action = var_export(TestBootstrapController::class . '@show', true);
+        $contents = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+use Quantum\Facades\Route;
+
+return static function (): void {
+    Route::prefix('/admin')
+        ->name('admin')
+        ->domain('admin.example.com')
+        ->group(static function (): void {
+            Route::get('/users', {$action})->name('users.index');
+        });
 };
 PHP;
 

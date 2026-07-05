@@ -56,6 +56,18 @@ final class RouteCollection implements Countable, IteratorAggregate
         return $route;
     }
 
+    public function remove(Route $route): void
+    {
+        $currentIndex = array_search($route, $this->routes, true);
+
+        if ($currentIndex === false) {
+            return;
+        }
+
+        array_splice($this->routes, $currentIndex, 1);
+        $this->rebuildIndexes();
+    }
+
     /**
      * @return array<int, Route>
      */
@@ -187,5 +199,22 @@ final class RouteCollection implements Countable, IteratorAggregate
     private function signature(string $method, ?string $domain, string $uri): string
     {
         return strtoupper($method) . ' ' . ($domain ?? '*') . ' ' . $uri;
+    }
+
+    private function rebuildIndexes(): void
+    {
+        $this->compiledCollection = null;
+        $this->signatures = [];
+        $this->names = [];
+
+        foreach ($this->routes as $index => $route) {
+            foreach ($route->methods() as $method) {
+                $this->signatures[$this->signature($method, $route->routeDomain(), $route->uri())] = $index;
+            }
+
+            if ($route->routeName() !== null) {
+                $this->names[$route->routeName()] = $index;
+            }
+        }
     }
 }

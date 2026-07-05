@@ -18,6 +18,7 @@ final class Route extends CompiledRoute
 
     private ?RouteCollection $collection = null;
     private $middlewareResolver = null;
+    private string $namePrefix = '';
 
     public function __construct(RouteDefinition $definition)
     {
@@ -34,12 +35,18 @@ final class Route extends CompiledRoute
         $this->middlewareResolver = $resolver;
     }
 
+    public function attachNamePrefix(string $prefix): void
+    {
+        $this->namePrefix = trim($prefix);
+    }
+
     public function name(?string $name = null): string|static|null
     {
         if ($name === null) {
             return $this->routeName();
         }
 
+        $name = $this->qualifyRouteName($name);
         $previousName = $this->routeName();
 
         if ($this->collection !== null) {
@@ -301,5 +308,20 @@ final class Route extends CompiledRoute
         }
 
         return $normalized;
+    }
+
+    private function qualifyRouteName(string $name): string
+    {
+        $normalizedName = trim($name);
+
+        if ($this->namePrefix === '' || $normalizedName === '') {
+            return $normalizedName;
+        }
+
+        if ($normalizedName === $this->namePrefix || str_starts_with($normalizedName, $this->namePrefix . '.')) {
+            return $normalizedName;
+        }
+
+        return $this->namePrefix . '.' . ltrim($normalizedName, '.');
     }
 }
