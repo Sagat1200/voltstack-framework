@@ -39,6 +39,11 @@ Hoy el sistema de rutas ya soporta:
 - header `X-Volt-Navigation` para requests de navegacion Volt
 - bootstrap HTML-first con atributos `data-volt-*` inyectados desde metadata runtime
 
+Notas operativas:
+
+- el framework expone endpoints internos bajo `/_volt/*` (por ejemplo `/_volt/runtime.js`, `/_volt/action` y `/_volt/routes-manifest.json`)
+- el manifest publico **no** incluye rutas internas ni rutas sin `name()`
+
 ---
 
 ## 3. Donde Registrar Rutas
@@ -597,6 +602,7 @@ Normalizacion actual:
 
 - `reload-only`, `static`, `non-spa` y `document` terminan proyectando `reload`
 - `interactive` y `reactive` terminan proyectando `spa`
+- otros aliases o valores personalizados se proyectan en minusculas sin mas transformacion
 
 ### 6.5 `runtime.navigation`
 
@@ -708,6 +714,14 @@ X-Requested-With: VoltStack
 X-Volt-Navigate: true
 ```
 
+Reglas de emision:
+
+- si falta `X-Requested-With: VoltStack`, no se adjunta `X-Volt-Navigation`
+- si falta `X-Volt-Navigate: true`, no se adjunta `X-Volt-Navigation`
+- si la ruta resuelta es un endpoint interno (`/_volt/*`), no se adjunta `X-Volt-Navigation`
+- el header puede salir tanto en respuestas `200` como en `3xx`, `4xx` y `5xx`
+- el payload se calcula sobre la respuesta final que sale del kernel, no sobre un estado intermedio del dispatcher
+
 Payload actual:
 
 ```json
@@ -740,11 +754,64 @@ Payload actual:
 Comportamiento actual:
 
 - `navigation.target` usa la URL final o el `Location` de un redirect
+- `navigation.method` replica el metodo HTTP de la request en mayusculas
 - `screen.route` depende del nombre de ruta resuelto
 - `policy.document` y `policy.navigation` salen del runtime publico
 - `runtime.transition` y `runtime.hydrate` salen reducidos
 - `redirect` aparece en respuestas `3xx`
 - `error` aparece en respuestas `4xx/5xx`
+
+### 8.1 Campos Estables Del Contrato
+
+Estos campos forman parte del shape publico estable del payload:
+
+- `protocol.name`
+- `protocol.version`
+- `navigation.target`
+- `navigation.method`
+- `screen.route`
+- `policy.document`
+- `policy.navigation`
+- `runtime.layout`
+- `runtime.transition`
+- `runtime.hydrate`
+- `redirect`
+- `error`
+
+Eso no significa que todos vengan siempre con valor no nulo. Significa que el contrato del payload reserva esos campos y los usa de forma consistente.
+
+### 8.2 Campos Derivados O Condicionales
+
+Los siguientes valores dependen del contexto real de la request o de la respuesta:
+
+- `navigation.target`:
+  - usa `request->uri()` cuando no hubo redirect
+  - usa `redirect.location` cuando la respuesta final es `3xx` con header `Location`
+- `screen.route`:
+  - usa el nombre de la ruta resuelta
+  - puede ser `null` si la ruta no tiene `name()`
+- `policy.document` y `policy.navigation`:
+  - salen de `runtime.document` y `runtime.navigation`
+  - pueden ser `null` si la ruta no declaro metadata publica de runtime
+- `runtime.layout`, `runtime.transition`, `runtime.hydrate`:
+  - son proyecciones publicas minimas del bloque `runtime`
+  - pueden ser `null` si no fueron declaradas
+- `redirect`:
+  - solo aparece cuando la respuesta final tiene status `3xx`
+  - publica `location` y `status`
+- `error`:
+  - solo aparece cuando la respuesta final tiene status `>= 400`
+  - publica `code` y un `message` normalizado por status HTTP
+  - no expone por contrato el detalle interno de excepciones del servidor
+
+### 8.3 Lectura Practica Del Payload
+
+Regla util para cliente:
+
+- si `redirect !== null`, la navegacion debe tratarse como cambio explicito de destino
+- si `error !== null`, la navegacion debe tratarse como respuesta fallida aunque el documento HTML exista
+- si `policy.document = reload` o `policy.navigation = reload`, el cliente puede decidir fallback a carga completa
+- si `screen.route === null`, la navegacion sigue siendo valida, pero esa pantalla no esta identificada por nombre publico
 
 ---
 
@@ -1174,6 +1241,42 @@ Comportamiento actual:
 - usa `signed_route()` y `temporary_signed_route()` para probar enlaces protegidos sin depender de concatenacion manual
 - usa `prefetch` solo en rutas `GET` que realmente quieras publicar como navegables
 - no bases pruebas cliente en metadata privada como `middleware` o `auth`, porque no forman parte del contrato publico
+
+---
+
+## 14. Ejemplo Real En `app-skeleton`: Routing Lab
+
+El repositorio `app-skeleton` incluye un set de rutas reales para validar el contrato SPA y el manifest publico sin depender de ejemplos ficticios.
+
+Rutas y nombres reales:
+
+- `GET /routing-lab` -> `routing.lab` (document `spa`, navigation `auto`, layout `routing-lab`, hydrate `false`)
+- `GET /routing-lab/users/{user}` -> `routing.lab.users.show` (capabilities `navigate`, `hydrate`, `prefetch`)
+- `GET /routing-lab/reports/export` -> `routing.lab.reports.export` (document `reload`, navigation `reload`)
+- `GET /routing-lab/private` -> `routing.lab.private` (redirect a `/login`)
+- `GET /routing-lab/boom` -> `routing.lab.boom` (error 500 controlado)
+- `GET /login` -> `login`
+
+Endpoints internos del runtime:
+
+- `GET /_volt/runtime.js`
+- `GET /_volt/routes-manifest.json`
+- `POST /_volt/action`
+
+Pruebas rapidas:
+
+```powershell
+Invoke-WebRequest http://127.0.0.1:8000/_volt/routes-manifest.json | Select-Object -ExpandProperty Content
+```
+
+```powershell
+$response = Invoke-WebRequest http://127.0.0.1:8000/routing-lab/users/15 -Headers @{
+    "X-Requested-With" = "VoltStack"
+    "X-Volt-Navigate" = "true"
+}
+
+$response.Headers["X-Volt-Navigation"]
+```
 
 ---
 

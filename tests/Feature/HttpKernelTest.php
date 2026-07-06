@@ -749,6 +749,8 @@ final class HttpKernelTest extends TestCase
 
     public function test_it_can_dispatch_routes_using_loaded_pipeline_artifacts(): void
     {
+        $this->app->make(ConfigRepository::class)->set('app.env', 'production');
+
         $router = $this->app->make(Router::class);
         $route = $router->get('/artifact-pipeline', fn() => new Response('ok'))->middleware(TestHeaderMiddleware::class);
 
@@ -765,6 +767,8 @@ final class HttpKernelTest extends TestCase
 
     public function test_it_can_dispatch_routes_using_a_loaded_collection_artifact(): void
     {
+        $this->app->make(ConfigRepository::class)->set('app.env', 'production');
+
         $router = $this->app->make(Router::class);
         $route = $router->get('/artifact-collection', TestStringController::class . '@show')->name('artifact.collection');
 

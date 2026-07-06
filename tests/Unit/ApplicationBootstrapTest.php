@@ -78,6 +78,24 @@ PHP
         self::assertSame($app, app());
         self::assertSame('VoltStack', config('app.name'));
     }
+
+    public function test_default_environment_is_local_when_configuration_has_not_been_loaded(): void
+    {
+        $basePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'voltstack-framework-no-config-' . uniqid('', true);
+        mkdir($basePath, 0777, true);
+
+        try {
+            $app = new Application($basePath);
+
+            self::assertSame('local', $app->environment());
+            self::assertTrue($app->isDevelopment());
+            self::assertFalse($app->isProduction());
+        } finally {
+            if (is_dir($basePath)) {
+                rmdir($basePath);
+            }
+        }
+    }
 }
 
 final class TestServiceProvider extends ServiceProvider

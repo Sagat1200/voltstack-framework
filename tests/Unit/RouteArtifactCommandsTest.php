@@ -35,6 +35,7 @@ final class RouteArtifactCommandsTest extends TestCase
 declare(strict_types=1);
 
 return [
+    'env' => 'production',
     'providers' => [],
 ];
 PHP

@@ -86,11 +86,13 @@ final class BootstrapperTest extends TestCase
     public function test_it_skips_route_file_interpretation_when_compiled_route_artifacts_are_available(): void
     {
         $builderApp = new Application($this->basePath);
+        $builderApp->make(ConfigRepository::class)->set('app.env', 'production');
         $builderRouter = $builderApp->make(Router::class);
         $builderRouter->get('/from-artifact', TestBootstrapController::class . '@show')->name('artifact.route');
         $builderApp->make(CollectionArtifactStore::class)->compileAndWrite($builderRouter);
 
         $runtimeApp = new Application($this->basePath);
+        $runtimeApp->make(ConfigRepository::class)->set('app.env', 'production');
         $bootstrapper = new Bootstrapper($runtimeApp);
         $bootstrapper->loadRoutes($this->writeRouteFile('route.file', '/from-route-file'));
 

@@ -512,11 +512,61 @@ Criterio de cierre:
 
 ---
 
-## 8. Checklist Postergado
+## 8. Siguiente Corte Recomendado
+
+Con `V1`, `V1.1`, `V1.2` y `V2 SPA` ya cerrados, el siguiente avance recomendado no debe abrir de inmediato optimizaciones o multitenancy. El orden mas conveniente es:
+
+1. consolidar el router actual sobre pruebas, skeleton y documentacion real
+2. abrir `Route Component System` como siguiente bloque funcional del roadmap
+3. dejar `adaptive matching`, optimizacion de pipeline y `Multi-Tenant Routing` para despues de ese cierre
+
+### 8.1 Consolidacion Del Router Actual
+
+Este bloque no busca agregar nuevas capacidades de routing. Busca cerrar la brecha entre framework, tests, skeleton consumidor y contratos documentados.
+
+- `[x]` alinear la suite del framework con el comportamiento real del runtime y del bootstrap HTML actual
+- `[x]` corregir tests o fixtures desfasados que aun asumen contratos viejos del documento o del runtime
+- `[x]` verificar que el skeleton consumidor expone las rutas y pantallas que los tests de integracion esperan consumir
+- `[x]` aislar mejor los tests que usan `sys_get_temp_dir()` para evitar contaminacion accidental por artifacts compartidos
+- `[x]` revisar el uso por defecto de `app.env` y la activacion de artifacts para evitar falsos `404` o lectura de cache ajena en pruebas
+- `[x]` alinear `Docs/Routing/20-Use.md`, el checklist y la suite con el estado real de la API publica
+- `[x]` registrar en bitacora las decisiones tecnicas de consolidacion para que no se reabran regresiones ya cerradas
+
+Criterio de cierre:
+
+- la suite de routing/runtime vuelve a ser confiable como señal de regresion
+- el skeleton usado por pruebas de integracion ya refleja el contrato publico actual
+- la documentacion ya no describe contratos obsoletos ni escenarios que no existan en el repo actual
+
+### 8.2 Checklist Route Component System
+
+Abrir este bloque solo despues de cerrar `8.1`.
+
+Este corte debe formalizar el uso de componentes o paginas como destinos de ruta de primer nivel, sin mezclarlo todavia con multitenancy, optimizacion avanzada o cambios de protocolo mayores.
+
+- `[ ]` definir el contrato publico de una ruta a componente o pagina navegable
+- `[ ]` separar formalmente componente navegable, componente embebible y endpoint interno del runtime
+- `[ ]` decidir que metadata publica del componente puede entrar al manifest y cual debe quedar interna
+- `[ ]` formalizar el path de render inicial para paginas basadas en componente
+- `[ ]` formalizar el dispatch de acciones sobre componentes resueltos desde ruta sin duplicar contratos con `/_volt/action`
+- `[ ]` definir el contrato de errores para paginas o componentes cuando fallen `mount`, `hydrate` o `render`
+- `[ ]` decidir como conviven layout, hydration y navigation policy entre metadata de ruta y metadata propia del componente
+- `[ ]` validar compatibilidad con `route()`, `signed_route()` y manifest publico cuando el destino sea un componente
+- `[ ]` cubrir con pruebas reales el flujo `match -> dispatch -> render -> bootstrap -> navigate`
+- `[ ]` documentar en `Docs/Routing/20-Use.md` y en documentos del runtime el uso oficial de rutas a componente o pagina
+
+Criterio de cierre:
+
+- una ruta a componente ya tiene contrato publico claro y no depende de supuestos internos del runtime
+- el router, el runtime y el manifest distinguen correctamente entre navegacion de pagina y accion reactiva
+- el consumo desde app cliente queda documentado y cubierto por pruebas de integracion
+
+---
+
+## 9. Checklist Postergado
 
 No iniciar estos bloques antes de cerrar `V1` y `V2`:
 
-- `[ ]` `Route Component System` completo
 - `[ ]` `Multi-Tenant Routing` completo
 - `[ ]` adaptive matching engine
 - `[ ]` compiler plugins completos
@@ -529,7 +579,7 @@ No iniciar estos bloques antes de cerrar `V1` y `V2`:
 
 ---
 
-## 9. Riesgos A Vigilar
+## 10. Riesgos A Vigilar
 
 - `[ ]` sobredisenar el core antes de tener matcher y dispatcher estables
 - `[ ]` mezclar necesidades del runtime SPA con el contrato HTTP base del framework
@@ -539,7 +589,7 @@ No iniciar estos bloques antes de cerrar `V1` y `V2`:
 
 ---
 
-## 10. Orden Recomendado De Ejecucion
+## 11. Orden Recomendado De Ejecucion
 
 Seguir este orden de trabajo:
 
@@ -555,15 +605,20 @@ Seguir este orden de trabajo:
 10. `[x]` `Route Attributes`
 11. `[x]` `Frontend Manifest` minimo
 12. `[x]` `SPA Routing Protocol` minimo
+13. `[x]` consolidacion del router actual sobre framework, tests, skeleton y documentacion
+14. `[ ]` `Route Component System`
+15. `[ ]` `pipeline optimizer`
+16. `[ ]` `Multi-Tenant Routing`
 
 Estado real del corte actual:
 
 - `V1 Core Routing`, `V1.1` y el bloque SPA minimo (`7.1`, `7.2`, `7.3`) ya quedaron cerrados
-- el siguiente trabajo recomendado ya no es infraestructura base, sino ergonomia publica y consolidacion documental del router
+- la fase corta de consolidacion del router actual ya quedo cerrada sobre framework, tests, skeleton y documentacion
+- el siguiente bloque funcional recomendado pasa a ser `Route Component System`
 
 ---
 
-## 11. Nota Sobre El Runtime SPA Reactivo
+## 12. Nota Sobre El Runtime SPA Reactivo
 
 Mientras este checklist no cierre `V1`, la recomendacion tecnica es:
 
@@ -579,9 +634,13 @@ Cuando `V1` este cerrado, ya se puede decidir si el runtime:
 
 ---
 
-## 12. Bitacora De Avance
+## 13. Bitacora De Avance
 
 Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques.
+
+- `[2026-07-05]` cierre de `8.1 Consolidacion Del Router Actual`: se corrigio el fallback de entorno para que una `Application` sin configuracion cargada arranque en `local`, se aislaron pruebas afectadas por artifacts compartidos y se hicieron explicitas las pruebas que realmente requieren `production`
+- `[2026-07-05]` la suite del framework volvio a verde con `347 tests` y `1466 assertions`, usando el skeleton real actual como base para las pruebas de integracion SPA
+- `[2026-07-05]` `Docs/Routing/20-Use.md` quedo alineado con el estado real del core: `/_volt/runtime.js`, `/_volt/action`, `/_volt/routes-manifest.json`, `Routing Lab`, contratos de `X-Volt-Navigation` y normalizacion de `runtime.document`
 
 ### 2026-06
 

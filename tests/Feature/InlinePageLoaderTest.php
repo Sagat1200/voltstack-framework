@@ -68,7 +68,7 @@ PHP
         self::assertSame('', $autoloadOutput);
         self::assertStringContainsString('<h1>Inline Hello</h1>', $html);
         self::assertStringContainsString('data-volt-root="true"', $html);
-        self::assertStringContainsString('<script>', $html);
+        self::assertStringNotContainsString('<script', $html);
     }
 
     private function deleteDirectory(string $path): void

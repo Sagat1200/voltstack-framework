@@ -353,7 +353,7 @@ class Application extends Container
         $environment = $this->config('app.env');
 
         if (! is_string($environment) || trim($environment) === '') {
-            return 'production';
+            return 'local';
         }
 
         return strtolower(trim($environment));

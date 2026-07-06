@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace VoltStack\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Quantum\Config\ConfigRepository;
 use Quantum\Http\Request;
 use Quantum\HttpKernel\Contracts\MiddlewareInterface;
 use Quantum\Routing\PipelineArtifactStore;
@@ -39,6 +40,8 @@ final class PipelineArtifactStoreTest extends TestCase
 
     public function test_it_writes_and_loads_a_pipeline_artifact_with_unique_compiled_pipelines(): void
     {
+        $this->app->make(ConfigRepository::class)->set('app.env', 'production');
+
         $router = $this->app->make(Router::class);
         $first = $router->get('/first', fn() => 'first')->middleware(TestArtifactMiddleware::class);
         $router->get('/second', fn() => 'second')->middleware(TestArtifactMiddleware::class);
