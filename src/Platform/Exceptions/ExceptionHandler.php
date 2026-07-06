@@ -8,6 +8,7 @@ use Quantum\Http\JsonResponse;
 use Quantum\Http\Request;
 use Quantum\Http\Response;
 use Quantum\Routing\Exceptions\MethodNotAllowedException;
+use Quantum\Routing\Exceptions\MissingRouteBindingException;
 use Quantum\Routing\Exceptions\RouteNotFoundException;
 use Quantum\Security\Exceptions\CsrfTokenMismatchException;
 use Quantum\Security\Exceptions\InvalidSignatureException;
@@ -41,6 +42,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
     {
         return match (true) {
             $exception instanceof RouteNotFoundException => 404,
+            $exception instanceof MissingRouteBindingException => 404,
             $exception instanceof MethodNotAllowedException => 405,
             $exception instanceof InvalidSignatureException => 403,
             $exception instanceof CsrfTokenMismatchException => 419,
@@ -164,6 +166,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
     {
         return match (true) {
             $exception instanceof RouteNotFoundException => 'route.not_found',
+            $exception instanceof MissingRouteBindingException => 'route.binding_missing',
             $exception instanceof MethodNotAllowedException => 'route.method_not_allowed',
             $exception instanceof InvalidSignatureException => 'security.invalid_signature',
             $exception instanceof CsrfTokenMismatchException => 'security.csrf_token_mismatch',

@@ -233,6 +233,10 @@ Alcance de esta primera capa:
 - permite personalizar nombres puntuales con `names([...])`
 - permite renombrar el placeholder singular con `parameter(...)`
 - permite renombrar el placeholder por clave de recurso con `parameters([...])`
+- acepta recursos anidados por notacion `padre.hijo`
+- expone `shallow()` para mover las rutas miembro a paths cortos
+- permite binding tipado sobre parametros miembro si el tipo implementa `RouteBindableInterface`
+- expone `missing(...)` para reaccionar cuando ese binder no encuentra el recurso enlazado
 
 Ejemplos:
 
@@ -257,6 +261,17 @@ Route::apiResource('posts', ApiPostController::class)
         'posts' => 'entry',
     ]);
 
+Route::resource('posts.comments', CommentController::class);
+
+Route::resource('posts.comments', CommentController::class)
+    ->shallow();
+
+Route::resource('posts.comments', CommentController::class)
+    ->parameters([
+        'posts' => 'entry',
+        'comments' => 'note',
+    ]);
+
 Route::apiResource('posts', ApiPostController::class);
 ```
 
@@ -266,6 +281,95 @@ Notas:
 - `apiResource()` reserva `create` para que `GET /posts/create` no sea capturado por `show`
 - `names([...])` reemplaza solo las acciones declaradas; las demas conservan `resource.action`
 - `parameter(...)` y `parameters([...])` cambian el nombre publico del placeholder para generacion de URLs, pero el controlador puede seguir recibiendo el nombre original del argumento mientras el dispatcher resuelve el alias internamente
+- `resource('posts.comments', ...)` genera nombres `posts.comments.*` y paths como `/posts/{post}/comments`
+- `shallow()` mueve `show/edit/update/destroy` a `/comments/{comment}` y `/comments/{comment}/edit`, pero mantiene `index/create/store` anidados bajo `/posts/{post}/comments`
+- el binding tipado solo se activa cuando el argumento del controller usa una clase que implementa `Quantum\Routing\Contracts\RouteBindableInterface`
+- `missing(404)` o `missing(410)` devuelven ese status cuando el binder retorna `null`
+- `missing('ruta.fallback')` hace redirect a una ruta nombrada usando los parametros actuales como input de generacion
+
+Ejemplo de recurso anidado sin `shallow()`:
+
+```php
+Route::resource('posts.comments', CommentController::class);
+```
+
+Eso genera:
+
+- `GET /posts/{post}/comments` -> `posts.comments.index`
+- `GET /posts/{post}/comments/create` -> `posts.comments.create`
+- `POST /posts/{post}/comments` -> `posts.comments.store`
+- `GET /posts/{post}/comments/{comment}` -> `posts.comments.show`
+- `GET /posts/{post}/comments/{comment}/edit` -> `posts.comments.edit`
+- `PUT|PATCH /posts/{post}/comments/{comment}` -> `posts.comments.update`
+- `DELETE /posts/{post}/comments/{comment}` -> `posts.comments.destroy`
+
+Ejemplo con `shallow()`:
+
+```php
+Route::resource('posts.comments', CommentController::class)
+    ->shallow();
+```
+
+Con `shallow()` el resultado operativo queda asi:
+
+- `GET /posts/{post}/comments` -> `posts.comments.index`
+- `GET /posts/{post}/comments/create` -> `posts.comments.create`
+- `POST /posts/{post}/comments` -> `posts.comments.store`
+- `GET /comments/{comment}` -> `posts.comments.show`
+- `GET /comments/{comment}/edit` -> `posts.comments.edit`
+- `PUT|PATCH /comments/{comment}` -> `posts.comments.update`
+- `DELETE /comments/{comment}` -> `posts.comments.destroy`
+
+Ejemplo de binding tipado con fallback `missing()`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Quantum\Http\Request;
+use Quantum\Routing\Contracts\RouteBindableInterface;
+use Quantum\Facades\Route;
+
+final class CommentResource implements RouteBindableInterface
+{
+    public function __construct(
+        public readonly string $id,
+    ) {}
+
+    public static function resolveRouteBinding(string $value, string $parameter, Request $request): ?self
+    {
+        if ($parameter !== 'comment') {
+            return null;
+        }
+
+        return in_array($value, ['10', '11'], true)
+            ? new self($value)
+            : null;
+    }
+}
+
+final class CommentController
+{
+    public function show(string $post, CommentResource $comment): string
+    {
+        return 'comment:' . $post . ':' . $comment->id;
+    }
+}
+
+Route::get('/missing-comments', fn() => 'missing')->name('comments.missing');
+
+Route::resource('posts.comments', CommentController::class)
+    ->only(['show'])
+    ->missing('comments.missing');
+```
+
+Comportamiento actual:
+
+- si `resolveRouteBinding(...)` devuelve una instancia, el controller recibe el recurso ya resuelto
+- si devuelve `null`, la ruta miembro entra al contrato `missing(...)`
+- `missing('comments.missing')` responde con redirect `302` por defecto
+- tambien puedes usar `->missing(404)` o `->missing(410)` para responder solo con status
 
 ---
 

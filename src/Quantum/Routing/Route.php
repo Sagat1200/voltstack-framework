@@ -105,6 +105,28 @@ final class Route extends CompiledRoute
         return $this;
     }
 
+    public function repath(string $uri): static
+    {
+        $previousUri = $this->definition()->uri();
+        $definition = $this->definition()->withPath($uri);
+
+        if ($definition === $this->definition()) {
+            return $this;
+        }
+
+        if ($this->collection !== null) {
+            $this->collection->validateRoutePath($this, $definition->uri());
+        }
+
+        $this->replaceDefinition($definition);
+
+        if ($this->collection !== null) {
+            $this->collection->syncRoutePath($this, $previousUri);
+        }
+
+        return $this;
+    }
+
     public function where(string|array $parameter, ?string $pattern = null): static
     {
         if (is_array($parameter)) {

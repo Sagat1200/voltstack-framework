@@ -6,6 +6,8 @@ namespace Quantum\Routing\Dispatching;
 
 use Closure;
 use Quantum\Http\Request;
+use Quantum\Routing\Contracts\RouteBindableInterface;
+use Quantum\Routing\Exceptions\MissingRouteBindingException;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -84,13 +86,18 @@ final class RouteArgumentResolver
         array $parameterAliases,
     ): mixed {
         if (array_key_exists($parameter->getName(), $parameters)) {
-            return $parameters[$parameter->getName()];
-        }
+            $parameterKey = $parameter->getName();
+            $parameterValue = $parameters[$parameterKey];
+        } else {
+            $aliasedParameter = $parameterAliases[$parameter->getName()] ?? null;
 
-        $aliasedParameter = $parameterAliases[$parameter->getName()] ?? null;
-
-        if (is_string($aliasedParameter) && array_key_exists($aliasedParameter, $parameters)) {
-            return $parameters[$aliasedParameter];
+            if (is_string($aliasedParameter) && array_key_exists($aliasedParameter, $parameters)) {
+                $parameterKey = $aliasedParameter;
+                $parameterValue = $parameters[$aliasedParameter];
+            } else {
+                $parameterKey = null;
+                $parameterValue = null;
+            }
         }
 
         $type = $parameter->getType();
@@ -102,7 +109,27 @@ final class RouteArgumentResolver
                 return $request;
             }
 
+            if (is_string($parameterKey) && is_subclass_of($typeName, RouteBindableInterface::class)) {
+                $binding = $typeName::resolveRouteBinding((string) $parameterValue, $parameterKey, $request);
+
+                if ($binding === null) {
+                    throw new MissingRouteBindingException(
+                        $parameter->getName(),
+                        $routeUri,
+                        $parameterKey,
+                        (string) $parameterValue,
+                        $typeName,
+                    );
+                }
+
+                return $binding;
+            }
+
             return $this->app->make($typeName);
+        }
+
+        if (is_string($parameterKey)) {
+            return $parameterValue;
         }
 
         if ($parameter->isDefaultValueAvailable()) {

@@ -142,26 +142,34 @@ final class Router
 
     public function resource(string $resource, string $controller): PendingResourceRegistration
     {
-        $resource = trim($resource, '/');
+        $segments = $this->resourceSegments($resource);
 
-        if ($resource === '') {
+        if ($segments === []) {
             throw new \InvalidArgumentException('Router::resource expects a non-empty resource name.');
         }
 
-        $resourceKey = $this->resourceKey($resource);
-        $parameter = $this->resourceParameterName($resource);
-        $resourceName = str_replace('/', '.', $resource);
+        $resourceKey = $this->resourceKey($segments[array_key_last($segments)]);
+        $resourceParameters = $this->resourceParameters($segments);
+        $parameter = $resourceParameters[$resourceKey];
+        $resourceName = implode('.', $segments);
+        $collectionPath = $this->resourceCollectionPath($segments, $resourceParameters);
         $routes = [
-            'index' => $this->get($resource, $controller . '@index')->name($resourceName . '.index'),
-            'create' => $this->get($resource . '/create', $controller . '@create')->name($resourceName . '.create'),
-            'store' => $this->post($resource, $controller . '@store')->name($resourceName . '.store'),
-            'show' => $this->get($resource . '/{' . $parameter . '}', $controller . '@show')->name($resourceName . '.show'),
-            'edit' => $this->get($resource . '/{' . $parameter . '}/edit', $controller . '@edit')->name($resourceName . '.edit'),
-            'update' => $this->match(['PUT', 'PATCH'], $resource . '/{' . $parameter . '}', $controller . '@update')->name($resourceName . '.update'),
-            'destroy' => $this->delete($resource . '/{' . $parameter . '}', $controller . '@destroy')->name($resourceName . '.destroy'),
+            'index' => $this->get($collectionPath, $controller . '@index')->name($resourceName . '.index'),
+            'create' => $this->get($collectionPath . '/create', $controller . '@create')->name($resourceName . '.create'),
+            'store' => $this->post($collectionPath, $controller . '@store')->name($resourceName . '.store'),
+            'show' => $this->get($collectionPath . '/{' . $parameter . '}', $controller . '@show')->name($resourceName . '.show'),
+            'edit' => $this->get($collectionPath . '/{' . $parameter . '}/edit', $controller . '@edit')->name($resourceName . '.edit'),
+            'update' => $this->match(['PUT', 'PATCH'], $collectionPath . '/{' . $parameter . '}', $controller . '@update')->name($resourceName . '.update'),
+            'destroy' => $this->delete($collectionPath . '/{' . $parameter . '}', $controller . '@destroy')->name($resourceName . '.destroy'),
         ];
 
-        return new PendingResourceRegistration($this->routes, $resourceKey, $parameter, $routes);
+        return new PendingResourceRegistration(
+            $this->routes,
+            $resourceParameters,
+            $resourceKey,
+            $segments[array_key_last($segments)],
+            $routes,
+        );
     }
 
     public function apiResource(string $resource, string $controller): PendingResourceRegistration
@@ -527,6 +535,62 @@ final class Router
         $segment = str_replace('-', '_', $segment);
 
         return $segment;
+    }
+
+    /**
+     * @param array<int, string> $segments
+     * @return array<string, string>
+     */
+    private function resourceParameters(array $segments): array
+    {
+        $parameters = [];
+
+        foreach ($segments as $segment) {
+            $resourceKey = $this->resourceKey($segment);
+            $parameters[$resourceKey] = $this->resourceParameterName($segment);
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * @param array<int, string> $segments
+     * @param array<string, string> $resourceParameters
+     */
+    private function resourceCollectionPath(array $segments, array $resourceParameters): string
+    {
+        $path = [];
+        $lastIndex = array_key_last($segments);
+
+        foreach ($segments as $index => $segment) {
+            $path[] = trim($segment, '/');
+
+            if ($index === $lastIndex) {
+                continue;
+            }
+
+            $path[] = '{' . $resourceParameters[$this->resourceKey($segment)] . '}';
+        }
+
+        return implode('/', $path);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resourceSegments(string $resource): array
+    {
+        $normalized = str_replace('\\', '/', $resource);
+        $normalized = str_replace('.', '/', $normalized);
+        $normalized = trim($normalized, " \t\n\r\0\x0B/.");
+
+        if ($normalized === '') {
+            return [];
+        }
+
+        $segments = preg_split('#/+#', $normalized) ?: [];
+
+        return array_values(array_filter($segments, static fn(string $segment): bool => trim($segment) !== ''));
     }
 
     private function middlewareAliases(): MiddlewareAliasRegistry

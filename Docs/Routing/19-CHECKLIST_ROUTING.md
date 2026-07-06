@@ -295,6 +295,26 @@ Estas piezas pueden entrar justo despues de `V1`, pero no deben bloquearlo:
 - `[x]` constraints mas ricos
 - `[x]` mejores herramientas de compilacion e invalidacion
 
+## 6.2 Checklist V1.2 Ergonomia De Recursos
+
+Este bloque ya no toca infraestructura base del router. Se enfoca en mejorar la API publica de `Route::resource()` sobre la base que ya esta cerrada.
+
+- `[x]` nested resources por notacion de recurso (`posts.comments`)
+- `[x]` `shallow()` para desacoplar las rutas miembro del path padre
+- `[x]` personalizacion de placeholders sobre recurso hijo y padres mediante `parameter(...)` y `parameters([...])`
+- `[ ]` personalizacion adicional de paths o verbos REST por accion
+- `[x]` estrategia uniforme de `missing()` o resolucion declarativa cuando falte un recurso enlazado
+- `[x]` documentacion publica actualizada en `Docs/Routing/20-Use.md`
+- `[x]` pruebas de integracion y unidad para generacion de URLs y dispatch real
+
+Criterio de cierre del corte actual:
+
+- los recursos anidados ya pueden registrarse y generar nombres `posts.comments.*`
+- `shallow()` ya mueve `show/edit/update/destroy` a rutas miembro cortas sin romper `index/create/store`
+- el cambio de nombres de placeholders sigue siendo compatible con el binder de controladores
+- existe una primera capa de route binding tipado mediante `RouteBindableInterface` y `missing()` ya puede reaccionar con status o redirect cuando el binder no encuentra el recurso
+- la siguiente iteracion de este bloque ya puede concentrarse en personalizacion extra de actions
+
 ---
 
 ## 7. Checklist V2 SPA
@@ -607,3 +627,6 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` `Route::resource()` ya soporta filtrado minimo con `only()` y `except()`, mientras `Route::apiResource()` excluye `create/edit` sin romper el matcher de `show` para literales reservados como `create`; la guia publica ya documenta estos matices y las pruebas cubren tanto `404/405` como el registro real
 - `[x]` la app skeleton ya adopta la API fluida en `routes/web.php` para el laboratorio `routing-lab`, agrupando `prefix('/routing-lab')->name('routing.lab')->group(...)` sin cambiar paths ni nombres publicos; esto valida el uso real de la fachada `Route` fuera de las pruebas del framework
 - `[x]` `Route::resource()` ya soporta una capa minima de personalizacion con `names([...])`, `parameter(...)` y `parameters([...])`; el placeholder publico puede renombrarse sin romper el despacho de controladores existentes porque el binder conserva aliases internos del parametro original durante la resolucion de argumentos
+- `[x]` `Route::resource()` ya soporta recursos anidados mediante notacion `posts.comments`, construyendo paths como `/posts/{post}/comments/{comment}` y nombres `posts.comments.show` sin requerir un builder separado
+- `[x]` `Route::resource()->shallow()` ya permite mover `show/edit/update/destroy` a rutas miembro cortas como `/comments/{comment}` mientras mantiene `index/create/store` anidados; la cobertura valida generacion de URLs, dispatch real y compatibilidad con renombre de placeholders padre e hijo
+- `[x]` existe una primera capa de binding tipado para rutas de recurso mediante `Quantum\Routing\Contracts\RouteBindableInterface`; cuando el binder devuelve `null`, `Route::resource()->missing(...)` ya puede responder con `status` custom o `redirect` declarativo sin introducir todavia un subsistema completo de model binding global

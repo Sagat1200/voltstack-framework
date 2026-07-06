@@ -6,6 +6,7 @@ namespace Quantum\Routing\Dispatching;
 
 use Quantum\Http\Request;
 use Quantum\Routing\Dispatching\Contracts\DispatcherInterface;
+use Quantum\Routing\Exceptions\MissingRouteBindingException;
 use Quantum\Routing\RouteMatch;
 use RuntimeException;
 use VoltStack\Framework\Application;
@@ -15,20 +16,25 @@ final class ControllerDispatcher implements DispatcherInterface
     public function __construct(
         private readonly Application $app,
         private readonly RouteArgumentResolver $arguments,
+        private readonly MissingRouteHandler $missing,
     ) {}
 
     public function dispatch(RouteMatch $match, Request $request): mixed
     {
         [$instance, $method] = $this->resolveTarget($match->route()->action());
         $parameterAliases = $match->route()->routeMetadata()->get('parameter_aliases', []);
-        $arguments = $this->arguments->forMethod(
-            $instance,
-            $method,
-            $request,
-            $match->parameters(),
-            $match->route()->uri(),
-            is_array($parameterAliases) ? $parameterAliases : [],
-        );
+        try {
+            $arguments = $this->arguments->forMethod(
+                $instance,
+                $method,
+                $request,
+                $match->parameters(),
+                $match->route()->uri(),
+                is_array($parameterAliases) ? $parameterAliases : [],
+            );
+        } catch (MissingRouteBindingException $exception) {
+            return $this->missing->handle($match, $request, $exception);
+        }
 
         return $instance->{$method}(...$arguments);
     }

@@ -23,8 +23,9 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
      */
     public function __construct(
         private readonly RouteCollection $collection,
+        private array $resourceParameters,
         private readonly string $resource,
-        private string $parameter,
+        private readonly string $resourceSegment,
         array $routes,
     ) {
         $this->routes = $routes;
@@ -85,11 +86,74 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
 
     public function parameter(string $parameter): self
     {
-        $normalizedParameter = $this->normalizeParameterName($parameter);
+        return $this->renameResourceParameter($this->resource, $parameter);
+    }
 
-        if ($normalizedParameter === $this->parameter) {
+    /**
+     * @param array<string, string> $parameters
+     */
+    public function parameters(array $parameters): self
+    {
+        $applied = false;
+
+        foreach ($this->resourceParameters as $resourceKey => $parameterName) {
+            if (array_key_exists($resourceKey, $parameters)) {
+                $this->renameResourceParameter($resourceKey, (string) $parameters[$resourceKey]);
+                $applied = true;
+                continue;
+            }
+
+            if (array_key_exists($parameterName, $parameters)) {
+                $this->renameResourceParameter($resourceKey, (string) $parameters[$parameterName]);
+                $applied = true;
+            }
+        }
+
+        if ($applied) {
             return $this;
         }
+
+        throw new \InvalidArgumentException(sprintf(
+            'Resource parameters must define at least one of [%s].',
+            implode(', ', $this->availableParameterKeys()),
+        ));
+    }
+
+    public function shallow(): self
+    {
+        $parameter = $this->resourceParameters[$this->resource] ?? null;
+
+        if (! is_string($parameter) || $parameter === '') {
+            return $this;
+        }
+
+        $memberBasePath = $this->resourceSegment . '/{' . $parameter . '}';
+
+        foreach (
+            [
+                'show' => $memberBasePath,
+                'edit' => $memberBasePath . '/edit',
+                'update' => $memberBasePath,
+                'destroy' => $memberBasePath,
+            ] as $action => $uri
+        ) {
+            $route = $this->routes[$action] ?? null;
+
+            if (! $route instanceof Route) {
+                continue;
+            }
+
+            $route->repath($uri);
+        }
+
+        return $this;
+    }
+
+    public function missing(string|int $strategy, int $status = 302): self
+    {
+        $payload = is_int($strategy)
+            ? $this->missingStatusPayload($strategy)
+            : $this->missingRedirectPayload($strategy, $status);
 
         foreach (['show', 'edit', 'update', 'destroy'] as $action) {
             $route = $this->routes[$action] ?? null;
@@ -98,38 +162,10 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
                 continue;
             }
 
-            $route->renameParameter($this->parameter, $normalizedParameter);
+            $route->meta('missing', $payload);
         }
-
-        if (! isset($this->routes['create'])) {
-            $this->reserveParameterLiteral('create', $normalizedParameter);
-        }
-
-        $this->parameter = $normalizedParameter;
 
         return $this;
-    }
-
-    /**
-     * @param array<string, string> $parameters
-     */
-    public function parameters(array $parameters): self
-    {
-        $resourceKey = $this->normalizeActionKey($this->resource);
-
-        if (array_key_exists($resourceKey, $parameters)) {
-            return $this->parameter((string) $parameters[$resourceKey]);
-        }
-
-        if (array_key_exists($this->parameter, $parameters)) {
-            return $this->parameter((string) $parameters[$this->parameter]);
-        }
-
-        throw new \InvalidArgumentException(sprintf(
-            'Resource parameters must define [%s] or [%s].',
-            $resourceKey,
-            $this->parameter,
-        ));
     }
 
     /**
@@ -190,8 +226,10 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
         $this->collection->remove($route);
         unset($this->routes[$action]);
 
-        if ($action === 'create') {
-            $this->reserveParameterLiteral('create', $this->parameter);
+        $parameter = $this->resourceParameters[$this->resource] ?? null;
+
+        if ($action === 'create' && is_string($parameter) && $parameter !== '') {
+            $this->reserveParameterLiteral('create', $parameter);
         }
     }
 
@@ -229,5 +267,94 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
         }
 
         return $normalized;
+    }
+
+    private function renameResourceParameter(string $resourceKey, string $parameter): self
+    {
+        $normalizedKey = $this->normalizeActionKey($resourceKey);
+        $currentParameter = $this->resourceParameters[$normalizedKey] ?? null;
+
+        if (! is_string($currentParameter) || $currentParameter === '') {
+            throw new \InvalidArgumentException(sprintf(
+                'Resource parameters must define a known resource key. Available keys are [%s].',
+                implode(', ', array_keys($this->resourceParameters)),
+            ));
+        }
+
+        $normalizedParameter = $this->normalizeParameterName($parameter);
+
+        if ($normalizedParameter === $currentParameter) {
+            return $this;
+        }
+
+        foreach ($this->routes as $route) {
+            if (! in_array($currentParameter, $route->parameterNames(), true)) {
+                continue;
+            }
+
+            $route->renameParameter($currentParameter, $normalizedParameter);
+        }
+
+        if ($normalizedKey === $this->resource && ! isset($this->routes['create'])) {
+            $this->reserveParameterLiteral('create', $normalizedParameter);
+        }
+
+        $this->resourceParameters[$normalizedKey] = $normalizedParameter;
+
+        return $this;
+    }
+
+    /**
+     * @return array{type: string, status: int}
+     */
+    private function missingStatusPayload(int $status): array
+    {
+        if ($status < 100 || $status > 599) {
+            throw new \InvalidArgumentException(sprintf(
+                'Missing resource status [%d] is invalid.',
+                $status,
+            ));
+        }
+
+        return [
+            'type' => 'status',
+            'status' => $status,
+        ];
+    }
+
+    /**
+     * @return array{type: string, name: string, status: int}
+     */
+    private function missingRedirectPayload(string $routeName, int $status): array
+    {
+        $normalizedRoute = trim($routeName);
+
+        if ($normalizedRoute === '') {
+            throw new \InvalidArgumentException('Missing resource route name cannot be empty.');
+        }
+
+        if ($status < 300 || $status > 399) {
+            throw new \InvalidArgumentException(sprintf(
+                'Missing resource redirect status [%d] is invalid.',
+                $status,
+            ));
+        }
+
+        return [
+            'type' => 'route',
+            'name' => $normalizedRoute,
+            'status' => $status,
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function availableParameterKeys(): array
+    {
+        return array_values(array_unique([
+            ...array_keys($this->resourceParameters),
+            ...array_values($this->resourceParameters),
+        ]));
     }
 }

@@ -73,6 +73,19 @@ final class RouteCompilationTest extends TestCase
         self::assertSame(['post' => 'entry'], $definition->metadata()['parameter_aliases']);
     }
 
+    public function test_route_definition_can_repath_and_prune_missing_parameter_constraints_and_aliases(): void
+    {
+        $definition = RouteDefinition::make(['GET'], '/posts/{post}/comments/{comment}', 'handler')
+            ->withConstraint('post', '[0-9]+')
+            ->withConstraint('comment', '[0-9]+')
+            ->renameParameter('comment', 'note')
+            ->withPath('/comments/{note}');
+
+        self::assertSame('/comments/{note}', $definition->uri());
+        self::assertSame(['note' => '[0-9]+'], $definition->constraints());
+        self::assertSame(['comment' => 'note'], $definition->metadata()['parameter_aliases']);
+    }
+
     public function test_route_definition_can_store_and_merge_metadata(): void
     {
         $definition = RouteDefinition::make(['GET'], '/users', 'handler')

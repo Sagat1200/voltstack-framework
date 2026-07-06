@@ -23,6 +23,7 @@ use Quantum\Routing\Attributes\Patch;
 use Quantum\Routing\Attributes\Post;
 use Quantum\Routing\Attributes\Put;
 use Quantum\Routing\CollectionArtifactStore;
+use Quantum\Routing\Contracts\RouteBindableInterface;
 use Quantum\Routing\Exceptions\DuplicateRouteException;
 use Quantum\Routing\Exceptions\DuplicateRouteNameException;
 use Quantum\Routing\Exceptions\RouteUrlGenerationException;
@@ -530,6 +531,117 @@ final class HttpKernelTest extends TestCase
         self::assertSame(404, $createResponse->statusCode());
         self::assertSame(200, $showResponse->statusCode());
         self::assertSame('show:12', $showResponse->content());
+    }
+
+    public function test_it_registers_nested_resource_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts.comments', TestNestedCommentController::class);
+
+        self::assertCount(7, $routes);
+        self::assertSame('/posts/{post}/comments', $router->collection()->named('posts.comments.index')?->uri());
+        self::assertSame('/posts/{post}/comments/{comment}', $router->collection()->named('posts.comments.show')?->uri());
+        self::assertSame('/posts/7/comments/11', $router->route('posts.comments.show', [
+            'post' => 7,
+            'comment' => 11,
+        ]));
+
+        $indexResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/7/comments'));
+        $showResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/7/comments/11'));
+
+        self::assertSame(200, $indexResponse->statusCode());
+        self::assertSame('comments.index:7', $indexResponse->content());
+        self::assertSame(200, $showResponse->statusCode());
+        self::assertSame('comments.show:7:11', $showResponse->content());
+    }
+
+    public function test_it_can_register_shallow_nested_resource_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts.comments', TestShallowCommentController::class)
+            ->shallow();
+
+        self::assertCount(7, $routes);
+        self::assertSame('/posts/{post}/comments', $router->collection()->named('posts.comments.index')?->uri());
+        self::assertSame('/comments/{comment}', $router->collection()->named('posts.comments.show')?->uri());
+        self::assertSame('/comments/{comment}/edit', $router->collection()->named('posts.comments.edit')?->uri());
+        self::assertSame('/posts/3/comments', $router->route('posts.comments.index', ['post' => 3]));
+        self::assertSame('/comments/11', $router->route('posts.comments.show', ['comment' => 11]));
+
+        $indexResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/3/comments'));
+        $showResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/comments/11'));
+
+        self::assertSame(200, $indexResponse->statusCode());
+        self::assertSame('shallow.index:3', $indexResponse->content());
+        self::assertSame(200, $showResponse->statusCode());
+        self::assertSame('shallow.show:11', $showResponse->content());
+    }
+
+    public function test_it_can_customize_nested_resource_parent_and_child_parameters(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts.comments', TestNestedCommentController::class)
+            ->parameters([
+                'posts' => 'entry',
+                'comments' => 'note',
+            ]);
+
+        self::assertCount(7, $routes);
+        self::assertSame('/posts/{entry}/comments/{note}', $router->collection()->named('posts.comments.show')?->uri());
+        self::assertSame('/posts/5/comments/9', $router->route('posts.comments.show', [
+            'entry' => 5,
+            'note' => 9,
+        ]));
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/5/comments/9'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('comments.show:5:9', $response->content());
+    }
+
+    public function test_it_can_resolve_typed_resource_bindings_for_member_routes(): void
+    {
+        TestBindableCommentResource::seed(['7' => 'comment-7']);
+
+        $router = $this->app->make(Router::class);
+        $router->resource('posts.comments', TestBindableCommentController::class)
+            ->only(['show']);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4/comments/7'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('bound:4:comment-7', $response->content());
+    }
+
+    public function test_it_can_redirect_when_a_bound_resource_is_missing(): void
+    {
+        TestBindableCommentResource::seed([]);
+
+        $router = $this->app->make(Router::class);
+        $router->get('/missing-comments', fn() => 'missing-comments')->name('comments.missing');
+        $router->resource('posts.comments', TestBindableCommentController::class)
+            ->only(['show'])
+            ->missing('comments.missing');
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4/comments/99'));
+
+        self::assertSame(302, $response->statusCode());
+        self::assertSame('/missing-comments?post=4&comment=99', $response->headers()['Location']);
+    }
+
+    public function test_it_can_return_a_custom_status_when_a_bound_resource_is_missing(): void
+    {
+        TestBindableCommentResource::seed([]);
+
+        $router = $this->app->make(Router::class);
+        $router->resource('posts.comments', TestBindableCommentController::class)
+            ->only(['show'])
+            ->missing(410);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/4/comments/99'));
+
+        self::assertSame(410, $response->statusCode());
+        self::assertSame('', $response->content());
     }
 
     public function test_it_resolves_global_middleware_aliases_before_runtime(): void
@@ -2210,6 +2322,130 @@ final class TestResourceController
     public function destroy(string $post): string
     {
         return 'destroy:' . $post;
+    }
+}
+
+final class TestNestedCommentController
+{
+    public function index(string $post): string
+    {
+        return 'comments.index:' . $post;
+    }
+
+    public function create(string $post): string
+    {
+        return 'comments.create:' . $post;
+    }
+
+    public function store(string $post): string
+    {
+        return 'comments.store:' . $post;
+    }
+
+    public function show(string $post, string $comment): string
+    {
+        return 'comments.show:' . $post . ':' . $comment;
+    }
+
+    public function edit(string $post, string $comment): string
+    {
+        return 'comments.edit:' . $post . ':' . $comment;
+    }
+
+    public function update(string $post, string $comment): string
+    {
+        return 'comments.update:' . $post . ':' . $comment;
+    }
+
+    public function destroy(string $post, string $comment): string
+    {
+        return 'comments.destroy:' . $post . ':' . $comment;
+    }
+}
+
+final class TestShallowCommentController
+{
+    public function index(string $post): string
+    {
+        return 'shallow.index:' . $post;
+    }
+
+    public function create(string $post): string
+    {
+        return 'shallow.create:' . $post;
+    }
+
+    public function store(string $post): string
+    {
+        return 'shallow.store:' . $post;
+    }
+
+    public function show(string $comment): string
+    {
+        return 'shallow.show:' . $comment;
+    }
+
+    public function edit(string $comment): string
+    {
+        return 'shallow.edit:' . $comment;
+    }
+
+    public function update(string $comment): string
+    {
+        return 'shallow.update:' . $comment;
+    }
+
+    public function destroy(string $comment): string
+    {
+        return 'shallow.destroy:' . $comment;
+    }
+}
+
+final class TestBindableCommentController
+{
+    public function show(string $post, TestBindableCommentResource $comment): string
+    {
+        return 'bound:' . $post . ':' . $comment->identifier();
+    }
+}
+
+final class TestBindableCommentResource implements RouteBindableInterface
+{
+    /**
+     * @var array<string, string>
+     */
+    private static array $records = [];
+
+    public function __construct(
+        private readonly string $identifier,
+    ) {}
+
+    /**
+     * @param array<string, string> $records
+     */
+    public static function seed(array $records): void
+    {
+        self::$records = $records;
+    }
+
+    public static function resolveRouteBinding(string $value, string $parameter, Request $request): ?self
+    {
+        if ($parameter !== 'comment') {
+            return null;
+        }
+
+        $record = self::$records[$value] ?? null;
+
+        if (! is_string($record)) {
+            return null;
+        }
+
+        return new self($record);
+    }
+
+    public function identifier(): string
+    {
+        return $this->identifier;
     }
 }
 

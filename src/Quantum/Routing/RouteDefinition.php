@@ -141,6 +141,43 @@ final class RouteDefinition
         );
     }
 
+    public function withPath(string $uri): self
+    {
+        $normalizedUri = self::normalizeUri($uri);
+
+        if ($normalizedUri === $this->uri) {
+            return $this;
+        }
+
+        $parameters = $this->parameterNamesFor($normalizedUri, $this->domain);
+        $constraints = array_intersect_key($this->constraints, array_flip($parameters));
+        $metadata = $this->metadata;
+        $aliases = $this->parameterAliases();
+
+        foreach ($aliases as $alias => $target) {
+            if (! in_array($target, $parameters, true) || $alias === $target) {
+                unset($aliases[$alias]);
+            }
+        }
+
+        if ($aliases === []) {
+            unset($metadata['parameter_aliases']);
+        } else {
+            $metadata['parameter_aliases'] = $aliases;
+        }
+
+        return new self(
+            $this->methods,
+            $normalizedUri,
+            $this->domain,
+            $this->action,
+            $this->name,
+            $constraints,
+            $this->middlewares,
+            $metadata,
+        );
+    }
+
     public function renameParameter(string $from, string $to): self
     {
         $normalizedFrom = trim($from);
@@ -353,13 +390,7 @@ final class RouteDefinition
      */
     private function parameterNames(): array
     {
-        preg_match_all('/\{([^}]+)\}/', $this->uri, $parameterMatches);
-        $pathParameters = $parameterMatches[1];
-
-        preg_match_all('/\{([^}]+)\}/', $this->domain ?? '', $domainParameterMatches);
-        $domainParameters = $domainParameterMatches[1];
-
-        return array_values(array_unique([...$pathParameters, ...$domainParameters]));
+        return $this->parameterNamesFor($this->uri, $this->domain);
     }
 
     /**
@@ -384,6 +415,20 @@ final class RouteDefinition
         }
 
         return $normalized;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function parameterNamesFor(string $uri, ?string $domain): array
+    {
+        preg_match_all('/\{([^}]+)\}/', $uri, $parameterMatches);
+        $pathParameters = $parameterMatches[1];
+
+        preg_match_all('/\{([^}]+)\}/', $domain ?? '', $domainParameterMatches);
+        $domainParameters = $domainParameterMatches[1];
+
+        return array_values(array_unique([...$pathParameters, ...$domainParameters]));
     }
 
     private static function normalizeUri(string $uri): string
