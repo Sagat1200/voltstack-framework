@@ -89,6 +89,9 @@ final class FrontendRouteManifestStoreTest extends TestCase
         self::assertCount(2, $routes);
         self::assertSame([
             'name' => 'users.show',
+            'screen' => [
+                'kind' => 'controller',
+            ],
             'path' => '/users/{user}',
             'methods' => ['GET'],
             'capabilities' => ['navigate', 'hydrate', 'prefetch'],
@@ -104,6 +107,9 @@ final class FrontendRouteManifestStoreTest extends TestCase
         ], $routes[0]);
         self::assertSame([
             'name' => 'users.store',
+            'screen' => [
+                'kind' => 'controller',
+            ],
             'path' => '/users',
             'methods' => ['POST'],
             'capabilities' => [],

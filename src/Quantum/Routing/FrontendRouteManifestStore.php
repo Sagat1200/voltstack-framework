@@ -7,6 +7,7 @@ namespace Quantum\Routing;
 use JsonException;
 use RuntimeException;
 use VoltStack\Framework\Application;
+use VoltStack\Runtime\Component\Component;
 
 final class FrontendRouteManifestStore
 {
@@ -120,6 +121,7 @@ final class FrontendRouteManifestStore
 
         $route = [
             'name' => $name,
+            'screen' => $this->publicScreenMetadata($route, $metadata),
             'path' => $route->uri(),
             'methods' => $methods,
             'capabilities' => $this->publicCapabilities($methods, $metadata, $runtime),
@@ -131,6 +133,40 @@ final class FrontendRouteManifestStore
         }
 
         return $route;
+    }
+
+    /**
+     * @return array{kind: string}
+     */
+    private function publicScreenMetadata(CompiledRoute $route, RouteMetadata $metadata): array
+    {
+        $screen = $metadata->get('screen');
+
+        if (is_array($screen)) {
+            $kind = $screen['kind'] ?? null;
+
+            if (is_string($kind) && trim($kind) !== '') {
+                $normalized = strtolower(trim($kind));
+
+                if (in_array($normalized, ['component', 'controller'], true)) {
+                    return [
+                        'kind' => $normalized,
+                    ];
+                }
+            }
+        }
+
+        $action = $route->action();
+
+        if (is_string($action) && class_exists($action) && is_subclass_of($action, Component::class)) {
+            return [
+                'kind' => 'component',
+            ];
+        }
+
+        return [
+            'kind' => 'controller',
+        ];
     }
 
     private function isInternalRoute(CompiledRoute $route, RouteMetadata $metadata): bool

@@ -33,6 +33,7 @@ use Quantum\Routing\Router;
 use Quantum\Routing\TreeArtifactStore;
 use Quantum\Routing\VersionArtifactStore;
 use VoltStack\Framework\Application;
+use VoltStack\Runtime\Component\Component;
 
 final class HttpKernelTest extends TestCase
 {
@@ -1879,6 +1880,9 @@ final class HttpKernelTest extends TestCase
                     'hydrate' => false,
                 ],
             ]);
+        $router->get('/manifest-component', TestManifestComponentPage::class)
+            ->name('manifest.component')
+            ->componentPage();
 
         $response = $this->app->make(HttpKernel::class)->handle(Request::create('/_volt/routes-manifest.json'));
         /** @var array<string, mixed> $payload */
@@ -1896,12 +1900,15 @@ final class HttpKernelTest extends TestCase
         $routes = is_array($payload['routes'] ?? null) ? $payload['routes'] : [];
         $showRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.users.show'));
         $storeRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.users.store'));
+        $componentRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.component'));
 
         self::assertCount(1, $showRoute);
         self::assertCount(1, $storeRoute);
+        self::assertCount(1, $componentRoute);
         self::assertSame('/manifest-users/{user}', $showRoute[0]['path'] ?? null);
         self::assertSame(['GET'], $showRoute[0]['methods'] ?? null);
         self::assertSame(['navigate', 'hydrate', 'prefetch'], $showRoute[0]['capabilities'] ?? null);
+        self::assertSame('controller', $showRoute[0]['screen']['kind'] ?? null);
         self::assertSame([
             'document' => 'reload',
             'navigation' => 'reload',
@@ -1914,10 +1921,16 @@ final class HttpKernelTest extends TestCase
         self::assertSame('/manifest-users', $storeRoute[0]['path'] ?? null);
         self::assertSame(['POST'], $storeRoute[0]['methods'] ?? null);
         self::assertSame([], $storeRoute[0]['capabilities'] ?? null);
+        self::assertSame('controller', $storeRoute[0]['screen']['kind'] ?? null);
         self::assertSame([
             'transition' => 'slide',
             'hydrate' => false,
         ], $storeRoute[0]['runtime'] ?? null);
+
+        self::assertSame('/manifest-component', $componentRoute[0]['path'] ?? null);
+        self::assertSame(['GET'], $componentRoute[0]['methods'] ?? null);
+        self::assertSame(['navigate'], $componentRoute[0]['capabilities'] ?? null);
+        self::assertSame('component', $componentRoute[0]['screen']['kind'] ?? null);
         self::assertStringNotContainsString('"middleware"', $response->content());
         self::assertStringNotContainsString('"auth"', $response->content());
         self::assertStringNotContainsString('"contract"', $response->content());
@@ -2203,6 +2216,14 @@ final class TestStringController
     public function show(): string
     {
         return 'controller-string';
+    }
+}
+
+final class TestManifestComponentPage extends Component
+{
+    public function render(): string
+    {
+        return '<section>manifest-component</section>';
     }
 }
 

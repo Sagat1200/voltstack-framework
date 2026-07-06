@@ -112,6 +112,26 @@ Route::get('/users/{user}', UserShowController::class)
     ->name('users.show');
 ```
 
+### 4.2.1 Ruta a Component Page
+
+Una ruta puede apuntar a una clase que extiende `VoltStack\Runtime\Component\Component`. En ese caso, el dispatcher monta el componente y normaliza la respuesta a HTML.
+
+```php
+use App\Pages\VoltStackPage;
+use Quantum\Facades\Route;
+
+return static function (): void {
+    Route::get('/voltstack', VoltStackPage::class)
+        ->name('voltstack')
+        ->componentPage();
+};
+```
+
+Contrato publico:
+
+- el manifest publico incluye `screen.kind = component`
+- no se expone la clase concreta del componente en el manifest
+
 ### 4.3 Constraints
 
 ```php
@@ -677,6 +697,9 @@ Ejemplo esperado:
   "routes": [
     {
       "name": "users.show",
+      "screen": {
+        "kind": "controller"
+      },
       "path": "/users/{user}",
       "methods": ["GET"],
       "capabilities": ["navigate", "hydrate", "prefetch"],
@@ -698,6 +721,7 @@ Reglas practicas:
 
 - si la ruta no tiene `name()`, no esperes verla en el manifest
 - si la ruta no soporta `GET`, no esperes la capacidad `navigate`
+- `screen.kind` describe el tipo de pantalla que resuelve la ruta sin exponer el `action` interno
 - `policy.document` y `policy.navigation` salen del bloque `runtime`
 - `transition` e `hydrate` salen reducidos a su proyeccion publica minima
 

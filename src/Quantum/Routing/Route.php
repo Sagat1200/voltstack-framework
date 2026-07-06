@@ -313,6 +313,22 @@ final class Route extends CompiledRoute
         return $this->meta('runtime', $value);
     }
 
+    public function componentPage(): static
+    {
+        $screen = $this->definition()->metadata()['screen'] ?? null;
+
+        if (! is_array($screen)) {
+            $screen = [];
+        }
+
+        $this->replaceDefinition($this->definition()->withMetadata('screen', [
+            ...$screen,
+            'kind' => 'component',
+        ]));
+
+        return $this;
+    }
+
     public function context(string $context): static
     {
         return $this->meta('context', $this->normalizeContext($context));

@@ -25,6 +25,11 @@ final class DispatcherResolver
     public function resolve(RouteMatch $match): DispatcherInterface
     {
         $action = $match->route()->action();
+        $screen = $match->route()->routeMetadata()->get('screen');
+
+        if (is_array($screen) && is_string($screen['kind'] ?? null) && strtolower(trim((string) $screen['kind'])) === 'component') {
+            return $this->app->make(ComponentDispatcher::class);
+        }
 
         if ($action instanceof Closure) {
             return $this->app->make(ClosureDispatcher::class);
