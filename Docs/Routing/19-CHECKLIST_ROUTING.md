@@ -302,7 +302,7 @@ Este bloque ya no toca infraestructura base del router. Se enfoca en mejorar la 
 - `[x]` nested resources por notacion de recurso (`posts.comments`)
 - `[x]` `shallow()` para desacoplar las rutas miembro del path padre
 - `[x]` personalizacion de placeholders sobre recurso hijo y padres mediante `parameter(...)` y `parameters([...])`
-- `[ ]` personalizacion adicional de paths o verbos REST por accion
+- `[x]` personalizacion adicional de paths o verbos REST por accion
 - `[x]` estrategia uniforme de `missing()` o resolucion declarativa cuando falte un recurso enlazado
 - `[x]` documentacion publica actualizada en `Docs/Routing/20-Use.md`
 - `[x]` pruebas de integracion y unidad para generacion de URLs y dispatch real
@@ -313,7 +313,8 @@ Criterio de cierre del corte actual:
 - `shallow()` ya mueve `show/edit/update/destroy` a rutas miembro cortas sin romper `index/create/store`
 - el cambio de nombres de placeholders sigue siendo compatible con el binder de controladores
 - existe una primera capa de route binding tipado mediante `RouteBindableInterface` y `missing()` ya puede reaccionar con status o redirect cuando el binder no encuentra el recurso
-- la siguiente iteracion de este bloque ya puede concentrarse en personalizacion extra de actions
+- `paths([...])` y `verbs([...])` ya permiten ajustar la URI publica y los metodos HTTP por accion sin re-registrar manualmente cada ruta del recurso
+- el bloque `V1.2` queda funcionalmente cerrado; el siguiente avance ya puede salir de ergonomia de recursos y pasar al siguiente bloque del roadmap
 
 ---
 
@@ -630,3 +631,4 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[x]` `Route::resource()` ya soporta recursos anidados mediante notacion `posts.comments`, construyendo paths como `/posts/{post}/comments/{comment}` y nombres `posts.comments.show` sin requerir un builder separado
 - `[x]` `Route::resource()->shallow()` ya permite mover `show/edit/update/destroy` a rutas miembro cortas como `/comments/{comment}` mientras mantiene `index/create/store` anidados; la cobertura valida generacion de URLs, dispatch real y compatibilidad con renombre de placeholders padre e hijo
 - `[x]` existe una primera capa de binding tipado para rutas de recurso mediante `Quantum\Routing\Contracts\RouteBindableInterface`; cuando el binder devuelve `null`, `Route::resource()->missing(...)` ya puede responder con `status` custom o `redirect` declarativo sin introducir todavia un subsistema completo de model binding global
+- `[x]` `Route::resource()` ya permite personalizar paths y verbos HTTP por accion con `paths([...])` y `verbs([...])`; el cambio reindexa correctamente las firmas en `RouteCollection`, mantiene la generacion de URLs por nombre y evita tener que desarmar manualmente el recurso convencional para ajustes puntuales

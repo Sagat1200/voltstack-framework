@@ -235,6 +235,8 @@ Alcance de esta primera capa:
 - permite renombrar el placeholder por clave de recurso con `parameters([...])`
 - acepta recursos anidados por notacion `padre.hijo`
 - expone `shallow()` para mover las rutas miembro a paths cortos
+- permite personalizar paths por accion con `paths([...])`
+- permite personalizar verbos HTTP por accion con `verbs([...])`
 - permite binding tipado sobre parametros miembro si el tipo implementa `RouteBindableInterface`
 - expone `missing(...)` para reaccionar cuando ese binder no encuentra el recurso enlazado
 
@@ -272,6 +274,19 @@ Route::resource('posts.comments', CommentController::class)
         'comments' => 'note',
     ]);
 
+Route::resource('posts', PostController::class)
+    ->paths([
+        'index' => '/catalog/posts',
+        'create' => '/catalog/posts/compose',
+        'edit' => '/catalog/posts/{post}/revise',
+    ]);
+
+Route::resource('posts', PostController::class)
+    ->verbs([
+        'store' => 'PUT',
+        'update' => 'POST',
+    ]);
+
 Route::apiResource('posts', ApiPostController::class);
 ```
 
@@ -283,6 +298,8 @@ Notas:
 - `parameter(...)` y `parameters([...])` cambian el nombre publico del placeholder para generacion de URLs, pero el controlador puede seguir recibiendo el nombre original del argumento mientras el dispatcher resuelve el alias internamente
 - `resource('posts.comments', ...)` genera nombres `posts.comments.*` y paths como `/posts/{post}/comments`
 - `shallow()` mueve `show/edit/update/destroy` a `/comments/{comment}` y `/comments/{comment}/edit`, pero mantiene `index/create/store` anidados bajo `/posts/{post}/comments`
+- `paths([...])` espera URIs publicas por accion; cada valor reemplaza directamente la path registrada para esa accion
+- `verbs([...])` acepta un verbo o una lista de verbos por accion y reemplaza el set HTTP registrado para esa ruta
 - el binding tipado solo se activa cuando el argumento del controller usa una clase que implementa `Quantum\Routing\Contracts\RouteBindableInterface`
 - `missing(404)` o `missing(410)` devuelven ese status cuando el binder retorna `null`
 - `missing('ruta.fallback')` hace redirect a una ruta nombrada usando los parametros actuales como input de generacion
@@ -319,6 +336,31 @@ Con `shallow()` el resultado operativo queda asi:
 - `GET /comments/{comment}/edit` -> `posts.comments.edit`
 - `PUT|PATCH /comments/{comment}` -> `posts.comments.update`
 - `DELETE /comments/{comment}` -> `posts.comments.destroy`
+
+Ejemplo de paths y verbos personalizados por accion:
+
+```php
+Route::resource('posts', PostController::class)
+    ->paths([
+        'index' => '/catalog/posts',
+        'create' => '/catalog/posts/compose',
+        'edit' => '/catalog/posts/{post}/revise',
+    ])
+    ->verbs([
+        'store' => 'PUT',
+        'update' => 'POST',
+    ]);
+```
+
+Resultado operativo:
+
+- `GET /catalog/posts` -> `posts.index`
+- `GET /catalog/posts/compose` -> `posts.create`
+- `PUT /posts` -> `posts.store`
+- `GET /posts/{post}` -> `posts.show`
+- `GET /catalog/posts/{post}/revise` -> `posts.edit`
+- `POST /posts/{post}` -> `posts.update`
+- `DELETE /posts/{post}` -> `posts.destroy`
 
 Ejemplo de binding tipado con fallback `missing()`:
 

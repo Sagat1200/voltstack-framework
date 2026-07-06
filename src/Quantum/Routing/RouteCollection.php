@@ -161,6 +161,25 @@ final class RouteCollection implements Countable, IteratorAggregate
         }
     }
 
+    /**
+     * @param array<int, string> $methods
+     * @param array<int, string>|null $previousMethods
+     */
+    public function validateRouteMethods(Route $route, array $methods, ?array $previousMethods): void
+    {
+        $currentIndex = array_search($route, $this->routes, true);
+        $previous = $previousMethods === null ? [] : array_values(array_unique(array_map('strtoupper', $previousMethods)));
+
+        foreach ($methods as $method) {
+            $signature = $this->signature($method, $route->routeDomain(), $route->uri());
+            $owner = $this->signatures[$signature] ?? null;
+
+            if ($owner !== null && $owner !== $currentIndex && ! in_array($method, $previous, true)) {
+                throw new DuplicateRouteException($method, $route->uri());
+            }
+        }
+    }
+
     public function validateRouteDomain(Route $route, string $domain, ?string $previousDomain): void
     {
         $currentIndex = array_search($route, $this->routes, true);
@@ -221,6 +240,32 @@ final class RouteCollection implements Countable, IteratorAggregate
         if ($previousUri !== null) {
             foreach ($route->methods() as $method) {
                 $previousSignature = $this->signature($method, $route->routeDomain(), $previousUri);
+
+                if (($this->signatures[$previousSignature] ?? null) === $currentIndex) {
+                    unset($this->signatures[$previousSignature]);
+                }
+            }
+        }
+
+        foreach ($route->methods() as $method) {
+            $this->signatures[$this->signature($method, $route->routeDomain(), $route->uri())] = $currentIndex;
+        }
+    }
+
+    /**
+     * @param array<int, string>|null $previousMethods
+     */
+    public function syncRouteMethods(Route $route, ?array $previousMethods): void
+    {
+        $currentIndex = array_search($route, $this->routes, true);
+
+        if ($currentIndex === false) {
+            return;
+        }
+
+        if ($previousMethods !== null) {
+            foreach ($previousMethods as $method) {
+                $previousSignature = $this->signature($method, $route->routeDomain(), $route->uri());
 
                 if (($this->signatures[$previousSignature] ?? null) === $currentIndex) {
                     unset($this->signatures[$previousSignature]);

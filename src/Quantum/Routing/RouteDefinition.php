@@ -30,7 +30,7 @@ final class RouteDefinition
      */
     public static function make(array $methods, string $uri, mixed $action): self
     {
-        $normalizedMethods = array_values(array_unique(array_map(static fn(string $method): string => strtoupper($method), $methods)));
+        $normalizedMethods = self::normalizeMethods($methods);
 
         return new self(
             $normalizedMethods,
@@ -175,6 +175,29 @@ final class RouteDefinition
             $constraints,
             $this->middlewares,
             $metadata,
+        );
+    }
+
+    /**
+     * @param array<int, string> $methods
+     */
+    public function withMethods(array $methods): self
+    {
+        $normalizedMethods = self::normalizeMethods($methods);
+
+        if ($normalizedMethods === $this->methods) {
+            return $this;
+        }
+
+        return new self(
+            $normalizedMethods,
+            $this->uri,
+            $this->domain,
+            $this->action,
+            $this->name,
+            $this->constraints,
+            $this->middlewares,
+            $this->metadata,
         );
     }
 
@@ -449,6 +472,33 @@ final class RouteDefinition
         $normalized = rtrim($normalized, '/');
 
         return explode(':', $normalized, 2)[0];
+    }
+
+    /**
+     * @param array<int, string> $methods
+     * @return array<int, string>
+     */
+    private static function normalizeMethods(array $methods): array
+    {
+        $normalized = [];
+
+        foreach ($methods as $method) {
+            $candidate = strtoupper(trim($method));
+
+            if ($candidate === '') {
+                continue;
+            }
+
+            $normalized[] = $candidate;
+        }
+
+        $normalized = array_values(array_unique($normalized));
+
+        if ($normalized === []) {
+            throw new \InvalidArgumentException('Route methods cannot be empty.');
+        }
+
+        return $normalized;
     }
 
     private function renamePlaceholder(string $template, string $from, string $to): string

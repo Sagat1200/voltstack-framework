@@ -149,6 +149,41 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
         return $this;
     }
 
+    /**
+     * @param array<string, string> $paths
+     */
+    public function paths(array $paths): self
+    {
+        foreach ($paths as $action => $path) {
+            $route = $this->routeForAction($action);
+            $normalizedPath = trim($path);
+
+            if ($normalizedPath === '') {
+                throw new \InvalidArgumentException(sprintf(
+                    'Resource path for action [%s] cannot be empty.',
+                    $action,
+                ));
+            }
+
+            $route->repath($normalizedPath);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param array<string, string|array<int, string>> $verbs
+     */
+    public function verbs(array $verbs): self
+    {
+        foreach ($verbs as $action => $methods) {
+            $route = $this->routeForAction($action);
+            $route->remethod($this->normalizeMethodsForAction($action, $methods));
+        }
+
+        return $this;
+    }
+
     public function missing(string|int $strategy, int $status = 302): self
     {
         $payload = is_int($strategy)
@@ -166,6 +201,37 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
         }
 
         return $this;
+    }
+
+    /**
+     * @param string|array<int, string> $methods
+     * @return array<int, string>
+     */
+    private function normalizeMethodsForAction(string $action, string|array $methods): array
+    {
+        $candidates = is_array($methods) ? $methods : [$methods];
+        $normalized = [];
+
+        foreach ($candidates as $method) {
+            $candidate = strtoupper(trim((string) $method));
+
+            if ($candidate === '') {
+                continue;
+            }
+
+            $normalized[] = $candidate;
+        }
+
+        $normalized = array_values(array_unique($normalized));
+
+        if ($normalized === []) {
+            throw new \InvalidArgumentException(sprintf(
+                'Resource verbs for action [%s] cannot be empty.',
+                $action,
+            ));
+        }
+
+        return $normalized;
     }
 
     /**
@@ -231,6 +297,22 @@ final class PendingResourceRegistration implements Countable, IteratorAggregate
         if ($action === 'create' && is_string($parameter) && $parameter !== '') {
             $this->reserveParameterLiteral('create', $parameter);
         }
+    }
+
+    private function routeForAction(string $action): Route
+    {
+        $normalizedAction = $this->normalizeActionKey($action);
+        $route = $this->routes[$normalizedAction] ?? null;
+
+        if (! $route instanceof Route) {
+            throw new \InvalidArgumentException(sprintf(
+                'Resource action [%s] is not supported. Supported actions are [%s].',
+                $action,
+                implode(', ', array_keys($this->routes)),
+            ));
+        }
+
+        return $route;
     }
 
     private function reserveParameterLiteral(string $literal, string $parameter): void

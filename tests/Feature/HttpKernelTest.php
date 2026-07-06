@@ -599,6 +599,61 @@ final class HttpKernelTest extends TestCase
         self::assertSame('comments.show:5:9', $response->content());
     }
 
+    public function test_it_can_customize_resource_paths_by_action(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts', TestResourceController::class)
+            ->paths([
+                'index' => '/catalog/posts',
+                'create' => '/catalog/posts/compose',
+                'edit' => '/catalog/posts/{post}/revise',
+            ]);
+
+        self::assertCount(7, $routes);
+        self::assertSame('/catalog/posts', $router->collection()->named('posts.index')?->uri());
+        self::assertSame('/catalog/posts/compose', $router->collection()->named('posts.create')?->uri());
+        self::assertSame('/catalog/posts/{post}/revise', $router->collection()->named('posts.edit')?->uri());
+        self::assertSame('/catalog/posts', $router->route('posts.index'));
+        self::assertSame('/catalog/posts/8/revise', $router->route('posts.edit', ['post' => 8]));
+
+        $indexResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/catalog/posts'));
+        $createResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/catalog/posts/compose'));
+        $editResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/catalog/posts/8/revise'));
+
+        self::assertSame(200, $indexResponse->statusCode());
+        self::assertSame('index', $indexResponse->content());
+        self::assertSame(200, $createResponse->statusCode());
+        self::assertSame('create', $createResponse->content());
+        self::assertSame(200, $editResponse->statusCode());
+        self::assertSame('edit:8', $editResponse->content());
+    }
+
+    public function test_it_can_customize_resource_verbs_by_action(): void
+    {
+        $router = $this->app->make(Router::class);
+        $routes = $router->resource('posts', TestResourceController::class)
+            ->verbs([
+                'store' => 'PUT',
+                'update' => 'POST',
+            ]);
+
+        self::assertCount(7, $routes);
+        self::assertSame(['PUT'], $router->collection()->named('posts.store')?->methods());
+        self::assertSame(['POST'], $router->collection()->named('posts.update')?->methods());
+
+        $storeResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts', 'PUT'));
+        $updateResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/8', 'POST'));
+        $oldStoreResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts', 'POST'));
+        $oldUpdateResponse = $this->app->make(HttpKernel::class)->handle(Request::create('/posts/8', 'PATCH'));
+
+        self::assertSame(200, $storeResponse->statusCode());
+        self::assertSame('store', $storeResponse->content());
+        self::assertSame(200, $updateResponse->statusCode());
+        self::assertSame('update:8', $updateResponse->content());
+        self::assertSame(405, $oldStoreResponse->statusCode());
+        self::assertSame(405, $oldUpdateResponse->statusCode());
+    }
+
     public function test_it_can_resolve_typed_resource_bindings_for_member_routes(): void
     {
         TestBindableCommentResource::seed(['7' => 'comment-7']);

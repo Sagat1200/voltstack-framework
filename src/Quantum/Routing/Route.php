@@ -127,6 +127,31 @@ final class Route extends CompiledRoute
         return $this;
     }
 
+    /**
+     * @param array<int, string> $methods
+     */
+    public function remethod(array $methods): static
+    {
+        $previousMethods = $this->definition()->methods();
+        $definition = $this->definition()->withMethods($methods);
+
+        if ($definition === $this->definition()) {
+            return $this;
+        }
+
+        if ($this->collection !== null) {
+            $this->collection->validateRouteMethods($this, $definition->methods(), $previousMethods);
+        }
+
+        $this->replaceDefinition($definition);
+
+        if ($this->collection !== null) {
+            $this->collection->syncRouteMethods($this, $previousMethods);
+        }
+
+        return $this;
+    }
+
     public function where(string|array $parameter, ?string $pattern = null): static
     {
         if (is_array($parameter)) {

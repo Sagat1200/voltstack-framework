@@ -86,6 +86,14 @@ final class RouteCompilationTest extends TestCase
         self::assertSame(['comment' => 'note'], $definition->metadata()['parameter_aliases']);
     }
 
+    public function test_route_definition_can_return_a_methods_copy(): void
+    {
+        $definition = RouteDefinition::make(['get'], '/posts', 'handler')
+            ->withMethods(['put', 'patch', 'PUT']);
+
+        self::assertSame(['PUT', 'PATCH'], $definition->methods());
+    }
+
     public function test_route_definition_can_store_and_merge_metadata(): void
     {
         $definition = RouteDefinition::make(['GET'], '/users', 'handler')
@@ -310,6 +318,17 @@ final class RouteCompilationTest extends TestCase
         $this->expectExceptionMessage('A route is already registered for [POST] /users.');
 
         $collection->add(new Route(RouteDefinition::make(['POST', 'PUT'], '/users', 'second')));
+    }
+
+    public function test_route_collection_reindexes_signatures_when_route_methods_change(): void
+    {
+        $collection = new RouteCollection();
+        $route = $collection->add(new Route(RouteDefinition::make(['GET'], '/users', 'first')));
+
+        $route->remethod(['POST']);
+        $collection->add(new Route(RouteDefinition::make(['GET'], '/users', 'second')));
+
+        self::assertCount(2, $collection);
     }
 
     public function test_route_collection_allows_same_method_and_path_on_different_domains(): void
