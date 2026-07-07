@@ -155,7 +155,7 @@ final class SpaNavigationPayloadFactory
     }
 
     /**
-     * @return array{code: int, message: string}|null
+     * @return array{code: int, message: string, reason?: string}|null
      */
     private function error(Response $response): ?array
     {
@@ -165,10 +165,18 @@ final class SpaNavigationPayloadFactory
             return null;
         }
 
-        return [
+        $error = [
             'code' => $status,
             'message' => $this->messageForStatus($status),
         ];
+
+        $reason = $response->headers()['X-Volt-Error-Code'] ?? null;
+
+        if (is_string($reason) && trim($reason) !== '') {
+            $error['reason'] = trim($reason);
+        }
+
+        return $error;
     }
 
     private function messageForStatus(int $status): string

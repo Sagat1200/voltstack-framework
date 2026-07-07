@@ -15,7 +15,7 @@ final class SpaNavigationPayload
      * @param array{document: ?string, navigation: ?string} $policy
      * @param array{layout: ?string, transition: ?string, hydrate: ?bool} $runtime
      * @param array{location: string, status: int}|null $redirect
-     * @param array{code: int, message: string}|null $error
+     * @param array{code: int, message: string, reason?: string}|null $error
      */
     public function __construct(
         private readonly array $navigation,
@@ -34,7 +34,7 @@ final class SpaNavigationPayload
      *     policy: array{document: ?string, navigation: ?string},
      *     runtime: array{layout: ?string, transition: ?string, hydrate: ?bool},
      *     redirect: array{location: string, status: int}|null,
-     *     error: array{code: int, message: string}|null
+     *     error: array{code: int, message: string, reason?: string}|null
      * }
      */
     public function toArray(): array

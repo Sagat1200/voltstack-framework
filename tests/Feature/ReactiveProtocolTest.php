@@ -243,6 +243,38 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('Server Error', $payload['error']['message']);
     }
 
+    public function test_it_returns_a_semantic_protocol_error_when_component_render_fails_after_an_action(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveRenderFailureComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveRenderFailureComponent::class,
+                'action' => 'breakRender',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(500, $response->statusCode());
+        self::assertSame('runtime.component_render_failed', $response->headers()['X-Volt-Error-Code'] ?? null);
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('runtime.component_render_failed', $payload['error']['code']);
+        self::assertSame(500, $payload['error']['status']);
+        self::assertSame('Server Error', $payload['error']['message']);
+    }
+
     public function test_it_applies_model_updates_and_form_params_before_running_the_action(): void
     {
         $app = new Application(sys_get_temp_dir());
@@ -1020,6 +1052,25 @@ final class TestReactiveExplosiveComponent extends Component
     public function render(): string
     {
         return '<button type="button" volt-click="explode">Explode</button>';
+    }
+}
+
+final class TestReactiveRenderFailureComponent extends Component
+{
+    public bool $shouldFailRender = false;
+
+    public function breakRender(): void
+    {
+        $this->shouldFailRender = true;
+    }
+
+    public function render(): string
+    {
+        if ($this->shouldFailRender) {
+            throw new \RuntimeException('Reactive render exploded.');
+        }
+
+        return '<button type="button" volt-click="breakRender">Break render</button>';
     }
 }
 

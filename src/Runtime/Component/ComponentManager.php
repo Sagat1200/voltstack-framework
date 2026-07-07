@@ -9,8 +9,11 @@ use Quantum\View\View;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
+use Throwable;
 use RuntimeException;
 use VoltStack\Framework\Application;
+use VoltStack\Runtime\Component\Exceptions\ComponentMountException;
+use VoltStack\Runtime\Component\Exceptions\ComponentRenderException;
 use VoltStack\Runtime\Hydration\Dehydrator;
 use VoltStack\Runtime\Hydration\Hydrator;
 use VoltStack\Runtime\Hydration\Snapshot;
@@ -61,7 +64,12 @@ final class ComponentManager
             $arguments[] = $this->resolveParameter($request, $parameter, $parameters);
         }
 
-        $method->invokeArgs($component, $arguments);
+        try {
+            $method->invokeArgs($component, $arguments);
+        } catch (Throwable $exception) {
+            throw ComponentMountException::forComponent($component::class, $exception);
+        }
+
         $this->applyUpdates($component, array_diff_key($parameters, array_flip($consumedParameters)));
 
         return $component;
@@ -82,33 +90,41 @@ final class ComponentManager
 
     public function render(Component $component): string
     {
-        $result = $component->render();
+        try {
+            $result = $component->render();
 
-        if ($result instanceof View) {
-            foreach ($component->viewData() as $key => $value) {
-                if (array_key_exists($key, $result->data())) {
-                    continue;
+            if ($result instanceof View) {
+                foreach ($component->viewData() as $key => $value) {
+                    if (array_key_exists($key, $result->data())) {
+                        continue;
+                    }
+
+                    $result = $result->with($key, $value);
                 }
 
-                $result = $result->with($key, $value);
-            }
+                foreach ($this->publicProperties($component) as $key => $value) {
+                    if (array_key_exists($key, $result->data())) {
+                        continue;
+                    }
 
-            foreach ($this->publicProperties($component) as $key => $value) {
-                if (array_key_exists($key, $result->data())) {
-                    continue;
+                    $result = $result->with($key, $value);
                 }
 
-                $result = $result->with($key, $value);
+                return $result->render();
             }
 
-            return $result->render();
-        }
+            if (is_string($result)) {
+                return $result;
+            }
 
-        if (is_string($result)) {
-            return $result;
-        }
+            throw new RuntimeException('Components must render a string or a view instance.');
+        } catch (Throwable $exception) {
+            if ($exception instanceof ComponentRenderException) {
+                throw $exception;
+            }
 
-        throw new RuntimeException('Components must render a string or a view instance.');
+            throw ComponentRenderException::forComponent($component::class, $exception);
+        }
     }
 
     public function renderRoot(Component $component, ?Snapshot $snapshot = null, string $renderMode = 'interactive'): string

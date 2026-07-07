@@ -38,6 +38,56 @@ final class ComponentRouteRenderingTest extends TestCase
         self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
     }
 
+    public function test_it_returns_a_reload_only_error_document_when_component_mount_fails(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $router = $app->make(Router::class);
+        $router->get('/counter-mount-fail/{count}', TestMountFailurePage::class)
+            ->name('counter.mount.fail')
+            ->componentPage();
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create('/counter-mount-fail/7'));
+
+        self::assertSame(500, $response->statusCode());
+        self::assertSame('runtime.component_mount_failed', $response->headers()['X-Volt-Error-Code'] ?? null);
+        self::assertStringContainsString('Server Error', $response->content());
+        self::assertStringContainsString('<body data-volt-document="reload">', $response->content());
+    }
+
+    public function test_it_exposes_a_semantic_navigation_error_reason_when_component_render_fails(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $router = $app->make(Router::class);
+        $router->get('/counter-render-fail', TestRenderFailurePage::class)
+            ->name('counter.render.fail')
+            ->componentPage();
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/counter-render-fail',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) ($response->headers()['X-Volt-Navigation'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(500, $response->statusCode());
+        self::assertSame('runtime.component_render_failed', $response->headers()['X-Volt-Error-Code'] ?? null);
+        self::assertSame([
+            'code' => 500,
+            'message' => 'Server Error',
+            'reason' => 'runtime.component_render_failed',
+        ], $payload['error'] ?? null);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -67,5 +117,26 @@ final class TestCounterPage extends Component
     public function render(): string
     {
         return sprintf('<section>Count: %d</section>', $this->count);
+    }
+}
+
+final class TestMountFailurePage extends Component
+{
+    public function mount(): void
+    {
+        throw new \RuntimeException('Mount exploded.');
+    }
+
+    public function render(): string
+    {
+        return '<section>Never rendered</section>';
+    }
+}
+
+final class TestRenderFailurePage extends Component
+{
+    public function render(): string
+    {
+        throw new \RuntimeException('Render exploded.');
     }
 }

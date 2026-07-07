@@ -549,7 +549,7 @@ Este corte debe formalizar el uso de componentes o paginas como destinos de ruta
 - `[x]` decidir que metadata publica del componente puede entrar al manifest y cual debe quedar interna
 - `[x]` formalizar el path de render inicial para paginas basadas en componente
 - `[x]` formalizar el dispatch de acciones sobre componentes resueltos desde ruta sin duplicar contratos con `/_volt/action`
-- `[ ]` definir el contrato de errores para paginas o componentes cuando fallen `mount`, `hydrate` o `render`
+- `[x]` definir el contrato de errores para paginas o componentes cuando fallen `mount`, `hydrate` o `render`
 - `[ ]` decidir como conviven layout, hydration y navigation policy entre metadata de ruta y metadata propia del componente
 - `[ ]` validar compatibilidad con `route()`, `signed_route()` y manifest publico cuando el destino sea un componente
 - `[ ]` cubrir con pruebas reales el flujo `match -> dispatch -> render -> bootstrap -> navigate`
@@ -644,6 +644,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[2026-07-05]` primer corte de `8.2 Route Component System`: `Route::componentPage()` publica `screen.kind=component` y `screen.mode=navigable`, `Route::embeddableComponent()` publica `screen.mode=embeddable`, el manifest distingue `navigate` vs `embed`, y `HtmlDocumentBootstrapper` deja de tratar componentes embebibles como documentos navegables
 - `[2026-07-05]` cobertura del nuevo contrato de componentes validada con suite verde: `348 tests` y `1489 assertions`
 - `[2026-07-05]` segundo corte de `8.2 Route Component System`: las acciones reactivas originadas desde una ruta preservan `snapshot.meta.route` y `meta.route` en `/_volt/action`, reutilizando el mismo endpoint interno sin abrir contratos paralelos por path
+- `[2026-07-05]` tercer corte de `8.2 Route Component System`: `mount` y `render` de componentes ahora tienen codigos semanticos estables (`runtime.component_mount_failed`, `runtime.component_render_failed`), `hydrate` mantiene `runtime.invalid_snapshot`, y la navegacion Volt proyecta ese contrato como `error.reason` en `X-Volt-Navigation`
 
 ### 2026-06
 

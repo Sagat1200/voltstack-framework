@@ -15,6 +15,8 @@ use Quantum\Security\Exceptions\InvalidSignatureException;
 use Quantum\Validation\Exceptions\ValidationException;
 use Throwable;
 use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
+use VoltStack\Runtime\Component\Exceptions\ComponentMountException;
+use VoltStack\Runtime\Component\Exceptions\ComponentRenderException;
 use VoltStack\Runtime\Hydration\Exceptions\InvalidSnapshotException;
 
 final class ExceptionHandler implements ExceptionHandlerContract
@@ -48,6 +50,8 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $exception instanceof CsrfTokenMismatchException => 419,
             $exception instanceof InvalidSnapshotException => 422,
             $exception instanceof ValidationException => 422,
+            $exception instanceof ComponentMountException => 500,
+            $exception instanceof ComponentRenderException => 500,
             default => 500,
         };
     }
@@ -155,6 +159,8 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $exception instanceof CsrfTokenMismatchException => $exception->getMessage(),
             $exception instanceof InvalidSignatureException => $exception->getMessage(),
             $exception instanceof InvalidSnapshotException => $exception->getMessage(),
+            $exception instanceof ComponentMountException => 'Server Error',
+            $exception instanceof ComponentRenderException => 'Server Error',
             $status === 403 => 'Forbidden',
             $status === 404 => 'Not Found',
             $status === 405 => 'Method Not Allowed',
@@ -172,6 +178,8 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $exception instanceof CsrfTokenMismatchException => 'security.csrf_token_mismatch',
             $exception instanceof InvalidSnapshotException => 'runtime.invalid_snapshot',
             $exception instanceof ValidationException => 'runtime.validation_failed',
+            $exception instanceof ComponentMountException => 'runtime.component_mount_failed',
+            $exception instanceof ComponentRenderException => 'runtime.component_render_failed',
             $status === 500 => 'server.error',
             default => 'runtime.error',
         };
@@ -182,12 +190,25 @@ final class ExceptionHandler implements ExceptionHandlerContract
      */
     private function responseHeaders(Throwable $exception): array
     {
+        $headers = [];
+        $errorCode = $this->errorCode($exception, $this->statusCode($exception));
+
+        if ($this->shouldExposeVoltErrorCode($errorCode)) {
+            $headers['X-Volt-Error-Code'] = $errorCode;
+        }
+
         if ($exception instanceof MethodNotAllowedException) {
             return [
+                ...$headers,
                 'Allow' => $exception->allowHeader(),
             ];
         }
 
-        return [];
+        return $headers;
+    }
+
+    private function shouldExposeVoltErrorCode(string $errorCode): bool
+    {
+        return $errorCode !== 'server.error' && $errorCode !== 'runtime.error';
     }
 }

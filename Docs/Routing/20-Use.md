@@ -197,6 +197,46 @@ Reglas practicas:
 - el contrato oficial para acciones sigue siendo el endpoint interno unico
 - el alcance de ruta viaja firmado dentro del snapshot, por lo que el backend puede usarlo para autorizacion, telemetria o politicas de runtime sin inventar otro transporte
 
+### 4.2.4 Contrato de Errores de Componentes
+
+Estados formalizados hoy:
+
+- `hydrate` invalido en `/_volt/action` responde `422` con `error.code = runtime.invalid_snapshot`
+- fallo durante `mount` de una ruta componente responde `500` con `X-Volt-Error-Code = runtime.component_mount_failed`
+- fallo durante `render` de una ruta o de un ciclo reactivo responde `500` con `X-Volt-Error-Code = runtime.component_render_failed`
+
+Reglas de superficie publica:
+
+- los mensajes publicos siguen siendo genericos (`Server Error`) para no exponer detalles internos
+- el codigo semantico estable viaja en `error.code` para respuestas del protocolo `/_volt/action`
+- en navegacion Volt normal, `X-Volt-Navigation.error.reason` proyecta el codigo semantico cuando existe
+- en respuestas HTML de pagina, el documento de error sigue siendo `reload-only`
+
+Ejemplo de error reactivo:
+
+```json
+{
+  "error": {
+    "kind": "protocol-error",
+    "code": "runtime.component_render_failed",
+    "status": 500,
+    "message": "Server Error"
+  }
+}
+```
+
+Ejemplo de error en `X-Volt-Navigation`:
+
+```json
+{
+  "error": {
+    "code": 500,
+    "message": "Server Error",
+    "reason": "runtime.component_render_failed"
+  }
+}
+```
+
 ### 4.3 Constraints
 
 ```php
@@ -853,6 +893,7 @@ Comportamiento actual:
 - `runtime.transition` y `runtime.hydrate` salen reducidos
 - `redirect` aparece en respuestas `3xx`
 - `error` aparece en respuestas `4xx/5xx`
+- `error.reason` aparece cuando el backend puede proyectar un codigo semantico estable del fallo
 
 ### 8.1 Campos Estables Del Contrato
 
@@ -895,6 +936,7 @@ Los siguientes valores dependen del contexto real de la request o de la respuest
 - `error`:
   - solo aparece cuando la respuesta final tiene status `>= 400`
   - publica `code` y un `message` normalizado por status HTTP
+  - puede publicar `reason` con un codigo semantico estable como `runtime.component_render_failed`
   - no expone por contrato el detalle interno de excepciones del servidor
 
 ### 8.3 Lectura Practica Del Payload
