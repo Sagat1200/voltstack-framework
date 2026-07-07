@@ -38,6 +38,39 @@ final class ComponentRouteRenderingTest extends TestCase
         self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
     }
 
+    public function test_it_emits_a_minimal_spa_navigation_payload_for_component_page_navigation_requests(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $router = $app->make(Router::class);
+        $router->get('/counter/{count}', TestCounterPage::class)
+            ->name('counter.show')
+            ->componentPage();
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/counter/7',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) ($response->headers()['X-Volt-Navigation'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(200, $response->statusCode());
+        self::assertSame('/counter/7', $payload['navigation']['target'] ?? null);
+        self::assertSame('GET', $payload['navigation']['method'] ?? null);
+        self::assertSame('counter.show', $payload['screen']['route'] ?? null);
+        self::assertNull($payload['error'] ?? null);
+        self::assertStringContainsString('<section>Count: 7</section>', $response->content());
+    }
+
     public function test_it_returns_a_reload_only_error_document_when_component_mount_fails(): void
     {
         $app = new Application(sys_get_temp_dir());

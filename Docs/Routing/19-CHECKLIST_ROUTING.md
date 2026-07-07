@@ -550,9 +550,9 @@ Este corte debe formalizar el uso de componentes o paginas como destinos de ruta
 - `[x]` formalizar el path de render inicial para paginas basadas en componente
 - `[x]` formalizar el dispatch de acciones sobre componentes resueltos desde ruta sin duplicar contratos con `/_volt/action`
 - `[x]` definir el contrato de errores para paginas o componentes cuando fallen `mount`, `hydrate` o `render`
-- `[ ]` decidir como conviven layout, hydration y navigation policy entre metadata de ruta y metadata propia del componente
-- `[ ]` validar compatibilidad con `route()`, `signed_route()` y manifest publico cuando el destino sea un componente
-- `[ ]` cubrir con pruebas reales el flujo `match -> dispatch -> render -> bootstrap -> navigate`
+- `[x]` decidir como conviven layout, hydration y navigation policy entre metadata de ruta y metadata propia del componente
+- `[x]` validar compatibilidad con `route()`, `signed_route()` y manifest publico cuando el destino sea un componente
+- `[x]` cubrir con pruebas reales el flujo `match -> dispatch -> render -> bootstrap -> navigate`
 - `[x]` documentar en `Docs/Routing/20-Use.md` y en documentos del runtime el uso oficial de rutas a componente o pagina
 
 Criterio de cierre:
@@ -606,7 +606,7 @@ Seguir este orden de trabajo:
 11. `[x]` `Frontend Manifest` minimo
 12. `[x]` `SPA Routing Protocol` minimo
 13. `[x]` consolidacion del router actual sobre framework, tests, skeleton y documentacion
-14. `[ ]` `Route Component System`
+14. `[x]` `Route Component System`
 15. `[ ]` `pipeline optimizer`
 16. `[ ]` `Multi-Tenant Routing`
 
@@ -645,6 +645,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[2026-07-05]` cobertura del nuevo contrato de componentes validada con suite verde: `348 tests` y `1489 assertions`
 - `[2026-07-05]` segundo corte de `8.2 Route Component System`: las acciones reactivas originadas desde una ruta preservan `snapshot.meta.route` y `meta.route` en `/_volt/action`, reutilizando el mismo endpoint interno sin abrir contratos paralelos por path
 - `[2026-07-05]` tercer corte de `8.2 Route Component System`: `mount` y `render` de componentes ahora tienen codigos semanticos estables (`runtime.component_mount_failed`, `runtime.component_render_failed`), `hydrate` mantiene `runtime.invalid_snapshot`, y la navegacion Volt proyecta ese contrato como `error.reason` en `X-Volt-Navigation`
+- `[2026-07-05]` cuarto corte de `8.2 Route Component System`: `Component::runtimeMetadata()` permite defaults de `runtime.*` por componente y la ruta conserva precedencia; `X-Volt-Navigation` refleja la proyeccion efectiva en runtime
+- `[2026-07-06]` quinto corte de `8.2 Route Component System`: rutas a componente ya son compatibles con `route()` y `signed_route()`, incluyendo middleware `signed` y navegacion Volt con `error.reason=security.invalid_signature` cuando la firma es invalida; suite en verde con `357 tests` y `1542 assertions`
 
 ### 2026-06
 

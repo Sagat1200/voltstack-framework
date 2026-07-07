@@ -1309,6 +1309,68 @@ final class HttpKernelTest extends TestCase
         self::assertStringContainsString('Invalid signature.', $response->content());
     }
 
+    public function test_it_allows_signed_component_route_requests_through_the_signed_middleware(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/secure-component', TestManifestComponentPage::class)
+            ->name('secure.component')
+            ->middleware('signed')
+            ->componentPage();
+
+        $signedUrl = signed_route('secure.component');
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create($signedUrl));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertStringContainsString('manifest-component', $response->content());
+    }
+
+    public function test_it_emits_a_semantic_navigation_error_reason_for_invalid_signed_component_route_requests(): void
+    {
+        /** @var ConfigRepository $config */
+        $config = $this->app->make(ConfigRepository::class);
+        $config->set('app.url', 'https://framework.test');
+        $config->set('app.key', 'base64:test-secret');
+
+        $router = $this->app->make(Router::class);
+        $router->get('/secure-component', TestManifestComponentPage::class)
+            ->name('secure.component')
+            ->middleware('signed')
+            ->componentPage();
+
+        $signedUrl = $router->signedRoute('secure.component', ['via' => 'mail']);
+        $tamperedUrl = str_replace('via=mail', 'via=sms', $signedUrl);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            $tamperedUrl,
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) ($response->headers()['X-Volt-Navigation'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(403, $response->statusCode());
+        self::assertSame('security.invalid_signature', $response->headers()['X-Volt-Error-Code'] ?? null);
+        self::assertSame([
+            'code' => 403,
+            'message' => 'Forbidden',
+            'reason' => 'security.invalid_signature',
+        ], $payload['error'] ?? null);
+    }
+
     public function test_it_marks_internal_volt_routes_with_explicit_transport_metadata(): void
     {
         $router = $this->app->make(Router::class);

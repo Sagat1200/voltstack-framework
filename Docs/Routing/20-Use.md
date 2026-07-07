@@ -132,6 +132,7 @@ Contrato publico:
 - el manifest publico incluye `screen.kind = component`
 - `componentPage()` publica `screen.mode = navigable`
 - no se expone la clase concreta del componente en el manifest
+- el componente puede declarar defaults de runtime via `runtimeMetadata()`, pero la ruta tiene precedencia cuando declara `runtime.*`
 
 ### 4.2.2 Ruta a Componente Embebible
 
@@ -236,6 +237,23 @@ Ejemplo de error en `X-Volt-Navigation`:
   }
 }
 ```
+
+### 4.2.5 Precedencia Entre Metadata de Ruta y Metadata del Componente
+
+Para rutas que resuelven un componente, existen dos fuentes de runtime:
+
+- `runtime` declarado en la ruta (`Route::runtime([...])` o `->meta(['runtime' => ...])`)
+- defaults declarados en el componente via `Component::runtimeMetadata()`
+
+Regla de precedencia:
+
+- la ruta tiene precedencia sobre el componente
+- el componente solo completa defaults ausentes
+
+Implicacion:
+
+- el manifest publico refleja solo metadata de ruta (no se instancia el componente al compilar)
+- `X-Volt-Navigation` y el bootstrap de documento pueden verse afectados por defaults del componente en runtime (porque el componente ya esta montado)
 
 ### 4.3 Constraints
 
