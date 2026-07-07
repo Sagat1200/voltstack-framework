@@ -544,16 +544,16 @@ Abrir este bloque solo despues de cerrar `8.1`.
 
 Este corte debe formalizar el uso de componentes o paginas como destinos de ruta de primer nivel, sin mezclarlo todavia con multitenancy, optimizacion avanzada o cambios de protocolo mayores.
 
-- `[ ]` definir el contrato publico de una ruta a componente o pagina navegable
-- `[ ]` separar formalmente componente navegable, componente embebible y endpoint interno del runtime
-- `[ ]` decidir que metadata publica del componente puede entrar al manifest y cual debe quedar interna
-- `[ ]` formalizar el path de render inicial para paginas basadas en componente
-- `[ ]` formalizar el dispatch de acciones sobre componentes resueltos desde ruta sin duplicar contratos con `/_volt/action`
+- `[x]` definir el contrato publico de una ruta a componente o pagina navegable
+- `[x]` separar formalmente componente navegable, componente embebible y endpoint interno del runtime
+- `[x]` decidir que metadata publica del componente puede entrar al manifest y cual debe quedar interna
+- `[x]` formalizar el path de render inicial para paginas basadas en componente
+- `[x]` formalizar el dispatch de acciones sobre componentes resueltos desde ruta sin duplicar contratos con `/_volt/action`
 - `[ ]` definir el contrato de errores para paginas o componentes cuando fallen `mount`, `hydrate` o `render`
 - `[ ]` decidir como conviven layout, hydration y navigation policy entre metadata de ruta y metadata propia del componente
 - `[ ]` validar compatibilidad con `route()`, `signed_route()` y manifest publico cuando el destino sea un componente
 - `[ ]` cubrir con pruebas reales el flujo `match -> dispatch -> render -> bootstrap -> navigate`
-- `[ ]` documentar en `Docs/Routing/20-Use.md` y en documentos del runtime el uso oficial de rutas a componente o pagina
+- `[x]` documentar en `Docs/Routing/20-Use.md` y en documentos del runtime el uso oficial de rutas a componente o pagina
 
 Criterio de cierre:
 
@@ -641,6 +641,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[2026-07-05]` cierre de `8.1 Consolidacion Del Router Actual`: se corrigio el fallback de entorno para que una `Application` sin configuracion cargada arranque en `local`, se aislaron pruebas afectadas por artifacts compartidos y se hicieron explicitas las pruebas que realmente requieren `production`
 - `[2026-07-05]` la suite del framework volvio a verde con `347 tests` y `1466 assertions`, usando el skeleton real actual como base para las pruebas de integracion SPA
 - `[2026-07-05]` `Docs/Routing/20-Use.md` quedo alineado con el estado real del core: `/_volt/runtime.js`, `/_volt/action`, `/_volt/routes-manifest.json`, `Routing Lab`, contratos de `X-Volt-Navigation` y normalizacion de `runtime.document`
+- `[2026-07-05]` primer corte de `8.2 Route Component System`: `Route::componentPage()` publica `screen.kind=component` y `screen.mode=navigable`, `Route::embeddableComponent()` publica `screen.mode=embeddable`, el manifest distingue `navigate` vs `embed`, y `HtmlDocumentBootstrapper` deja de tratar componentes embebibles como documentos navegables
+- `[2026-07-05]` cobertura del nuevo contrato de componentes validada con suite verde: `348 tests` y `1489 assertions`
+- `[2026-07-05]` segundo corte de `8.2 Route Component System`: las acciones reactivas originadas desde una ruta preservan `snapshot.meta.route` y `meta.route` en `/_volt/action`, reutilizando el mismo endpoint interno sin abrir contratos paralelos por path
 
 ### 2026-06
 

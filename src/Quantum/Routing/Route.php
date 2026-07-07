@@ -315,18 +315,18 @@ final class Route extends CompiledRoute
 
     public function componentPage(): static
     {
-        $screen = $this->definition()->metadata()['screen'] ?? null;
-
-        if (! is_array($screen)) {
-            $screen = [];
-        }
-
-        $this->replaceDefinition($this->definition()->withMetadata('screen', [
-            ...$screen,
+        return $this->screen([
             'kind' => 'component',
-        ]));
+            'mode' => 'navigable',
+        ]);
+    }
 
-        return $this;
+    public function embeddableComponent(): static
+    {
+        return $this->screen([
+            'kind' => 'component',
+            'mode' => 'embeddable',
+        ]);
     }
 
     public function context(string $context): static
@@ -360,6 +360,25 @@ final class Route extends CompiledRoute
         }
 
         return ($this->middlewareResolver)($middleware);
+    }
+
+    /**
+     * @param array<string, mixed> $attributes
+     */
+    private function screen(array $attributes): static
+    {
+        $screen = $this->definition()->metadata()['screen'] ?? null;
+
+        if (! is_array($screen)) {
+            $screen = [];
+        }
+
+        $this->replaceDefinition($this->definition()->withMetadata('screen', [
+            ...$screen,
+            ...$attributes,
+        ]));
+
+        return $this;
     }
 
     private function applyNamedConstraint(string|array $parameter, string $pattern): static

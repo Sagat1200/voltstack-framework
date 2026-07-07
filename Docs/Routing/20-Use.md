@@ -130,7 +130,72 @@ return static function (): void {
 Contrato publico:
 
 - el manifest publico incluye `screen.kind = component`
+- `componentPage()` publica `screen.mode = navigable`
 - no se expone la clase concreta del componente en el manifest
+
+### 4.2.2 Ruta a Componente Embebible
+
+Si la ruta debe resolverse como fragmento o widget reactivo y no como pantalla navegable, usar `embeddableComponent()`.
+
+```php
+use App\Pages\UserSummaryWidget;
+use Quantum\Facades\Route;
+
+return static function (): void {
+    Route::get('/widgets/user-summary', UserSummaryWidget::class)
+        ->name('widgets.user-summary')
+        ->embeddableComponent();
+};
+```
+
+Contrato publico:
+
+- el manifest publica `screen.kind = component`
+- el manifest publica `screen.mode = embeddable`
+- una ruta embebible no anuncia `navigate` ni `prefetch` en `capabilities`
+- una ruta embebible puede seguir anunciando `hydrate` si su runtime lo habilita
+
+### 4.2.3 Acciones Reactivas Scopeadas Por Ruta
+
+Las rutas de componente no crean un endpoint de acciones nuevo por cada path. El transporte reactivo sigue usando `POST /_volt/action`, pero el snapshot inicial del root incluye el alcance de ruta firmado en `snapshot.meta.route`.
+
+Contrato actual:
+
+- el render inicial de una `Component Page` incluye `snapshot.meta.route.name` cuando la ruta tiene `name()`
+- el render inicial incluye `snapshot.meta.route.params` con los placeholders resueltos
+- el render inicial incluye `snapshot.meta.route.screen` con la metadata publica de pantalla
+- cada accion reactiva preserva ese `route scope` en el siguiente `snapshot`
+- la respuesta del protocolo tambien devuelve ese alcance en `meta.route`
+
+Ejemplo conceptual del snapshot:
+
+```json
+{
+  "component": "App\\Pages\\CounterPage",
+  "state": {
+    "count": 2
+  },
+  "checksum": "sha256...",
+  "meta": {
+    "route": {
+      "name": "counter.show",
+      "params": {
+        "count": "2"
+      },
+      "screen": {
+        "kind": "component",
+        "mode": "navigable"
+      }
+    }
+  }
+}
+```
+
+Reglas practicas:
+
+- no existe un `/_volt/action` distinto por ruta
+- el contrato oficial para acciones sigue siendo el endpoint interno unico
+- el alcance de ruta viaja firmado dentro del snapshot, por lo que el backend puede usarlo para autorizacion, telemetria o politicas de runtime sin inventar otro transporte
 
 ### 4.3 Constraints
 
@@ -698,7 +763,8 @@ Ejemplo esperado:
     {
       "name": "users.show",
       "screen": {
-        "kind": "controller"
+        "kind": "controller",
+        "mode": "navigable"
       },
       "path": "/users/{user}",
       "methods": ["GET"],
@@ -722,6 +788,9 @@ Reglas practicas:
 - si la ruta no tiene `name()`, no esperes verla en el manifest
 - si la ruta no soporta `GET`, no esperes la capacidad `navigate`
 - `screen.kind` describe el tipo de pantalla que resuelve la ruta sin exponer el `action` interno
+- `screen.mode = navigable` representa una pantalla de primer nivel apta para navegacion
+- `screen.mode = embeddable` representa un fragmento o widget reactivo, no una pantalla navegable
+- una ruta `embeddable` expone `embed` en `capabilities` cuando responde a `GET`
 - `policy.document` y `policy.navigation` salen del bloque `runtime`
 - `transition` e `hydrate` salen reducidos a su proyeccion publica minima
 

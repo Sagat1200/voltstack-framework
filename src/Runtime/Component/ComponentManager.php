@@ -113,7 +113,7 @@ final class ComponentManager
 
     public function renderRoot(Component $component, ?Snapshot $snapshot = null, string $renderMode = 'interactive'): string
     {
-        $snapshot ??= $this->dehydrate($component);
+        $snapshot ??= $this->dehydrate($component, $this->routeScopeMeta($component));
         $encodedSnapshot = htmlspecialchars(
             json_encode($snapshot->toArray(), JSON_THROW_ON_ERROR),
             ENT_QUOTES | ENT_SUBSTITUTE,
@@ -130,6 +130,39 @@ final class ComponentManager
             $encodedSnapshot,
             $this->render($component),
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function routeScopeMeta(Component $component): array
+    {
+        $request = $component->request();
+
+        if (! $request instanceof Request) {
+            return [];
+        }
+
+        $route = [];
+        $name = $request->routeMeta('name');
+
+        if (is_string($name) && trim($name) !== '') {
+            $route['name'] = trim($name);
+        }
+
+        $parameters = $request->routeParameters();
+
+        if ($parameters !== []) {
+            $route['params'] = $parameters;
+        }
+
+        $screen = $request->routeMeta('screen');
+
+        if (is_array($screen) && $screen !== []) {
+            $route['screen'] = $screen;
+        }
+
+        return $route === [] ? [] : ['route' => $route];
     }
 
     /**

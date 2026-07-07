@@ -7,8 +7,9 @@ namespace VoltStack\Test\Feature;
 use PHPUnit\Framework\TestCase;
 use Quantum\Http\RedirectResponse;
 use Quantum\Http\Request;
-use Quantum\Security\CsrfTokenManager;
 use Quantum\HttpKernel\HttpKernel;
+use Quantum\Routing\Router;
+use Quantum\Security\CsrfTokenManager;
 use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Component;
 use VoltStack\Runtime\Component\ComponentManager;
@@ -55,6 +56,45 @@ final class ReactiveProtocolTest extends TestCase
         self::assertStringContainsString('Count: 3', $payload['effects'][0]['html']);
         self::assertStringContainsString('<button type="button" volt-click="increment">Count: 3</button>', $payload['html']);
         self::assertStringContainsString('data-volt-root="true"', $payload['html']);
+    }
+
+    public function test_it_preserves_route_scope_metadata_when_a_component_action_originates_from_a_route(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $router = $app->make(Router::class);
+        $router->get('/counter/{count}', TestReactiveCounter::class)
+            ->name('reactive.counter.show')
+            ->componentPage();
+
+        $initialResponse = $app->make(HttpKernel::class)->handle(Request::create('/counter/2'));
+        $snapshot = $this->extractSnapshotFromHtml($initialResponse->content());
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveCounter::class,
+                'action' => 'increment',
+                'params' => [],
+                'snapshot' => $snapshot,
+            ],
+        ));
+
+        self::assertSame(200, $response->statusCode());
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('increment', $payload['meta']['action'] ?? null);
+        self::assertSame('reactive.counter.show', $payload['meta']['route']['name'] ?? null);
+        self::assertSame(['count' => '2'], $payload['meta']['route']['params'] ?? null);
+        self::assertSame('component', $payload['meta']['route']['screen']['kind'] ?? null);
+        self::assertSame('navigable', $payload['meta']['route']['screen']['mode'] ?? null);
+        self::assertSame('reactive.counter.show', $payload['snapshot']['meta']['route']['name'] ?? null);
+        self::assertSame(['count' => '2'], $payload['snapshot']['meta']['route']['params'] ?? null);
+        self::assertSame(3, $payload['snapshot']['state']['count'] ?? null);
     }
 
     public function test_it_returns_a_validation_error_when_the_snapshot_is_invalid(): void
@@ -928,6 +968,22 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('todo-list', $payload['effects'][0]['parentTarget']);
         self::assertSame('[data-volt-target="todo-list"] > [data-volt-key="item-1"]', $payload['effects'][0]['beforeSelector']);
         self::assertSame('beforebegin', $payload['effects'][0]['position']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function extractSnapshotFromHtml(string $html): array
+    {
+        preg_match('/data-volt-snapshot="([^"]+)"/', $html, $matches);
+
+        self::assertIsArray($matches);
+        self::assertArrayHasKey(1, $matches);
+
+        /** @var array<string, mixed> $snapshot */
+        $snapshot = json_decode(html_entity_decode($matches[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'), true, 512, JSON_THROW_ON_ERROR);
+
+        return $snapshot;
     }
 }
 

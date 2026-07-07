@@ -66,6 +66,18 @@ final class FrontendRouteManifestStoreTest extends TestCase
                     'transition' => 'slide',
                 ],
             ]);
+        $router->get('/widgets/summary', TestFrontendManifestController::class . '@show')
+            ->name('widgets.summary')
+            ->meta([
+                'screen' => [
+                    'kind' => 'component',
+                    'mode' => 'embeddable',
+                ],
+                'prefetch' => true,
+                'runtime' => [
+                    'hydrate' => true,
+                ],
+            ]);
         $router->get('/internal-preview', TestFrontendManifestController::class . '@show')
             ->name('internal.preview')
             ->meta([
@@ -86,11 +98,12 @@ final class FrontendRouteManifestStoreTest extends TestCase
 
         $routes = $manifest->routes();
 
-        self::assertCount(2, $routes);
+        self::assertCount(3, $routes);
         self::assertSame([
             'name' => 'users.show',
             'screen' => [
                 'kind' => 'controller',
+                'mode' => 'navigable',
             ],
             'path' => '/users/{user}',
             'methods' => ['GET'],
@@ -109,6 +122,7 @@ final class FrontendRouteManifestStoreTest extends TestCase
             'name' => 'users.store',
             'screen' => [
                 'kind' => 'controller',
+                'mode' => 'navigable',
             ],
             'path' => '/users',
             'methods' => ['POST'],
@@ -118,11 +132,24 @@ final class FrontendRouteManifestStoreTest extends TestCase
                 'hydrate' => false,
             ],
         ], $routes[1]);
+        self::assertSame([
+            'name' => 'widgets.summary',
+            'screen' => [
+                'kind' => 'component',
+                'mode' => 'embeddable',
+            ],
+            'path' => '/widgets/summary',
+            'methods' => ['GET'],
+            'capabilities' => ['embed', 'hydrate'],
+            'runtime' => [
+                'hydrate' => true,
+            ],
+        ], $routes[2]);
         self::assertArrayNotHasKey('middleware', $routes[0]);
         self::assertArrayNotHasKey('auth', $routes[0]);
         self::assertArrayNotHasKey('document', $routes[0]['runtime']);
         self::assertArrayNotHasKey('navigation', $routes[0]['runtime']);
-        self::assertSame(['users.show', 'users.store'], array_column($routes, 'name'));
+        self::assertSame(['users.show', 'users.store', 'widgets.summary'], array_column($routes, 'name'));
     }
 
     private function removeDirectory(string $directory): void

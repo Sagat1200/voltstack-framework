@@ -42,26 +42,21 @@ final class ProtocolController extends Controller
             $payload->snapshot(),
             $request,
         );
+        $interactionMeta = $this->interactionMeta($payload);
 
         if ($payload->action() === self::INTERNAL_SYNC_ACTION) {
-            $previousSnapshot = $this->components->dehydrate($component, [
-                'action' => $payload->action(),
-            ]);
+            $previousSnapshot = $this->components->dehydrate($component, $interactionMeta);
             $previousHtml = $this->components->renderRoot($component, $previousSnapshot);
             $this->components->applyUpdates($component, $payload->updates());
             $actionResult = null;
         } else {
             $this->components->applyUpdates($component, $payload->updates());
-            $previousSnapshot = $this->components->dehydrate($component, [
-                'action' => $payload->action(),
-            ]);
+            $previousSnapshot = $this->components->dehydrate($component, $interactionMeta);
             $previousHtml = $this->components->renderRoot($component, $previousSnapshot);
             $actionResult = $this->components->callAction($component, $payload->action(), $payload->params(), $request);
         }
 
-        $snapshot = $this->components->dehydrate($component, [
-            'action' => $payload->action(),
-        ]);
+        $snapshot = $this->components->dehydrate($component, $interactionMeta);
         $html = $this->components->renderRoot($component, $snapshot);
 
         return $this->json((new ActionResponse(
@@ -69,7 +64,7 @@ final class ProtocolController extends Controller
             $html,
             $snapshot,
             $this->effects->build($actionResult, $previousHtml, $html),
-            ['action' => $payload->action()],
+            $interactionMeta,
         ))->toArray());
     }
 
@@ -80,5 +75,15 @@ final class ProtocolController extends Controller
         if (! is_string($token) || ! $this->csrf->verify($token)) {
             throw new CsrfTokenMismatchException('CSRF token mismatch.');
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function interactionMeta(ActionPayload $payload): array
+    {
+        return array_replace($payload->snapshot()->meta(), [
+            'action' => $payload->action(),
+        ]);
     }
 }

@@ -103,6 +103,10 @@ final class HtmlDocumentBootstrapper
             return false;
         }
 
+        if ($this->isEmbeddableComponentRoute($request)) {
+            return false;
+        }
+
         if ($response instanceof JsonResponse || $response instanceof RedirectResponse) {
             return false;
         }
@@ -122,6 +126,23 @@ final class HtmlDocumentBootstrapper
         }
 
         return $this->looksLikeHtml($content);
+    }
+
+    private function isEmbeddableComponentRoute(Request $request): bool
+    {
+        $screen = $request->routeMeta('screen');
+
+        if (! is_array($screen)) {
+            return false;
+        }
+
+        $kind = $screen['kind'] ?? null;
+        $mode = $screen['mode'] ?? null;
+
+        return is_string($kind)
+            && strtolower(trim($kind)) === 'component'
+            && is_string($mode)
+            && strtolower(trim($mode)) === 'embeddable';
     }
 
     public function bootstrap(Request $request, Response $response): Response

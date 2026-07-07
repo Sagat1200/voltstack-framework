@@ -136,36 +136,30 @@ final class FrontendRouteManifestStore
     }
 
     /**
-     * @return array{kind: string}
+     * @return array{kind: string, mode: string}
      */
     private function publicScreenMetadata(CompiledRoute $route, RouteMetadata $metadata): array
     {
         $screen = $metadata->get('screen');
+        $kind = null;
+        $mode = null;
 
         if (is_array($screen)) {
-            $kind = $screen['kind'] ?? null;
+            $kind = $this->normalizeScreenKind($screen['kind'] ?? null);
+            $mode = $this->normalizeScreenMode($screen['mode'] ?? null);
+        }
 
-            if (is_string($kind) && trim($kind) !== '') {
-                $normalized = strtolower(trim($kind));
+        if ($kind === null) {
+            $action = $route->action();
 
-                if (in_array($normalized, ['component', 'controller'], true)) {
-                    return [
-                        'kind' => $normalized,
-                    ];
-                }
+            if (is_string($action) && class_exists($action) && is_subclass_of($action, Component::class)) {
+                $kind = 'component';
             }
         }
 
-        $action = $route->action();
-
-        if (is_string($action) && class_exists($action) && is_subclass_of($action, Component::class)) {
-            return [
-                'kind' => 'component',
-            ];
-        }
-
         return [
-            'kind' => 'controller',
+            'kind' => $kind ?? 'controller',
+            'mode' => $mode ?? 'navigable',
         ];
     }
 
@@ -271,9 +265,14 @@ final class FrontendRouteManifestStore
     private function publicCapabilities(array $methods, RouteMetadata $metadata, array $runtime): array
     {
         $capabilities = [];
+        $screen = $this->publicScreenMetadataFromMetadata($metadata);
+        $mode = $screen['mode'];
+        $isNavigable = $mode === 'navigable';
 
-        if (in_array('GET', $methods, true)) {
+        if ($isNavigable && in_array('GET', $methods, true)) {
             $capabilities[] = 'navigate';
+        } elseif (! $isNavigable && in_array('GET', $methods, true)) {
+            $capabilities[] = 'embed';
         }
 
         if (($runtime['hydrate'] ?? null) === true) {
@@ -284,13 +283,55 @@ final class FrontendRouteManifestStore
         $rawRuntime = $metadata->get('runtime');
         $runtimePrefetch = is_array($rawRuntime) ? ($rawRuntime['prefetch'] ?? null) : null;
 
-        if ($prefetch === true) {
+        if ($isNavigable && $prefetch === true) {
             $capabilities[] = 'prefetch';
-        } elseif ($runtimePrefetch === true) {
+        } elseif ($isNavigable && $runtimePrefetch === true) {
             $capabilities[] = 'prefetch';
         }
 
         return array_values(array_unique($capabilities));
+    }
+
+    /**
+     * @return array{kind: string, mode: string}
+     */
+    private function publicScreenMetadataFromMetadata(RouteMetadata $metadata): array
+    {
+        $screen = $metadata->get('screen');
+
+        if (! is_array($screen)) {
+            return [
+                'kind' => 'controller',
+                'mode' => 'navigable',
+            ];
+        }
+
+        return [
+            'kind' => $this->normalizeScreenKind($screen['kind'] ?? null) ?? 'controller',
+            'mode' => $this->normalizeScreenMode($screen['mode'] ?? null) ?? 'navigable',
+        ];
+    }
+
+    private function normalizeScreenKind(mixed $kind): ?string
+    {
+        if (! is_string($kind) || trim($kind) === '') {
+            return null;
+        }
+
+        $normalized = strtolower(trim($kind));
+
+        return in_array($normalized, ['component', 'controller'], true) ? $normalized : null;
+    }
+
+    private function normalizeScreenMode(mixed $mode): ?string
+    {
+        if (! is_string($mode) || trim($mode) === '') {
+            return null;
+        }
+
+        $normalized = strtolower(trim($mode));
+
+        return in_array($normalized, ['navigable', 'embeddable'], true) ? $normalized : null;
     }
 
     /**

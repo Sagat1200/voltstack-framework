@@ -1883,6 +1883,13 @@ final class HttpKernelTest extends TestCase
         $router->get('/manifest-component', TestManifestComponentPage::class)
             ->name('manifest.component')
             ->componentPage();
+        $router->get('/manifest-widget', TestEmbeddableManifestComponent::class)
+            ->name('manifest.widget')
+            ->runtime([
+                'hydrate' => true,
+                'prefetch' => true,
+            ])
+            ->embeddableComponent();
 
         $response = $this->app->make(HttpKernel::class)->handle(Request::create('/_volt/routes-manifest.json'));
         /** @var array<string, mixed> $payload */
@@ -1901,14 +1908,17 @@ final class HttpKernelTest extends TestCase
         $showRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.users.show'));
         $storeRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.users.store'));
         $componentRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.component'));
+        $widgetRoute = array_values(array_filter($routes, static fn(array $route): bool => ($route['name'] ?? null) === 'manifest.widget'));
 
         self::assertCount(1, $showRoute);
         self::assertCount(1, $storeRoute);
         self::assertCount(1, $componentRoute);
+        self::assertCount(1, $widgetRoute);
         self::assertSame('/manifest-users/{user}', $showRoute[0]['path'] ?? null);
         self::assertSame(['GET'], $showRoute[0]['methods'] ?? null);
         self::assertSame(['navigate', 'hydrate', 'prefetch'], $showRoute[0]['capabilities'] ?? null);
         self::assertSame('controller', $showRoute[0]['screen']['kind'] ?? null);
+        self::assertSame('navigable', $showRoute[0]['screen']['mode'] ?? null);
         self::assertSame([
             'document' => 'reload',
             'navigation' => 'reload',
@@ -1922,6 +1932,7 @@ final class HttpKernelTest extends TestCase
         self::assertSame(['POST'], $storeRoute[0]['methods'] ?? null);
         self::assertSame([], $storeRoute[0]['capabilities'] ?? null);
         self::assertSame('controller', $storeRoute[0]['screen']['kind'] ?? null);
+        self::assertSame('navigable', $storeRoute[0]['screen']['mode'] ?? null);
         self::assertSame([
             'transition' => 'slide',
             'hydrate' => false,
@@ -1931,9 +1942,34 @@ final class HttpKernelTest extends TestCase
         self::assertSame(['GET'], $componentRoute[0]['methods'] ?? null);
         self::assertSame(['navigate'], $componentRoute[0]['capabilities'] ?? null);
         self::assertSame('component', $componentRoute[0]['screen']['kind'] ?? null);
+        self::assertSame('navigable', $componentRoute[0]['screen']['mode'] ?? null);
+        self::assertSame('/manifest-widget', $widgetRoute[0]['path'] ?? null);
+        self::assertSame(['GET'], $widgetRoute[0]['methods'] ?? null);
+        self::assertSame(['embed', 'hydrate'], $widgetRoute[0]['capabilities'] ?? null);
+        self::assertSame('component', $widgetRoute[0]['screen']['kind'] ?? null);
+        self::assertSame('embeddable', $widgetRoute[0]['screen']['mode'] ?? null);
+        self::assertSame([
+            'hydrate' => true,
+        ], $widgetRoute[0]['runtime'] ?? null);
         self::assertStringNotContainsString('"middleware"', $response->content());
         self::assertStringNotContainsString('"auth"', $response->content());
         self::assertStringNotContainsString('"contract"', $response->content());
+    }
+
+    public function test_it_renders_an_embeddable_component_route_as_a_runtime_fragment(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/component-fragment', TestEmbeddableManifestComponent::class)
+            ->name('component.fragment')
+            ->embeddableComponent();
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/component-fragment'));
+
+        self::assertSame(200, $response->statusCode());
+        self::assertStringContainsString('data-volt-root="true"', $response->content());
+        self::assertStringContainsString('fragment-widget', $response->content());
+        self::assertStringNotContainsString('data-volt-runtime="true"', $response->content());
+        self::assertStringNotContainsString('<body', $response->content());
     }
 
     public function test_it_emits_a_minimal_spa_navigation_payload_for_volt_navigation_requests(): void
@@ -2224,6 +2260,14 @@ final class TestManifestComponentPage extends Component
     public function render(): string
     {
         return '<section>manifest-component</section>';
+    }
+}
+
+final class TestEmbeddableManifestComponent extends Component
+{
+    public function render(): string
+    {
+        return '<section>fragment-widget</section>';
     }
 }
 
