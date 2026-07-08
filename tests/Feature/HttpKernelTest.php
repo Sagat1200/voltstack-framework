@@ -758,7 +758,7 @@ final class HttpKernelTest extends TestCase
         $this->app->make(PipelineArtifactStore::class)->compileAndWrite($router);
         $router->reloadPipelineArtifacts();
 
-        self::assertNotSame($route->routePipeline(), $router->resolvedRoutePipeline($route));
+        self::assertSame($route->routePipeline(), $router->resolvedRoutePipeline($route));
 
         $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-pipeline'));
 
@@ -1004,7 +1004,7 @@ final class HttpKernelTest extends TestCase
 
         $resolvedPipeline = $router->resolvedRoutePipeline($compiledRoute);
 
-        self::assertNotSame($compiledRoute->routePipeline(), $resolvedPipeline);
+        self::assertSame($compiledRoute->routePipeline(), $resolvedPipeline);
         self::assertSame($compiledRoute->routePipeline()->id(), $resolvedPipeline->id());
 
         $response = $this->app->make(HttpKernel::class)->handle(Request::create('/artifact-production'));

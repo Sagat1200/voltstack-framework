@@ -30,6 +30,11 @@ final class RouteArtifactManager
         return $paths;
     }
 
+    public function pipelineOptimizationReport(Router $router): PipelineOptimizationReport
+    {
+        return $this->app->make(PipelineArtifactStore::class)->optimizationReport($router);
+    }
+
     /**
      * @return array<string, string>
      */

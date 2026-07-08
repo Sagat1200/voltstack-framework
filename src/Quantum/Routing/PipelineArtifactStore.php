@@ -10,6 +10,7 @@ use VoltStack\Framework\Application;
 final class PipelineArtifactStore
 {
     private const ARTIFACT_VERSION = 1;
+    private const RECOMMENDED_MAX_PIPELINE_LENGTH = 12;
 
     public function __construct(
         private readonly Application $app,
@@ -47,6 +48,61 @@ final class PipelineArtifactStore
         }
 
         return new PipelineArtifact(self::ARTIFACT_VERSION, $pipelines);
+    }
+
+    public function optimizationReport(Router $router): PipelineOptimizationReport
+    {
+        (new RouteCompilerValidator())->validateRoutes(
+            $router->routes(),
+            false,
+            true,
+            false,
+        );
+
+        $pipelineUsage = [];
+        $longestRouteUri = null;
+        $longestPipelineLength = 0;
+        $analyzedRoutes = 0;
+
+        foreach ($router->routes() as $route) {
+            if ($this->isInternalRoute($route)) {
+                continue;
+            }
+
+            $analyzedRoutes++;
+            $pipeline = $route->routePipeline();
+            $pipelineUsage[$pipeline->id()] = ($pipelineUsage[$pipeline->id()] ?? 0) + 1;
+
+            $pipelineLength = count($pipeline->middlewares());
+
+            if ($longestRouteUri !== null && $pipelineLength <= $longestPipelineLength) {
+                continue;
+            }
+
+            $longestPipelineLength = $pipelineLength;
+            $longestRouteUri = $route->uri();
+        }
+
+        $totalRoutes = $analyzedRoutes;
+        $uniquePipelines = count($pipelineUsage);
+        $warnings = [];
+
+        if ($longestRouteUri !== null && $longestPipelineLength > self::RECOMMENDED_MAX_PIPELINE_LENGTH) {
+            $warnings[] = sprintf(
+                'El pipeline de la ruta %s tiene %d middleware; considere simplificarlo.',
+                $longestRouteUri,
+                $longestPipelineLength,
+            );
+        }
+
+        return new PipelineOptimizationReport(
+            $totalRoutes,
+            $uniquePipelines,
+            max(0, $totalRoutes - $uniquePipelines),
+            $longestRouteUri,
+            $longestPipelineLength,
+            $warnings,
+        );
     }
 
     public function write(PipelineArtifact $artifact): string
@@ -110,5 +166,16 @@ final class PipelineArtifactStore
         }
 
         return $serialized;
+    }
+
+    private function isInternalRoute(Route $route): bool
+    {
+        $transport = $route->routeMetadata()->get('transport');
+
+        if (is_string($transport) && strtolower(trim($transport)) === 'internal') {
+            return true;
+        }
+
+        return str_starts_with($route->uri(), '/_volt/');
     }
 }

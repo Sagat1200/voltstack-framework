@@ -44,12 +44,13 @@ final class PipelineArtifactStoreTest extends TestCase
 
         $router = $this->app->make(Router::class);
         $first = $router->get('/first', fn() => 'first')->middleware(TestArtifactMiddleware::class);
-        $router->get('/second', fn() => 'second')->middleware(TestArtifactMiddleware::class);
+        $second = $router->get('/second', fn() => 'second')->middleware(TestArtifactMiddleware::class);
 
         $store = $this->app->make(PipelineArtifactStore::class);
         $path = $store->compileAndWrite($router);
         $artifact = $store->load();
 
+        self::assertSame($first->routePipeline(), $second->routePipeline());
         self::assertSame($this->app->cachePath('routes/pipeline.php'), $path);
         self::assertNotNull($artifact);
         self::assertSame(1, $artifact->version());
@@ -65,7 +66,7 @@ final class PipelineArtifactStoreTest extends TestCase
         $router->reloadPipelineArtifacts();
         $resolvedPipeline = $router->resolvedRoutePipeline($first);
 
-        self::assertNotSame($first->routePipeline(), $resolvedPipeline);
+        self::assertSame($first->routePipeline(), $resolvedPipeline);
         self::assertSame($first->routePipeline()->id(), $resolvedPipeline->id());
     }
 
@@ -82,6 +83,38 @@ final class PipelineArtifactStoreTest extends TestCase
         $this->expectExceptionMessage('Route [/non-serializable] contains non-serializable middleware in its compiled pipeline.');
 
         $store->compile($router);
+    }
+
+    public function test_it_generates_an_optimization_report_with_budget_warnings_for_long_pipelines(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/budget-warning', fn() => 'ok')->middleware([
+            TestArtifactMiddleware01::class,
+            TestArtifactMiddleware02::class,
+            TestArtifactMiddleware03::class,
+            TestArtifactMiddleware04::class,
+            TestArtifactMiddleware05::class,
+            TestArtifactMiddleware06::class,
+            TestArtifactMiddleware07::class,
+            TestArtifactMiddleware08::class,
+            TestArtifactMiddleware09::class,
+            TestArtifactMiddleware10::class,
+            TestArtifactMiddleware11::class,
+            TestArtifactMiddleware12::class,
+            TestArtifactMiddleware13::class,
+        ]);
+
+        $report = $this->app->make(PipelineArtifactStore::class)->optimizationReport($router);
+
+        self::assertSame(1, $report->totalRoutes());
+        self::assertSame(1, $report->uniquePipelines());
+        self::assertSame(0, $report->sharedRouteCount());
+        self::assertSame('/budget-warning', $report->longestRouteUri());
+        self::assertSame(13, $report->longestPipelineLength());
+        self::assertTrue($report->hasWarnings());
+        self::assertSame([
+            'El pipeline de la ruta /budget-warning tiene 13 middleware; considere simplificarlo.',
+        ], $report->warnings());
     }
 
     private function removeDirectory(string $directory): void
@@ -115,10 +148,24 @@ final class PipelineArtifactStoreTest extends TestCase
     }
 }
 
-final class TestArtifactMiddleware implements MiddlewareInterface
+class TestArtifactMiddleware implements MiddlewareInterface
 {
     public function handle(Request $request, \Closure $next): mixed
     {
         return $next($request);
     }
 }
+
+final class TestArtifactMiddleware01 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware02 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware03 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware04 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware05 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware06 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware07 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware08 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware09 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware10 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware11 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware12 extends TestArtifactMiddleware {}
+final class TestArtifactMiddleware13 extends TestArtifactMiddleware {}

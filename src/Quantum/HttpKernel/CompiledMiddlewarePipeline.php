@@ -12,6 +12,11 @@ use VoltStack\Framework\Application;
 
 final class CompiledMiddlewarePipeline
 {
+    /**
+     * @var array<string, self>
+     */
+    private static array $sharedCache = [];
+
     private Closure $executor;
 
     /**
@@ -30,8 +35,13 @@ final class CompiledMiddlewarePipeline
     public static function compile(array $middlewares): self
     {
         $normalized = array_values($middlewares);
+        $id = MiddlewareStack::signature($normalized);
 
-        return new self($normalized, MiddlewareStack::signature($normalized));
+        if (self::isCacheableStack($normalized)) {
+            return self::$sharedCache[$id] ??= new self($normalized, $id);
+        }
+
+        return new self($normalized, $id);
     }
 
     public function id(): string
@@ -69,6 +79,20 @@ final class CompiledMiddlewarePipeline
             },
             static fn(Application $app, Request $request, Closure $destination): mixed => $destination($request),
         );
+    }
+
+    /**
+     * @param array<int, class-string<MiddlewareInterface>|callable|MiddlewareInterface> $middlewares
+     */
+    private static function isCacheableStack(array $middlewares): bool
+    {
+        foreach ($middlewares as $middleware) {
+            if (! is_string($middleware) || $middleware === '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static function handleMiddleware(Application $app, mixed $middleware, Request $request, Closure $next): mixed

@@ -26,6 +26,31 @@ final class CompiledMiddlewarePipelineTest extends TestCase
         self::assertSame($first->id(), $second->id());
     }
 
+    public function test_it_reuses_the_same_compiled_instance_for_cacheable_class_string_stacks(): void
+    {
+        $first = CompiledMiddlewarePipeline::compile([
+            TestCompiledFirstMiddleware::class,
+            TestCompiledSecondMiddleware::class,
+        ]);
+        $second = CompiledMiddlewarePipeline::compile([
+            TestCompiledFirstMiddleware::class,
+            TestCompiledSecondMiddleware::class,
+        ]);
+
+        self::assertSame($first, $second);
+    }
+
+    public function test_it_does_not_share_non_cacheable_pipeline_stacks(): void
+    {
+        $closure = static fn(Request $request, \Closure $next): mixed => $next($request);
+
+        $first = CompiledMiddlewarePipeline::compile([$closure]);
+        $second = CompiledMiddlewarePipeline::compile([$closure]);
+
+        self::assertNotSame($first, $second);
+        self::assertSame($first->id(), $second->id());
+    }
+
     public function test_it_executes_the_compiled_pipeline_in_declared_order(): void
     {
         TestCompiledPipelineTrace::reset();

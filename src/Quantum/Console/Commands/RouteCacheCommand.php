@@ -51,6 +51,7 @@ final class RouteCacheCommand extends Command
         $manager = $app->make(RouteArtifactManager::class);
         $verbose = $input->hasOption('verbose');
         $paths = $manager->compileAndWrite($router);
+        $report = $manager->pipelineOptimizationReport($router);
 
         if ($verbose) {
             foreach ($paths as $name => $path) {
@@ -60,6 +61,26 @@ final class RouteCacheCommand extends Command
 
         $output->writeln('Artifacts de rutas compilados correctamente.');
         $output->writeln(sprintf('  Artifacts escritos: %d', count($paths)));
+
+        if ($verbose) {
+            $output->writeln('  Pipeline optimizer:');
+            $output->writeln(sprintf('    Rutas analizadas: %d', $report->totalRoutes()));
+            $output->writeln(sprintf('    Pipelines unicos: %d', $report->uniquePipelines()));
+            $output->writeln(sprintf('    Rutas reutilizando pipeline: %d', $report->sharedRouteCount()));
+            $output->writeln(sprintf(
+                '    Pipeline mas largo: %s (%d middleware)',
+                $report->longestRouteUri() ?? '-',
+                $report->longestPipelineLength(),
+            ));
+        }
+
+        if ($report->hasWarnings()) {
+            $output->writeln('  Advertencias del pipeline optimizer:');
+
+            foreach ($report->warnings() as $warning) {
+                $output->writeln(sprintf('    - %s', $warning));
+            }
+        }
 
         return 0;
     }

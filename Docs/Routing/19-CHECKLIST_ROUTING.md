@@ -561,6 +561,23 @@ Criterio de cierre:
 - el router, el runtime y el manifest distinguen correctamente entre navegacion de pagina y accion reactiva
 - el consumo desde app cliente queda documentado y cubierto por pruebas de integracion
 
+### 8.3 Checklist Pipeline Optimizer
+
+Abrir este bloque solo despues de cerrar `8.2`.
+
+Primer corte recomendado:
+
+- `[x]` compartir instancias de `CompiledMiddlewarePipeline` para stacks serializables con la misma firma
+- `[x]` reutilizar el mismo pipeline tanto en rutas vivas como cuando `pipeline.php` recompone stacks equivalentes
+- `[x]` mantener aislamiento para stacks no cacheables como `Closure` u objetos middleware ya instanciados
+- `[x]` cubrir con pruebas la deduplicacion de pipelines compartidos en modo vivo y con artifacts
+- `[x]` evaluar una siguiente capa de optimizer con diagnosticos o budgets de longitud de pipeline durante compilacion
+
+Criterio de cierre del primer corte:
+
+- el runtime no duplica en memoria pipelines equivalentes cuando el stack es serializable y estable
+- el comportamiento observable del pipeline no cambia entre registro vivo y carga desde artifacts
+
 ---
 
 ## 9. Checklist Postergado
@@ -614,7 +631,7 @@ Estado real del corte actual:
 
 - `V1 Core Routing`, `V1.1` y el bloque SPA minimo (`7.1`, `7.2`, `7.3`) ya quedaron cerrados
 - la fase corta de consolidacion del router actual ya quedo cerrada sobre framework, tests, skeleton y documentacion
-- el siguiente bloque funcional recomendado pasa a ser `Route Component System`
+- el siguiente bloque funcional recomendado pasa a ser `pipeline optimizer`
 
 ---
 
@@ -647,6 +664,8 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[2026-07-05]` tercer corte de `8.2 Route Component System`: `mount` y `render` de componentes ahora tienen codigos semanticos estables (`runtime.component_mount_failed`, `runtime.component_render_failed`), `hydrate` mantiene `runtime.invalid_snapshot`, y la navegacion Volt proyecta ese contrato como `error.reason` en `X-Volt-Navigation`
 - `[2026-07-05]` cuarto corte de `8.2 Route Component System`: `Component::runtimeMetadata()` permite defaults de `runtime.*` por componente y la ruta conserva precedencia; `X-Volt-Navigation` refleja la proyeccion efectiva en runtime
 - `[2026-07-06]` quinto corte de `8.2 Route Component System`: rutas a componente ya son compatibles con `route()` y `signed_route()`, incluyendo middleware `signed` y navegacion Volt con `error.reason=security.invalid_signature` cuando la firma es invalida; suite en verde con `357 tests` y `1542 assertions`
+- `[2026-07-06]` primer corte de `8.3 Pipeline Optimizer`: `CompiledMiddlewarePipeline` ahora reutiliza instancias compartidas para stacks serializables con la misma firma, las rutas vivas y `pipeline.php` convergen al mismo objeto compilado, y los stacks no cacheables conservan aislamiento; suite en verde tras ampliar cobertura del optimizer
+- `[2026-07-06]` segundo corte de `8.3 Pipeline Optimizer`: `route:cache` ahora emite un reporte de optimizer con conteo de rutas, pipelines unicos, reutilizacion y presupuesto de longitud maxima; cuando una ruta supera el budget recomendado (`12` middlewares), la compilacion proyecta una advertencia explicita sin bloquear la generacion de artifacts
 
 ### 2026-06
 

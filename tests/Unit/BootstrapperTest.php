@@ -145,7 +145,7 @@ final class BootstrapperTest extends TestCase
 
         $resolvedPipeline = $runtimeRouter->resolvedRoutePipeline($compiledRoute);
 
-        self::assertNotSame($compiledRoute->routePipeline(), $resolvedPipeline);
+        self::assertSame($compiledRoute->routePipeline(), $resolvedPipeline);
         self::assertSame($compiledRoute->routePipeline()->id(), $resolvedPipeline->id());
 
         $response = $runtimeApp->make(HttpKernel::class)->handle(Request::create('/from-runtime-artifact/42', 'POST'));

@@ -112,6 +112,11 @@ PHP
         }
 
         self::assertStringContainsString('Artifacts escritos: 6', $cacheOutput->stdout());
+        self::assertStringContainsString('Pipeline optimizer:', $cacheOutput->stdout());
+        self::assertStringContainsString('Rutas analizadas: 1', $cacheOutput->stdout());
+        self::assertStringContainsString('Pipelines unicos: 1', $cacheOutput->stdout());
+        self::assertStringContainsString('Rutas reutilizando pipeline: 0', $cacheOutput->stdout());
+        self::assertStringContainsString('Pipeline mas largo: /cached-route (0 middleware)', $cacheOutput->stdout());
 
         $manifest = file_get_contents($manager->paths()['frontend-manifest']);
 
@@ -136,6 +141,78 @@ PHP
         foreach ($manager->paths() as $path) {
             self::assertFileDoesNotExist($path);
         }
+    }
+
+    public function test_route_cache_emits_pipeline_optimizer_warnings_when_a_route_exceeds_the_budget(): void
+    {
+        $aliases = [
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware01',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware02',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware03',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware04',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware05',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware06',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware07',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware08',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware09',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware10',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware11',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware12',
+            'VoltStack\\Test\\Unit\\TestRouteArtifactCommandBudgetMiddleware13',
+        ];
+
+        foreach ($aliases as $alias) {
+            if (! class_exists($alias, false)) {
+                class_alias(TestRouteArtifactCommandPassThroughMiddleware::class, $alias);
+            }
+        }
+
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'routes' . DIRECTORY_SEPARATOR . 'web.php',
+            <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+use Quantum\Routing\Router;
+use VoltStack\Test\Unit\TestRouteArtifactCommandController;
+
+return static function (Router $router): void {
+    $router->get('/heavy-pipeline', TestRouteArtifactCommandController::class . '@show')
+        ->name('heavy.pipeline')
+        ->middleware([
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware01::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware02::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware03::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware04::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware05::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware06::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware07::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware08::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware09::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware10::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware11::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware12::class,
+            \VoltStack\Test\Unit\TestRouteArtifactCommandBudgetMiddleware13::class,
+        ]);
+};
+PHP
+        );
+
+        $cacheCommand = new RouteCacheCommand($this->basePath);
+        $cacheOutput = new Output();
+
+        $exitCode = $cacheCommand->handle(
+            Input::fromArgv([
+                'volt',
+                'route:cache',
+            ]),
+            $cacheOutput,
+        );
+
+        self::assertSame(0, $exitCode);
+        self::assertStringContainsString('Advertencias del pipeline optimizer:', $cacheOutput->stdout());
+        self::assertStringContainsString('El pipeline de la ruta /heavy-pipeline tiene 13 middleware; considere simplificarlo.', $cacheOutput->stdout());
     }
 
     private function bootstrappedApplication(): Application
@@ -182,5 +259,13 @@ final class TestRouteArtifactCommandController
     public function show(): string
     {
         return 'cached';
+    }
+}
+
+final class TestRouteArtifactCommandPassThroughMiddleware implements \Quantum\HttpKernel\Contracts\MiddlewareInterface
+{
+    public function handle(\Quantum\Http\Request $request, \Closure $next): mixed
+    {
+        return $next($request);
     }
 }
