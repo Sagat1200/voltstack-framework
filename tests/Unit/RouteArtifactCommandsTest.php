@@ -116,7 +116,12 @@ PHP
         self::assertStringContainsString('Rutas analizadas: 1', $cacheOutput->stdout());
         self::assertStringContainsString('Pipelines unicos: 1', $cacheOutput->stdout());
         self::assertStringContainsString('Rutas reutilizando pipeline: 0', $cacheOutput->stdout());
+        self::assertStringContainsString('Pipelines singleton: 1', $cacheOutput->stdout());
+        self::assertStringContainsString('Max reutilizacion: 1 rutas por pipeline', $cacheOutput->stdout());
         self::assertStringContainsString('Pipeline mas largo: /cached-route (0 middleware)', $cacheOutput->stdout());
+        self::assertStringContainsString('Top pipelines reutilizados: 0', $cacheOutput->stdout());
+        self::assertStringContainsString('Ejemplos singleton: 1', $cacheOutput->stdout());
+        self::assertStringContainsString('  - /cached-route', $cacheOutput->stdout());
 
         $manifest = file_get_contents($manager->paths()['frontend-manifest']);
 
@@ -213,6 +218,34 @@ PHP
         self::assertSame(0, $exitCode);
         self::assertStringContainsString('Advertencias del pipeline optimizer:', $cacheOutput->stdout());
         self::assertStringContainsString('El pipeline de la ruta /heavy-pipeline tiene 13 middleware; considere simplificarlo.', $cacheOutput->stdout());
+    }
+
+    public function test_route_cache_optimizer_only_emits_the_optimizer_report_without_writing_artifacts(): void
+    {
+        $cacheCommand = new RouteCacheCommand($this->basePath);
+        $cacheOutput = new Output();
+
+        $exitCode = $cacheCommand->handle(
+            Input::fromArgv([
+                'volt',
+                'route:cache',
+                '--optimizer-only',
+            ]),
+            $cacheOutput,
+        );
+
+        self::assertSame(0, $exitCode);
+        self::assertStringContainsString('Pipeline optimizer:', $cacheOutput->stdout());
+        self::assertStringContainsString('Rutas analizadas: 1', $cacheOutput->stdout());
+        self::assertStringNotContainsString('Artifacts de rutas compilados correctamente.', $cacheOutput->stdout());
+        self::assertStringNotContainsString('[collection]', $cacheOutput->stdout());
+
+        $app = $this->bootstrappedApplication();
+        $manager = $app->make(RouteArtifactManager::class);
+
+        foreach ($manager->paths() as $path) {
+            self::assertFileDoesNotExist($path);
+        }
     }
 
     private function bootstrappedApplication(): Application

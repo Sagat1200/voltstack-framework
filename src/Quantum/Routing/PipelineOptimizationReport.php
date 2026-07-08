@@ -6,13 +6,14 @@ namespace Quantum\Routing;
 
 final class PipelineOptimizationReport
 {
-    /**
-     * @param array<int, string> $warnings
-     */
     public function __construct(
         private readonly int $totalRoutes,
         private readonly int $uniquePipelines,
         private readonly int $sharedRouteCount,
+        private readonly int $singletonPipelines,
+        private readonly int $maxPipelineReuse,
+        private readonly array $topReusedPipelines,
+        private readonly array $singletonRouteExamples,
         private readonly ?string $longestRouteUri,
         private readonly int $longestPipelineLength,
         private readonly array $warnings,
@@ -33,6 +34,26 @@ final class PipelineOptimizationReport
         return $this->sharedRouteCount;
     }
 
+    public function singletonPipelines(): int
+    {
+        return $this->singletonPipelines;
+    }
+
+    public function maxPipelineReuse(): int
+    {
+        return $this->maxPipelineReuse;
+    }
+
+    public function topReusedPipelines(): array
+    {
+        return $this->topReusedPipelines;
+    }
+
+    public function singletonRouteExamples(): array
+    {
+        return $this->singletonRouteExamples;
+    }
+
     public function longestRouteUri(): ?string
     {
         return $this->longestRouteUri;
@@ -43,9 +64,6 @@ final class PipelineOptimizationReport
         return $this->longestPipelineLength;
     }
 
-    /**
-     * @return array<int, string>
-     */
     public function warnings(): array
     {
         return $this->warnings;
@@ -56,4 +74,3 @@ final class PipelineOptimizationReport
         return $this->warnings !== [];
     }
 }
-

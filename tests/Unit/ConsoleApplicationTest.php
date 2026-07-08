@@ -97,7 +97,7 @@ final class ConsoleApplicationTest extends TestCase
 
         self::assertSame(0, $exitCode);
         self::assertStringContainsString('Command: route:cache', $output->stdout());
-        self::assertStringContainsString('Usage: php volt route:cache [--verbose]', $output->stdout());
+        self::assertStringContainsString('Usage: php volt route:cache [--verbose] [--optimizer-only]', $output->stdout());
         self::assertStringContainsString('Aliases: routes:cache', $output->stdout());
     }
 

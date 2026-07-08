@@ -572,6 +572,9 @@ Primer corte recomendado:
 - `[x]` mantener aislamiento para stacks no cacheables como `Closure` u objetos middleware ya instanciados
 - `[x]` cubrir con pruebas la deduplicacion de pipelines compartidos en modo vivo y con artifacts
 - `[x]` evaluar una siguiente capa de optimizer con diagnosticos o budgets de longitud de pipeline durante compilacion
+- `[x]` emitir advertencias por fragmentacion (poca reutilizacion) del pipeline durante `route:cache`
+- `[x]` emitir un ranking (top pipelines reutilizados + ejemplos singleton) durante `route:cache --verbose`
+- `[x]` agregar `route:cache --optimizer-only` para imprimir solo diagnosticos sin escribir artifacts
 
 Criterio de cierre del primer corte:
 
@@ -666,6 +669,9 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[2026-07-06]` quinto corte de `8.2 Route Component System`: rutas a componente ya son compatibles con `route()` y `signed_route()`, incluyendo middleware `signed` y navegacion Volt con `error.reason=security.invalid_signature` cuando la firma es invalida; suite en verde con `357 tests` y `1542 assertions`
 - `[2026-07-06]` primer corte de `8.3 Pipeline Optimizer`: `CompiledMiddlewarePipeline` ahora reutiliza instancias compartidas para stacks serializables con la misma firma, las rutas vivas y `pipeline.php` convergen al mismo objeto compilado, y los stacks no cacheables conservan aislamiento; suite en verde tras ampliar cobertura del optimizer
 - `[2026-07-06]` segundo corte de `8.3 Pipeline Optimizer`: `route:cache` ahora emite un reporte de optimizer con conteo de rutas, pipelines unicos, reutilizacion y presupuesto de longitud maxima; cuando una ruta supera el budget recomendado (`12` middlewares), la compilacion proyecta una advertencia explicita sin bloquear la generacion de artifacts
+- `[2026-07-06]` tercer corte de `8.3 Pipeline Optimizer`: el reporte del optimizer ahora incluye pipelines singleton y max reutilizacion, y emite advertencias por fragmentacion cuando no existe reutilizacion significativa de pipelines a partir de un umbral de rutas
+- `[2026-07-06]` cuarto corte de `8.3 Pipeline Optimizer`: `route:cache --verbose` ahora imprime un ranking de pipelines mas reutilizados (con ejemplo de ruta) y una muestra acotada de rutas singleton para guiar refactors sin abrir un budget system completo
+- `[2026-07-06]` quinto corte de `8.3 Pipeline Optimizer`: `route:cache --optimizer-only` imprime el reporte completo del optimizer sin escribir artifacts, para diagnostico rapido en CI o en desarrollo
 
 ### 2026-06
 

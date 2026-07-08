@@ -109,12 +109,93 @@ final class PipelineArtifactStoreTest extends TestCase
         self::assertSame(1, $report->totalRoutes());
         self::assertSame(1, $report->uniquePipelines());
         self::assertSame(0, $report->sharedRouteCount());
+        self::assertSame(1, $report->singletonPipelines());
+        self::assertSame(1, $report->maxPipelineReuse());
+        self::assertSame([], $report->topReusedPipelines());
+        self::assertSame(['/budget-warning'], $report->singletonRouteExamples());
         self::assertSame('/budget-warning', $report->longestRouteUri());
         self::assertSame(13, $report->longestPipelineLength());
         self::assertTrue($report->hasWarnings());
         self::assertSame([
             'El pipeline de la ruta /budget-warning tiene 13 middleware; considere simplificarlo.',
         ], $report->warnings());
+    }
+
+    public function test_it_emits_fragmentation_warnings_when_there_is_no_pipeline_reuse_across_many_routes(): void
+    {
+        $router = $this->app->make(Router::class);
+
+        $middlewares = [
+            TestArtifactMiddleware01::class,
+            TestArtifactMiddleware02::class,
+            TestArtifactMiddleware03::class,
+            TestArtifactMiddleware04::class,
+            TestArtifactMiddleware05::class,
+            TestArtifactMiddleware06::class,
+            TestArtifactMiddleware07::class,
+            TestArtifactMiddleware08::class,
+            TestArtifactMiddleware09::class,
+            TestArtifactMiddleware10::class,
+        ];
+
+        foreach ($middlewares as $index => $middleware) {
+            $router->get('/fragmentation-' . ($index + 1), TestArtifactPipelineController::class . '@show')
+                ->name('fragmentation.' . ($index + 1))
+                ->middleware([$middleware]);
+        }
+
+        $report = $this->app->make(PipelineArtifactStore::class)->optimizationReport($router);
+
+        self::assertSame(10, $report->totalRoutes());
+        self::assertSame(10, $report->uniquePipelines());
+        self::assertSame(0, $report->sharedRouteCount());
+        self::assertSame(10, $report->singletonPipelines());
+        self::assertSame(1, $report->maxPipelineReuse());
+        self::assertSame([], $report->topReusedPipelines());
+        self::assertSame([
+            '/fragmentation-1',
+            '/fragmentation-10',
+            '/fragmentation-2',
+            '/fragmentation-3',
+            '/fragmentation-4',
+        ], $report->singletonRouteExamples());
+        self::assertTrue($report->hasWarnings());
+        self::assertSame([
+            'No hay reutilizacion de pipelines: 10 rutas, 10 pipelines unicos.',
+            'Fragmentacion alta de pipelines: 10 de 10 pipelines se usan una sola vez.',
+        ], $report->warnings());
+    }
+
+    public function test_it_ranks_top_reused_pipelines(): void
+    {
+        $router = $this->app->make(Router::class);
+
+        foreach (range(1, 10) as $index) {
+            $router->get('/reused-a-' . $index, TestArtifactPipelineController::class . '@show')
+                ->name('reused.a.' . $index)
+                ->middleware([TestArtifactMiddleware01::class]);
+        }
+
+        foreach (range(1, 10) as $index) {
+            $router->get('/reused-b-' . $index, TestArtifactPipelineController::class . '@show')
+                ->name('reused.b.' . $index)
+                ->middleware([TestArtifactMiddleware02::class]);
+        }
+
+        $report = $this->app->make(PipelineArtifactStore::class)->optimizationReport($router);
+
+        self::assertSame(20, $report->totalRoutes());
+        self::assertSame(2, $report->uniquePipelines());
+        self::assertSame(18, $report->sharedRouteCount());
+        self::assertSame(0, $report->singletonPipelines());
+        self::assertSame(10, $report->maxPipelineReuse());
+        self::assertCount(2, $report->topReusedPipelines());
+        self::assertSame('/reused-a-1', $report->topReusedPipelines()[0]['example']);
+        self::assertSame(10, $report->topReusedPipelines()[0]['routes']);
+        self::assertSame('/reused-b-1', $report->topReusedPipelines()[1]['example']);
+        self::assertSame(10, $report->topReusedPipelines()[1]['routes']);
+        self::assertSame([], $report->singletonRouteExamples());
+        self::assertFalse($report->hasWarnings());
     }
 
     private function removeDirectory(string $directory): void
@@ -169,3 +250,11 @@ final class TestArtifactMiddleware10 extends TestArtifactMiddleware {}
 final class TestArtifactMiddleware11 extends TestArtifactMiddleware {}
 final class TestArtifactMiddleware12 extends TestArtifactMiddleware {}
 final class TestArtifactMiddleware13 extends TestArtifactMiddleware {}
+
+final class TestArtifactPipelineController
+{
+    public function show(): string
+    {
+        return 'ok';
+    }
+}

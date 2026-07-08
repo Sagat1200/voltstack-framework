@@ -11,6 +11,10 @@ final class PipelineArtifactStore
 {
     private const ARTIFACT_VERSION = 1;
     private const RECOMMENDED_MAX_PIPELINE_LENGTH = 12;
+    private const MIN_ROUTES_FOR_FRAGMENTATION_WARNING = 10;
+    private const FRAGMENTATION_SINGLETON_RATIO_WARNING = 0.8;
+    private const TOP_REUSED_PIPELINES_LIMIT = 5;
+    private const SINGLETON_ROUTE_EXAMPLES_LIMIT = 5;
 
     public function __construct(
         private readonly Application $app,
@@ -60,6 +64,7 @@ final class PipelineArtifactStore
         );
 
         $pipelineUsage = [];
+        $pipelineSamples = [];
         $longestRouteUri = null;
         $longestPipelineLength = 0;
         $analyzedRoutes = 0;
@@ -72,6 +77,7 @@ final class PipelineArtifactStore
             $analyzedRoutes++;
             $pipeline = $route->routePipeline();
             $pipelineUsage[$pipeline->id()] = ($pipelineUsage[$pipeline->id()] ?? 0) + 1;
+            $pipelineSamples[$pipeline->id()] ??= $route->uri();
 
             $pipelineLength = count($pipeline->middlewares());
 
@@ -85,7 +91,20 @@ final class PipelineArtifactStore
 
         $totalRoutes = $analyzedRoutes;
         $uniquePipelines = count($pipelineUsage);
+        $singletonPipelines = 0;
+        $maxPipelineReuse = 0;
         $warnings = [];
+
+        foreach ($pipelineUsage as $count) {
+            $maxPipelineReuse = max($maxPipelineReuse, (int) $count);
+
+            if ($count === 1) {
+                $singletonPipelines++;
+            }
+        }
+
+        $topReusedPipelines = $this->topReusedPipelines($pipelineUsage, $pipelineSamples);
+        $singletonRouteExamples = $this->singletonRouteExamples($pipelineUsage, $pipelineSamples);
 
         if ($longestRouteUri !== null && $longestPipelineLength > self::RECOMMENDED_MAX_PIPELINE_LENGTH) {
             $warnings[] = sprintf(
@@ -95,10 +114,34 @@ final class PipelineArtifactStore
             );
         }
 
+        if ($totalRoutes >= self::MIN_ROUTES_FOR_FRAGMENTATION_WARNING && $uniquePipelines > 0) {
+            if ($uniquePipelines === $totalRoutes) {
+                $warnings[] = sprintf(
+                    'No hay reutilizacion de pipelines: %d rutas, %d pipelines unicos.',
+                    $totalRoutes,
+                    $uniquePipelines,
+                );
+            }
+
+            $singletonRatio = $singletonPipelines / $uniquePipelines;
+
+            if ($singletonRatio >= self::FRAGMENTATION_SINGLETON_RATIO_WARNING) {
+                $warnings[] = sprintf(
+                    'Fragmentacion alta de pipelines: %d de %d pipelines se usan una sola vez.',
+                    $singletonPipelines,
+                    $uniquePipelines,
+                );
+            }
+        }
+
         return new PipelineOptimizationReport(
             $totalRoutes,
             $uniquePipelines,
             max(0, $totalRoutes - $uniquePipelines),
+            $singletonPipelines,
+            $maxPipelineReuse,
+            $topReusedPipelines,
+            $singletonRouteExamples,
             $longestRouteUri,
             $longestPipelineLength,
             $warnings,
@@ -177,5 +220,51 @@ final class PipelineArtifactStore
         }
 
         return str_starts_with($route->uri(), '/_volt/');
+    }
+
+    private function topReusedPipelines(array $usage, array $samples): array
+    {
+        $candidates = [];
+
+        foreach ($usage as $id => $count) {
+            if ($count <= 1) {
+                continue;
+            }
+
+            $candidates[] = [
+                'id' => (string) $id,
+                'routes' => (int) $count,
+                'example' => (string) ($samples[$id] ?? ''),
+            ];
+        }
+
+        usort($candidates, static function (array $left, array $right): int {
+            $compare = ($right['routes'] <=> $left['routes']);
+
+            if ($compare !== 0) {
+                return $compare;
+            }
+
+            return strcmp((string) $left['id'], (string) $right['id']);
+        });
+
+        return array_slice($candidates, 0, self::TOP_REUSED_PIPELINES_LIMIT);
+    }
+
+    private function singletonRouteExamples(array $usage, array $samples): array
+    {
+        $routes = [];
+
+        foreach ($usage as $id => $count) {
+            if ($count !== 1) {
+                continue;
+            }
+
+            $routes[] = (string) ($samples[$id] ?? '');
+        }
+
+        sort($routes);
+
+        return array_slice($routes, 0, self::SINGLETON_ROUTE_EXAMPLES_LIMIT);
     }
 }
