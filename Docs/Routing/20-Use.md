@@ -86,6 +86,27 @@ Recomendacion practica:
 - usa el estilo con fachada cuando quieras un archivo de rutas mas declarativo
 - usa el estilo con `Router $router` cuando necesites inyeccion explicita o prefieras dejar claro el dependency flow
 
+### 3.1 Operacion De Artifacts De Routing
+
+Cuando quieras congelar el estado compilado del router para `production`, usar:
+
+```bash
+php volt route:cache
+```
+
+Variantes utiles:
+
+- `php volt route:cache --verbose` imprime cada artifact generado y tambien el reporte del `pipeline optimizer`
+- `php volt route:cache --optimizer-only` imprime solo el diagnostico del `pipeline optimizer` sin escribir artifacts
+- `php volt route:clear` elimina `collection.php`, `tree.php`, `metadata.php`, `pipeline.php`, `version.php` y `frontend-manifest.json`
+
+Lectura practica del optimizer:
+
+- `Rutas analizadas` cuenta solo rutas publicas de la app, no endpoints internos `/_volt/*`
+- `Pipelines unicos` y `Rutas reutilizando pipeline` ayudan a detectar cuanto comparte realmente el runtime
+- `Pipelines singleton`, `Top pipelines reutilizados` y `Ejemplos singleton` ayudan a ubicar fragmentacion
+- las advertencias actuales no bloquean la compilacion; son diagnostico para refactor o consolidacion del pipeline
+
 ---
 
 ## 4. API Basica

@@ -590,7 +590,7 @@ No iniciar estos bloques antes de cerrar `V1` y `V2`:
 - `[ ]` `Multi-Tenant Routing` completo
 - `[ ]` adaptive matching engine
 - `[ ]` compiler plugins completos
-- `[ ]` pipeline optimizer
+- `[x]` pipeline optimizer
 - `[ ]` performance budget system
 - `[ ]` manifests negociados por runtime adapter
 - `[ ]` overlays por tenant
@@ -627,14 +627,15 @@ Seguir este orden de trabajo:
 12. `[x]` `SPA Routing Protocol` minimo
 13. `[x]` consolidacion del router actual sobre framework, tests, skeleton y documentacion
 14. `[x]` `Route Component System`
-15. `[ ]` `pipeline optimizer`
+15. `[x]` `pipeline optimizer`
 16. `[ ]` `Multi-Tenant Routing`
 
 Estado real del corte actual:
 
 - `V1 Core Routing`, `V1.1` y el bloque SPA minimo (`7.1`, `7.2`, `7.3`) ya quedaron cerrados
 - la fase corta de consolidacion del router actual ya quedo cerrada sobre framework, tests, skeleton y documentacion
-- el siguiente bloque funcional recomendado pasa a ser `pipeline optimizer`
+- `pipeline optimizer` ya quedo cerrado como bloque funcional
+- el siguiente bloque funcional recomendado pasa a ser `Multi-Tenant Routing`
 
 ---
 
@@ -672,6 +673,7 @@ Usar esta seccion para registrar hitos reales conforme se vayan cerrando bloques
 - `[2026-07-06]` tercer corte de `8.3 Pipeline Optimizer`: el reporte del optimizer ahora incluye pipelines singleton y max reutilizacion, y emite advertencias por fragmentacion cuando no existe reutilizacion significativa de pipelines a partir de un umbral de rutas
 - `[2026-07-06]` cuarto corte de `8.3 Pipeline Optimizer`: `route:cache --verbose` ahora imprime un ranking de pipelines mas reutilizados (con ejemplo de ruta) y una muestra acotada de rutas singleton para guiar refactors sin abrir un budget system completo
 - `[2026-07-06]` quinto corte de `8.3 Pipeline Optimizer`: `route:cache --optimizer-only` imprime el reporte completo del optimizer sin escribir artifacts, para diagnostico rapido en CI o en desarrollo
+- `[2026-07-06]` cierre formal de `15. pipeline optimizer`: el checklist operativo y el orden recomendado quedan alineados con el estado real; el siguiente bloque sugerido pasa a ser `Multi-Tenant Routing`
 
 ### 2026-06
 
