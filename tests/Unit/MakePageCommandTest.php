@@ -38,7 +38,10 @@ use Quantum\Config\ConfigRepository;
 use VoltStack\Framework\Application;
 
 \$app = new Application({$escapedBasePath});
-\$app->make(ConfigRepository::class)->set('ui-reactive.single_page_components', {$escapedPagesPath});
+\$app->make(ConfigRepository::class)->set('ui-reactive.single_page_components', [
+    'App\\\\VoltPages' => {$escapedPagesPath},
+    'VoltStack\\\\SPALab\\\\Pages' => {$escapedBasePath} . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'voltstack' . DIRECTORY_SEPARATOR . 'spa-lab' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages',
+]);
 
 return \$app;
 PHP

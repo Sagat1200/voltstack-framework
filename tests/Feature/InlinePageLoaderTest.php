@@ -19,6 +19,7 @@ final class InlinePageLoaderTest extends TestCase
 
         $this->basePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'voltstack-inline-page-' . uniqid('', true);
         mkdir($this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages', 0777, true);
+        mkdir($this->basePath . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'voltstack' . DIRECTORY_SEPARATOR . 'spa-lab' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages' . DIRECTORY_SEPARATOR . 'Focus', 0777, true);
         mkdir($this->basePath . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views', 0777, true);
 
         file_put_contents(
@@ -35,6 +36,28 @@ use VoltStack\Runtime\Component\Component;
 final class HelloPage extends Component
 {
     public string $title = 'Inline Hello';
+}
+?>
+<section>
+    <h1>{{ $title }}</h1>
+</section>
+PHP
+        );
+
+        file_put_contents(
+            $this->basePath . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'voltstack' . DIRECTORY_SEPARATOR . 'spa-lab' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages' . DIRECTORY_SEPARATOR . 'Focus' . DIRECTORY_SEPARATOR . 'FocusAltPage.php',
+            <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace VoltStack\SPALab\Pages\Focus;
+
+use VoltStack\Runtime\Component\Component;
+
+final class FocusAltPage extends Component
+{
+    public string $title = 'Focus Alt';
 }
 ?>
 <section>
@@ -69,6 +92,25 @@ PHP
         self::assertStringContainsString('<h1>Inline Hello</h1>', $html);
         self::assertStringContainsString('data-volt-root="true"', $html);
         self::assertStringNotContainsString('<script', $html);
+    }
+
+    public function test_it_loads_an_inline_page_from_an_explicit_namespace_mapping_without_leaking_output(): void
+    {
+        $app = new Application($this->basePath);
+        $app->make(ConfigRepository::class)->set('ui-reactive.single_page_components', [
+            'App\\Pages' => $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages',
+            'VoltStack\\SPALab\\Pages' => $this->basePath . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'voltstack' . DIRECTORY_SEPARATOR . 'spa-lab' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages',
+        ]);
+
+        ob_start();
+        $component = $app->make(ComponentManager::class)->mount('VoltStack\\SPALab\\Pages\\Focus\\FocusAltPage');
+        $autoloadOutput = ob_get_clean();
+
+        $html = $app->make(ComponentManager::class)->renderRoot($component);
+
+        self::assertSame('', $autoloadOutput);
+        self::assertStringContainsString('<h1>Focus Alt</h1>', $html);
+        self::assertStringContainsString('data-volt-root="true"', $html);
     }
 
     private function deleteDirectory(string $path): void

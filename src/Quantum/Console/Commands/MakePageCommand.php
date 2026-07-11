@@ -146,6 +146,24 @@ final class MakePageCommand extends Command
 
         $configured = $app->config('ui-reactive.single_page_components');
 
+        if (is_array($configured) && $configured !== []) {
+            foreach ($configured as $namespace => $directory) {
+                if (! is_string($directory) || trim($directory) === '') {
+                    continue;
+                }
+
+                if (is_string($namespace) && str_starts_with(trim($namespace, '\\ '), 'App')) {
+                    return $this->normalizeDirectory($directory);
+                }
+            }
+
+            foreach ($configured as $directory) {
+                if (is_string($directory) && trim($directory) !== '') {
+                    return $this->normalizeDirectory($directory);
+                }
+            }
+        }
+
         if (! is_string($configured) || trim($configured) === '') {
             return $this->basePath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Pages';
         }

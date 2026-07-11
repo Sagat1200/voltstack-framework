@@ -62,114 +62,149 @@ final class InlinePageLoader
 
         $separator = strpos($contents, '?>');
 
-        if ($separator === false) {
-            return;
-        }
+if ($separator === false) {
+return;
+}
 
-        $php = substr($contents, 0, $separator);
-        $template = substr($contents, $separator + 2);
+$php = substr($contents, 0, $separator);
+$template = substr($contents, $separator + 2);
 
-        if ($php === false || $template === false) {
-            return;
-        }
+if ($php === false || $template === false) {
+return;
+}
 
-        $compiledPath = $this->compiledPath($file, $php);
-        $directory = dirname($compiledPath);
+$compiledPath = $this->compiledPath($file, $php);
+$directory = dirname($compiledPath);
 
-        if (! is_dir($directory)) {
-            mkdir($directory, 0777, true);
-        }
+if (! is_dir($directory)) {
+mkdir($directory, 0777, true);
+}
 
-        if (! is_file($compiledPath)) {
-            file_put_contents($compiledPath, rtrim($php) . PHP_EOL);
-        }
+if (! is_file($compiledPath)) {
+file_put_contents($compiledPath, rtrim($php) . PHP_EOL);
+}
 
-        require $compiledPath;
+require $compiledPath;
 
-        if (! class_exists($class, false)) {
-            return;
-        }
+if (! class_exists($class, false)) {
+return;
+}
 
-        $trimmedTemplate = ltrim($template, "\r\n");
+$trimmedTemplate = ltrim($template, "\r\n");
 
-        if (trim($trimmedTemplate) !== '') {
-            $this->templates[$class] = $trimmedTemplate;
-        }
+if (trim($trimmedTemplate) !== '') {
+$this->templates[$class] = $trimmedTemplate;
+}
 
-        $this->sourceFiles[$class] = $file;
+$this->sourceFiles[$class] = $file;
+}
+
+private function fileForClass(string $class): ?string
+{
+foreach ($this->namespaceAndDirectories() as ['namespace' => $namespace, 'directory' => $directory]) {
+if (! str_starts_with($class, $namespace . '\\') && $class !== $namespace) {
+continue;
+}
+
+$relative = $class === $namespace
+? ''
+: substr($class, strlen($namespace) + 1);
+
+$path = $directory;
+
+if ($relative !== '') {
+$path .= DIRECTORY_SEPARATOR . str_replace('\\', DIRECTORY_SEPARATOR, $relative);
+}
+
+return $path . '.php';
+}
+
+return null;
+}
+
+/**
+* @return array<int, array{namespace: string, directory: string}>
+    */
+    private function namespaceAndDirectories(): array
+    {
+    $configured = $this->app->config('ui-reactive.single_page_components');
+
+    if (is_array($configured) && $configured !== []) {
+    $resolved = [];
+
+    foreach ($configured as $namespace => $directory) {
+    if (! is_string($directory) || trim($directory) === '') {
+    continue;
     }
 
-    private function fileForClass(string $class): ?string
-    {
-        [$namespace, $directory] = $this->namespaceAndDirectory();
+    $resolved[] = is_string($namespace) && trim($namespace) !== ''
+    ? [
+    'namespace' => trim($namespace, '\\ '),
+    'directory' => $this->normalizeDirectory($directory),
+    ]
+    : $this->resolveDirectoryMapping($directory);
+    }
 
-        if (! str_starts_with($class, $namespace . '\\') && $class !== $namespace) {
-            return null;
-        }
+    if ($resolved !== []) {
+    return $resolved;
+    }
+    }
 
-        $relative = $class === $namespace
-            ? ''
-            : substr($class, strlen($namespace) + 1);
+    $directory = is_string($configured) && trim($configured) !== ''
+    ? $this->normalizeDirectory($configured)
+    : $this->app->basePath('app/Pages');
 
-        $path = $directory;
-
-        if ($relative !== '') {
-            $path .= DIRECTORY_SEPARATOR . str_replace('\\', DIRECTORY_SEPARATOR, $relative);
-        }
-
-        return $path . '.php';
+    return [$this->resolveDirectoryMapping($directory)];
     }
 
     /**
-     * @return array{0: string, 1: string}
-     */
-    private function namespaceAndDirectory(): array
+    * @return array{namespace: string, directory: string}
+    */
+    private function resolveDirectoryMapping(string $directory): array
     {
-        $configured = $this->app->config('ui-reactive.single_page_components');
-        $directory = is_string($configured) && trim($configured) !== ''
-            ? $this->normalizeDirectory($configured)
-            : $this->app->basePath('app/Pages');
+    $directory = $this->normalizeDirectory($directory);
+    $baseAppPath = $this->normalizeDirectory($this->app->basePath('app'));
+    $namespace = 'App\\Pages';
 
-        $baseAppPath = $this->normalizeDirectory($this->app->basePath('app'));
+    if (str_starts_with($directory, $baseAppPath)) {
+    $relative = trim(substr($directory, strlen($baseAppPath)), '\\/');
+    $namespace = 'App';
 
-        if (str_starts_with($directory, $baseAppPath)) {
-            $relative = trim(substr($directory, strlen($baseAppPath)), '\\/');
-            $namespace = 'App';
+    if ($relative !== '') {
+    $namespace .= '\\' . str_replace(['/', '\\'], '\\', $relative);
+    }
+    }
 
-            if ($relative !== '') {
-                $namespace .= '\\' . str_replace(['/', '\\'], '\\', $relative);
-            }
-
-            return [$namespace, $directory];
-        }
-
-        return ['App\\Pages', $directory];
+    return [
+    'namespace' => $namespace,
+    'directory' => $directory,
+    ];
     }
 
     private function normalizeDirectory(string $path): string
     {
-        $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+    $normalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
 
-        if ($this->isAbsolutePath($normalized)) {
-            return rtrim($normalized, '\\/');
-        }
+    if ($this->isAbsolutePath($normalized)) {
+    return rtrim($normalized, '\\/');
+    }
 
-        return rtrim($this->app->basePath($normalized), '\\/');
+    return rtrim($this->app->basePath($normalized), '\\/');
     }
 
     private function isAbsolutePath(string $path): bool
     {
-        return preg_match('/^[A-Za-z]:\\\\/', $path) === 1
-            || str_starts_with($path, DIRECTORY_SEPARATOR);
+    return preg_match('/^[A-Za-z]:\\\\/', $path) === 1
+    || str_starts_with($path, DIRECTORY_SEPARATOR);
     }
 
     private function compiledPath(string $file, string $php): string
     {
-        $basePath = $this->app->config('cache.compiled.pages', $this->app->cachePath('compiled/pages'));
+    $basePath = $this->app->config('cache.compiled.pages', $this->app->cachePath('compiled/pages'));
 
-        return rtrim((string) $basePath, '\\/')
-            . DIRECTORY_SEPARATOR
-            . sha1($file . '|' . $php)
-            . '.php';
+    return rtrim((string) $basePath, '\\/')
+    . DIRECTORY_SEPARATOR
+    . sha1($file . '|' . $php)
+    . '.php';
     }
-}
+    }
