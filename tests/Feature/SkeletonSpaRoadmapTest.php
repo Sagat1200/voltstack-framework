@@ -217,6 +217,30 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $runtimeAsset->content());
     }
 
+    public function test_runtime_source_reads_wrapped_component_document_meta_from_the_full_parsed_document(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '13-state-sync-navigation.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($navigationSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('typeof doc.querySelector === "function"', $navigationSource);
+        self::assertStringContainsString('? doc.querySelector(selector)', $navigationSource);
+        self::assertStringContainsString('typeof doc.querySelector === "function"', $runtimeAsset->content());
+        self::assertStringContainsString('? doc.querySelector(selector)', $runtimeAsset->content());
+    }
+
     public function test_runtime_source_keeps_spa_navigation_on_get_and_protocol_actions_on_post(): void
     {
         $frameworkBasePath = self::$skeletonBasePath

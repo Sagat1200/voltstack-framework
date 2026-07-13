@@ -406,26 +406,17 @@
   }
 
   function navigationCacheControlForDocument(doc) {
-    if (!doc || !doc.head || typeof doc.head.querySelector !== "function") {
+    if (!doc || typeof doc !== "object") {
       return parseNavigationCacheControl("", "default");
     }
 
-    for (
-      let index = 0;
-      index < NAVIGATION_CACHE_CONTROL_META_NAMES.length;
-      index += 1
-    ) {
-      const name = NAVIGATION_CACHE_CONTROL_META_NAMES[index];
-      const meta = doc.head.querySelector(
-        'meta[name="' + cssEscape(name) + '"]',
-      );
+    const declaredMeta = firstDocumentMetaValue(
+      doc,
+      NAVIGATION_CACHE_CONTROL_META_NAMES,
+    );
 
-      if (meta) {
-        return parseNavigationCacheControl(
-          meta.getAttribute("content") || "",
-          "document",
-        );
-      }
+    if (declaredMeta !== null) {
+      return parseNavigationCacheControl(declaredMeta, "document");
     }
 
     return parseNavigationCacheControl("", "default");
@@ -538,24 +529,10 @@
       return parseNavigationMode("", "default");
     }
 
-    if (doc.head && typeof doc.head.querySelector === "function") {
-      for (
-        let index = 0;
-        index < NAVIGATION_MODE_META_NAMES.length;
-        index += 1
-      ) {
-        const name = NAVIGATION_MODE_META_NAMES[index];
-        const meta = doc.head.querySelector(
-          'meta[name="' + cssEscape(name) + '"]',
-        );
+    const declaredMeta = firstDocumentMetaValue(doc, NAVIGATION_MODE_META_NAMES);
 
-        if (meta) {
-          return parseNavigationMode(
-            meta.getAttribute("content") || "",
-            "document",
-          );
-        }
-      }
+    if (declaredMeta !== null) {
+      return parseNavigationMode(declaredMeta, "document");
     }
 
     if (doc.body && typeof doc.body.getAttribute === "function") {
@@ -727,20 +704,20 @@
   }
 
   function firstDocumentMetaValue(doc, names) {
-    if (
-      !doc ||
-      !doc.head ||
-      typeof doc.head.querySelector !== "function" ||
-      !Array.isArray(names)
-    ) {
+    if (!doc || typeof doc !== "object" || !Array.isArray(names)) {
       return null;
     }
 
     for (let index = 0; index < names.length; index += 1) {
       const name = names[index];
-      const meta = doc.head.querySelector(
-        'meta[name="' + cssEscape(name) + '"]',
-      );
+      const selector = 'meta[name="' + cssEscape(name) + '"]';
+      const meta =
+        (doc.head && typeof doc.head.querySelector === "function"
+          ? doc.head.querySelector(selector)
+          : null) ||
+        (typeof doc.querySelector === "function"
+          ? doc.querySelector(selector)
+          : null);
 
       if (meta) {
         return meta.getAttribute("content") || "";
@@ -1159,24 +1136,13 @@
       return parseFragmentControl("", "default");
     }
 
-    if (doc.head && typeof doc.head.querySelector === "function") {
-      for (
-        let index = 0;
-        index < NAVIGATION_FRAGMENT_CONTROL_META_NAMES.length;
-        index += 1
-      ) {
-        const name = NAVIGATION_FRAGMENT_CONTROL_META_NAMES[index];
-        const meta = doc.head.querySelector(
-          'meta[name="' + cssEscape(name) + '"]',
-        );
+    const declaredMeta = firstDocumentMetaValue(
+      doc,
+      NAVIGATION_FRAGMENT_CONTROL_META_NAMES,
+    );
 
-        if (meta) {
-          return parseFragmentControl(
-            meta.getAttribute("content") || "",
-            "document",
-          );
-        }
-      }
+    if (declaredMeta !== null) {
+      return parseFragmentControl(declaredMeta, "document");
     }
 
     if (doc.body && typeof doc.body.getAttribute === "function") {
