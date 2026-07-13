@@ -42,6 +42,66 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('volt:navigate', $response->content());
     }
 
+    public function test_home_screen_is_spa_capable_from_first_render(): void
+    {
+        $response = $this->handleSkeletonRequest('/');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('VoltStack Framework', $response->content());
+        self::assertStringContainsString('href="/spaReactive"', $response->content());
+        self::assertStringContainsString('volt:navigate', $response->content());
+        self::assertStringContainsString('data-volt-document="spa"', $response->content());
+        self::assertStringContainsString('data-volt-navigation-mode="auto"', $response->content());
+        self::assertStringContainsString('data-volt-layout="app"', $response->content());
+        self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
+        self::assertMatchesRegularExpression('/<script data-volt-runtime="true" src="\/_volt\/runtime\.js\?v=\d+" defer><\/script>/', $response->content());
+    }
+
+    public function test_home_first_click_target_emits_spa_navigation_payload(): void
+    {
+        $home = $this->handleSkeletonRequest('/');
+        $navigation = $this->handleSkeletonNavigationRequest('/spaReactive');
+        $payload = $this->decodeNavigationPayload($navigation);
+
+        self::assertSame(200, $home->statusCode(), $home->content());
+        self::assertStringContainsString('href="/spaReactive"', $home->content());
+        self::assertStringContainsString('volt:navigate', $home->content());
+
+        self::assertSame(200, $navigation->statusCode(), $navigation->content());
+        self::assertSame('/spaReactive', $payload['navigation']['target'] ?? null);
+        self::assertSame('spaReactive', $payload['screen']['route'] ?? null);
+        self::assertArrayHasKey('policy', $payload);
+        self::assertNull($payload['redirect'] ?? null);
+        self::assertNull($payload['error'] ?? null);
+    }
+
+    public function test_traditional_controller_view_can_embed_an_interactive_island(): void
+    {
+        $response = $this->handleSkeletonRequest('/islandExample');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Controller + View + Isla Interactiva', $response->content());
+        self::assertStringContainsString('data-volt-root="true"', $response->content());
+        self::assertStringContainsString('data-volt-component="App\\View\\Components\\IslandCounter"', $response->content());
+        self::assertStringContainsString('volt:click="increment"', $response->content());
+        self::assertStringContainsString('data-volt-layout="app"', $response->content());
+        self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
+        self::assertStringContainsString(
+            '&quot;meta&quot;:{&quot;route&quot;:{&quot;name&quot;:&quot;islandExample&quot;',
+            $response->content(),
+        );
+    }
+
+    public function test_island_example_emits_spa_navigation_payload(): void
+    {
+        $navigation = $this->handleSkeletonNavigationRequest('/islandExample');
+        $payload = $this->decodeNavigationPayload($navigation);
+
+        self::assertSame(200, $navigation->statusCode(), $navigation->content());
+        self::assertSame('/islandExample', $payload['navigation']['target'] ?? null);
+        self::assertSame('islandExample', $payload['screen']['route'] ?? null);
+    }
+
     public function test_routing_lab_navigation_payload_exposes_reload_and_redirect_contracts(): void
     {
         $reload = $this->handleSkeletonNavigationRequest('/routing-lab/reports/export');
