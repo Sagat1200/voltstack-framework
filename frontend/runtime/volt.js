@@ -10228,7 +10228,10 @@
         : null;
     const nextLayout = documentLayoutIdentity(doc) || hintedLayout;
 
-    if (!currentLayout && !nextLayout) {
+    // Un layout ausente ya no invalida por si solo la navegacion SPA.
+    // Solo hacemos fallback cuando ambos documentos declaran una identidad
+    // explicita y realmente cambian entre si.
+    if (!currentLayout || !nextLayout) {
       return false;
     }
 

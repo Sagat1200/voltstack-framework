@@ -102,6 +102,36 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertSame('islandExample', $payload['screen']['route'] ?? null);
     }
 
+    public function test_traditional_controller_view_without_layout_is_still_spa_capable(): void
+    {
+        $response = $this->handleSkeletonRequest('/noLayoutExample');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Vista Tradicional Sin Layout', $response->content());
+        self::assertStringContainsString('href="/"', $response->content());
+        self::assertStringContainsString('href="/islandExample"', $response->content());
+        self::assertStringContainsString('volt:navigate', $response->content());
+        self::assertStringContainsString('data-volt-document="spa"', $response->content());
+        self::assertStringContainsString('data-volt-navigation-mode="auto"', $response->content());
+        self::assertStringNotContainsString('data-volt-layout=', $response->content());
+        self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
+    }
+
+    public function test_no_layout_example_emits_spa_navigation_payload_without_runtime_layout_hint(): void
+    {
+        $navigation = $this->handleSkeletonNavigationRequest('/noLayoutExample');
+        $payload = $this->decodeNavigationPayload($navigation);
+
+        self::assertSame(200, $navigation->statusCode(), $navigation->content());
+        self::assertSame('/noLayoutExample', $payload['navigation']['target'] ?? null);
+        self::assertSame('noLayoutExample', $payload['screen']['route'] ?? null);
+        self::assertNull($payload['policy']['document'] ?? null);
+        self::assertNull($payload['policy']['navigation'] ?? null);
+        self::assertNull($payload['runtime']['layout'] ?? null);
+        self::assertStringContainsString('data-volt-document="spa"', $navigation->content());
+        self::assertStringContainsString('data-volt-navigation-mode="auto"', $navigation->content());
+    }
+
     public function test_routing_lab_navigation_payload_exposes_reload_and_redirect_contracts(): void
     {
         $reload = $this->handleSkeletonNavigationRequest('/routing-lab/reports/export');
@@ -239,6 +269,28 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('? doc.querySelector(selector)', $navigationSource);
         self::assertStringContainsString('typeof doc.querySelector === "function"', $runtimeAsset->content());
         self::assertStringContainsString('? doc.querySelector(selector)', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_only_falls_back_for_layout_changes_when_both_documents_declare_layouts(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationDocumentSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '42-navigation-document.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($navigationDocumentSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('if (!currentLayout || !nextLayout) {', $navigationDocumentSource);
+        self::assertStringContainsString('if (!currentLayout || !nextLayout) {', $runtimeAsset->content());
     }
 
     public function test_runtime_source_keeps_spa_navigation_on_get_and_protocol_actions_on_post(): void
