@@ -243,6 +243,70 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('Server Error', $payload['error']['message']);
     }
 
+    public function test_it_returns_a_semantic_protocol_error_when_the_component_action_does_not_exist(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveCounter::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveCounter::class,
+                'action' => 'missingAction',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(422, $response->statusCode());
+        self::assertSame('runtime.action_not_allowed', $response->headers()['X-Volt-Error-Code'] ?? null);
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('runtime.action_not_allowed', $payload['error']['code']);
+        self::assertSame(422, $payload['error']['status']);
+        self::assertSame('Component action is not allowed.', $payload['error']['message']);
+    }
+
+    public function test_it_returns_a_semantic_protocol_error_when_the_component_action_is_reserved(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveCounter::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveCounter::class,
+                'action' => 'render',
+                'params' => [],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(422, $response->statusCode());
+        self::assertSame('runtime.action_not_allowed', $response->headers()['X-Volt-Error-Code'] ?? null);
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('runtime.action_not_allowed', $payload['error']['code']);
+        self::assertSame(422, $payload['error']['status']);
+        self::assertSame('Component action is not allowed.', $payload['error']['message']);
+    }
+
     public function test_it_returns_a_semantic_protocol_error_when_component_render_fails_after_an_action(): void
     {
         $app = new Application(sys_get_temp_dir());
@@ -311,6 +375,88 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('html.replace', $payload['effects'][0]['type']);
         self::assertStringContainsString('value="VoltStack Title"', $payload['html']);
         self::assertStringContainsString('Saved: saved-from-submit', $payload['html']);
+    }
+
+    public function test_it_returns_semantic_validation_errors_when_a_reactive_form_submit_fails(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $components = $app->make(ComponentManager::class);
+        $component = $components->mount(TestReactiveFormComponent::class);
+        $snapshot = $components->dehydrate($component);
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveFormComponent::class,
+                'action' => 'save',
+                'params' => [
+                    'note' => 'should-not-save',
+                ],
+                'updates' => [
+                    'title' => 'no',
+                ],
+                'snapshot' => $snapshot->toArray(),
+            ],
+        ));
+
+        self::assertSame(422, $response->statusCode());
+        self::assertSame('runtime.validation_failed', $response->headers()['X-Volt-Error-Code'] ?? null);
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('runtime.validation_failed', $payload['error']['code']);
+        self::assertSame(422, $payload['error']['status']);
+        self::assertSame('The given data was invalid.', $payload['error']['message']);
+        self::assertSame(
+            ['The title field must be at least 3.'],
+            $payload['error']['errors']['title'] ?? null,
+        );
+    }
+
+    public function test_it_returns_validation_failed_when_the_reactive_payload_shape_is_invalid(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+
+        $response = $app->make(HttpKernel::class)->handle(Request::create(
+            '/_volt/action',
+            'POST',
+            [],
+            [
+                '_token' => $app->make(CsrfTokenManager::class)->token(),
+                'component' => TestReactiveFormComponent::class,
+                'action' => 'save',
+                'params' => 'invalid',
+                'updates' => 'invalid',
+                'snapshot' => 'invalid',
+            ],
+        ));
+
+        self::assertSame(422, $response->statusCode());
+        self::assertSame('runtime.validation_failed', $response->headers()['X-Volt-Error-Code'] ?? null);
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($response->content(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('protocol-error', $payload['error']['kind']);
+        self::assertSame('runtime.validation_failed', $payload['error']['code']);
+        self::assertSame('The given data was invalid.', $payload['error']['message']);
+        self::assertSame(
+            ['The snapshot field must be an array.'],
+            $payload['error']['errors']['snapshot'] ?? null,
+        );
+        self::assertSame(
+            ['The params field must be an array.'],
+            $payload['error']['errors']['params'] ?? null,
+        );
+        self::assertSame(
+            ['The updates field must be an array.'],
+            $payload['error']['errors']['updates'] ?? null,
+        );
     }
 
     public function test_it_allows_internal_sync_requests_to_apply_updates_without_a_public_action(): void

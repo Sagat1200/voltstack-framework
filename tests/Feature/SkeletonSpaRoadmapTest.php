@@ -75,6 +75,44 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertNull($payload['error'] ?? null);
     }
 
+    public function test_spa_reactive_entry_screen_exposes_component_navigation_targets(): void
+    {
+        $response = $this->handleSkeletonRequest('/spaReactive');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Sistema de Analisis de Runtime SPA Full Reactive', $response->content());
+        self::assertStringContainsString('href="/counterExample"', $response->content());
+        self::assertStringContainsString('href="/formExample"', $response->content());
+        self::assertStringContainsString('href="/runtimeState"', $response->content());
+        self::assertStringContainsString('data-volt-document="spa"', $response->content());
+        self::assertStringContainsString('data-volt-navigation-mode="auto"', $response->content());
+        self::assertStringContainsString('data-volt-layout="spa"', $response->content());
+        self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
+    }
+
+    public function test_cache_example_screen_renders_declared_navigation_and_invalidation_sections(): void
+    {
+        $response = $this->handleSkeletonRequest('/cacheExample');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Runtime Cache Demo', $response->content());
+        self::assertStringContainsString('Recarga controlada', $response->content());
+        self::assertStringContainsString('volt:cache-hit', $response->content());
+        self::assertStringContainsString("volt:navigation-cache-invalidate", $response->content());
+    }
+
+    public function test_request_lab_screen_exposes_explicit_abort_and_stale_controls(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeRequestLab');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Abort previous action', $response->content());
+        self::assertStringContainsString('Abort previous navigation', $response->content());
+        self::assertStringContainsString('Stale navigation', $response->content());
+        self::assertStringContainsString('volt:request-abort', $response->content());
+        self::assertStringContainsString('/runtimeRequestLabSlow', $response->content());
+    }
+
     public function test_traditional_controller_view_can_embed_an_interactive_island(): void
     {
         $response = $this->handleSkeletonRequest('/islandExample');
@@ -247,6 +285,22 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $runtimeAsset->content());
     }
 
+    public function test_skeleton_html_resolves_built_manifest_assets_when_hot_reload_is_not_active(): void
+    {
+        $manifestPath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'public'
+            . DIRECTORY_SEPARATOR . 'build'
+            . DIRECTORY_SEPARATOR . '.vite'
+            . DIRECTORY_SEPARATOR . 'manifest.json';
+        $response = $this->handleSkeletonRequest('/');
+
+        self::assertFileExists($manifestPath);
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('<link rel="stylesheet" href="/build/assets/', $response->content());
+        self::assertStringContainsString('<script type="module" src="/build/assets/', $response->content());
+        self::assertStringNotContainsString('@vite/client', $response->content());
+    }
+
     public function test_runtime_source_reads_wrapped_component_document_meta_from_the_full_parsed_document(): void
     {
         $frameworkBasePath = self::$skeletonBasePath
@@ -291,6 +345,205 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
         self::assertStringContainsString('if (!currentLayout || !nextLayout) {', $navigationDocumentSource);
         self::assertStringContainsString('if (!currentLayout || !nextLayout) {', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_handles_popstate_with_a_spa_visit_and_reload_fallback(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $bootSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '50-events-and-boot.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($bootSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('window.addEventListener("popstate", function () {', $bootSource);
+        self::assertStringContainsString('visit(window.location.href, {', $bootSource);
+        self::assertStringContainsString('updateHistory: false,', $bootSource);
+        self::assertStringContainsString('historyMode: "replace",', $bootSource);
+        self::assertStringContainsString('preserveScroll: false,', $bootSource);
+        self::assertStringContainsString('fallback: false,', $bootSource);
+        self::assertStringContainsString('window.location.reload();', $bootSource);
+        self::assertStringContainsString('window.addEventListener("popstate", function () {', $runtimeAsset->content());
+        self::assertStringContainsString('visit(window.location.href, {', $runtimeAsset->content());
+        self::assertStringContainsString('window.location.reload();', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_reconciles_managed_head_entries_without_duplicating_scripts(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationDocumentSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '42-navigation-document.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($navigationDocumentSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('function managedHeadNodeKey(node) {', $navigationDocumentSource);
+        self::assertStringContainsString('return "script:" + (node.getAttribute("type") || "") + ":" + src;', $navigationDocumentSource);
+        self::assertStringContainsString('async function reconcileDocumentHead(nextHead) {', $navigationDocumentSource);
+        self::assertStringContainsString('const existing = currentMap.get(entry.key);', $navigationDocumentSource);
+        self::assertStringContainsString('syncManagedHeadNode(existing, entry.node);', $navigationDocumentSource);
+        self::assertStringContainsString('const clone = entry.node.cloneNode(true);', $navigationDocumentSource);
+        self::assertStringContainsString('document.head.appendChild(clone);', $navigationDocumentSource);
+        self::assertStringContainsString('return "script:" + (node.getAttribute("type") || "") + ":" + src;', $runtimeAsset->content());
+        self::assertStringContainsString('async function reconcileDocumentHead(nextHead) {', $runtimeAsset->content());
+        self::assertStringContainsString('syncManagedHeadNode(existing, entry.node);', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_falls_back_to_full_reload_when_navigation_returns_http_errors(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $visitSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '44-navigation-visit.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($visitSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('if (payload && payload.error && typeof payload.error === "object") {', $visitSource);
+        self::assertStringContainsString('fallbackReason = settings.fallback !== false ? "request-error" : null;', $visitSource);
+        self::assertStringContainsString('emitRuntimeHook("volt:request-error", errorDetail, document);', $visitSource);
+        self::assertStringContainsString('window.location.assign(finalUrl);', $visitSource);
+        self::assertStringContainsString('window.location.assign(normalizedUrl);', $visitSource);
+        self::assertStringContainsString('if (payload && payload.error && typeof payload.error === "object") {', $runtimeAsset->content());
+        self::assertStringContainsString('emitRuntimeHook("volt:request-error", errorDetail, document);', $runtimeAsset->content());
+        self::assertStringContainsString('window.location.assign(finalUrl);', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_updates_snapshot_when_volt_model_inputs_change(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $bootSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '50-events-and-boot.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($bootSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('const snapshot = readSnapshot(root);', $bootSource);
+        self::assertStringContainsString('const key = directiveValue(element, ["volt-model", "volt:model"]);', $bootSource);
+        self::assertStringContainsString('if (snapshot && snapshot.state && key) {', $bootSource);
+        self::assertStringContainsString('snapshot.state[key] =', $bootSource);
+        self::assertStringContainsString('root.setAttribute("data-volt-snapshot", JSON.stringify(snapshot));', $bootSource);
+        self::assertStringContainsString('updateModelSyncDirectiveFromElement(element, root, "directive:model.sync:input");', $bootSource);
+        self::assertStringContainsString('const snapshot = readSnapshot(root);', $runtimeAsset->content());
+        self::assertStringContainsString('root.setAttribute("data-volt-snapshot", JSON.stringify(snapshot));', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_schedules_internal_sync_requests_for_volt_model_sync(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $modelDirectiveSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '11-dom-model-directives.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($modelDirectiveSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('function scheduleModelSyncDirectiveDispatch(root, element) {', $modelDirectiveSource);
+        self::assertStringContainsString('MODEL_SYNC_INTERNAL_ACTION,', $modelDirectiveSource);
+        self::assertStringContainsString('}, MODEL_SYNC_DEBOUNCE);', $modelDirectiveSource);
+        self::assertStringContainsString('runtime.modelSyncDebounces.set(element, timeoutId);', $modelDirectiveSource);
+        self::assertStringContainsString('runtime.modelSyncTrackedElements.add(element);', $modelDirectiveSource);
+        self::assertStringContainsString('function scheduleModelSyncDirectiveDispatch(root, element) {', $runtimeAsset->content());
+        self::assertStringContainsString('MODEL_SYNC_INTERNAL_ACTION,', $runtimeAsset->content());
+        self::assertStringContainsString('runtime.modelSyncTrackedElements.add(element);', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_updates_snapshot_after_action_responses_and_emits_stale_abort_hooks(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $actionSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '45-action-dispatch.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($actionSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('outcome = "stale";', $actionSource);
+        self::assertStringContainsString('"volt:request-stale",', $actionSource);
+        self::assertStringContainsString('outcome = "aborted";', $actionSource);
+        self::assertStringContainsString('"volt:request-abort",', $actionSource);
+        self::assertStringContainsString('if (payload.snapshot && updatedRoot) {', $actionSource);
+        self::assertStringContainsString('"data-volt-snapshot",', $actionSource);
+        self::assertStringContainsString('JSON.stringify(payload.snapshot),', $actionSource);
+        self::assertStringContainsString('"volt:request-stale",', $runtimeAsset->content());
+        self::assertStringContainsString('"volt:request-abort",', $runtimeAsset->content());
+        self::assertStringContainsString('JSON.stringify(payload.snapshot),', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_keeps_reactive_actions_without_automatic_retry(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $actionSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '45-action-dispatch.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($actionSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('const response = await withRequestTimeout(', $actionSource);
+        self::assertStringNotContainsString('resolveRequestRetryPolicy("action"', $actionSource);
+        self::assertStringNotContainsString('"volt:request-retry"', $actionSource);
+        self::assertStringNotContainsString('waitForRetryDelay(', $actionSource);
+        self::assertStringContainsString('const response = await withRequestTimeout(', $runtimeAsset->content());
     }
 
     public function test_runtime_source_keeps_spa_navigation_on_get_and_protocol_actions_on_post(): void

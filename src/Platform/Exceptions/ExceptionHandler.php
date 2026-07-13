@@ -17,6 +17,7 @@ use Throwable;
 use VoltStack\Framework\Contracts\ExceptionHandler as ExceptionHandlerContract;
 use VoltStack\Runtime\Component\Exceptions\ComponentMountException;
 use VoltStack\Runtime\Component\Exceptions\ComponentRenderException;
+use VoltStack\Runtime\Component\Exceptions\InvalidComponentActionException;
 use VoltStack\Runtime\Hydration\Exceptions\InvalidSnapshotException;
 
 final class ExceptionHandler implements ExceptionHandlerContract
@@ -50,6 +51,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $exception instanceof CsrfTokenMismatchException => 419,
             $exception instanceof InvalidSnapshotException => 422,
             $exception instanceof ValidationException => 422,
+            $exception instanceof InvalidComponentActionException => 422,
             $exception instanceof ComponentMountException => 500,
             $exception instanceof ComponentRenderException => 500,
             default => 500,
@@ -159,6 +161,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $exception instanceof CsrfTokenMismatchException => $exception->getMessage(),
             $exception instanceof InvalidSignatureException => $exception->getMessage(),
             $exception instanceof InvalidSnapshotException => $exception->getMessage(),
+            $exception instanceof InvalidComponentActionException => $exception->getMessage(),
             $exception instanceof ComponentMountException => 'Server Error',
             $exception instanceof ComponentRenderException => 'Server Error',
             $status === 403 => 'Forbidden',
@@ -178,6 +181,7 @@ final class ExceptionHandler implements ExceptionHandlerContract
             $exception instanceof CsrfTokenMismatchException => 'security.csrf_token_mismatch',
             $exception instanceof InvalidSnapshotException => 'runtime.invalid_snapshot',
             $exception instanceof ValidationException => 'runtime.validation_failed',
+            $exception instanceof InvalidComponentActionException => 'runtime.action_not_allowed',
             $exception instanceof ComponentMountException => 'runtime.component_mount_failed',
             $exception instanceof ComponentRenderException => 'runtime.component_render_failed',
             $status === 500 => 'server.error',

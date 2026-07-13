@@ -14,6 +14,7 @@ use RuntimeException;
 use VoltStack\Framework\Application;
 use VoltStack\Runtime\Component\Exceptions\ComponentMountException;
 use VoltStack\Runtime\Component\Exceptions\ComponentRenderException;
+use VoltStack\Runtime\Component\Exceptions\InvalidComponentActionException;
 use VoltStack\Runtime\Hydration\Dehydrator;
 use VoltStack\Runtime\Hydration\Hydrator;
 use VoltStack\Runtime\Hydration\Snapshot;
@@ -195,21 +196,21 @@ final class ComponentManager
         }
 
         if ($action === '' || str_starts_with($action, '__')) {
-            throw new RuntimeException('Invalid component action.');
+            throw InvalidComponentActionException::invalid();
         }
 
         if (! method_exists($component, $action)) {
-            throw new RuntimeException(sprintf('Component action [%s] does not exist.', $action));
+            throw InvalidComponentActionException::missing();
         }
 
         $method = new ReflectionMethod($component, $action);
 
         if (! $method->isPublic()) {
-            throw new RuntimeException(sprintf('Component action [%s] is not public.', $action));
+            throw InvalidComponentActionException::nonPublic();
         }
 
         if (in_array($action, ['render', 'setRequest', 'request'], true)) {
-            throw new RuntimeException(sprintf('Component action [%s] is reserved.', $action));
+            throw InvalidComponentActionException::reserved();
         }
 
         $arguments = [];
