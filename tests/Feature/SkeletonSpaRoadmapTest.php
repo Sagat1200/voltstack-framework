@@ -101,6 +101,46 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString("volt:navigation-cache-invalidate", $response->content());
     }
 
+    public function test_fragment_cache_screen_exposes_preserve_targets_and_fragment_monitors(): void
+    {
+        $response = $this->handleSkeletonRequest('/fragmentCache');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Cache Demo', $response->content());
+        self::assertStringContainsString('<meta name="volt-fragment-control" content="preserve"', $response->content());
+        self::assertStringContainsString('data-volt-preserve="draft-fragment"', $response->content());
+        self::assertStringContainsString('data-volt-preserve="live-shell"', $response->content());
+        self::assertStringContainsString('volt:fragment-preserve', $response->content());
+        self::assertStringContainsString('volt:fragment-discard', $response->content());
+        self::assertStringContainsString('/formExample', $response->content());
+        self::assertStringContainsString('/fragmentCacheReset', $response->content());
+    }
+
+    public function test_form_example_screen_exposes_matching_preserve_targets_for_reuse(): void
+    {
+        $response = $this->handleSkeletonRequest('/formExample');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('<meta name="volt-fragment-control" content="preserve"', $response->content());
+        self::assertStringContainsString('data-volt-preserve="draft-fragment"', $response->content());
+        self::assertStringContainsString('data-volt-preserve="live-shell"', $response->content());
+        self::assertStringContainsString('volt:fragment-preserve', $response->content());
+        self::assertStringContainsString('volt:fragment-discard', $response->content());
+    }
+
+    public function test_fragment_cache_reset_screen_declares_documental_reset_policy_for_preserved_fragments(): void
+    {
+        $response = $this->handleSkeletonRequest('/fragmentCacheReset');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Cache Reset', $response->content());
+        self::assertStringContainsString('<meta name="volt-fragment-control" content="reset"', $response->content());
+        self::assertStringContainsString('<meta name="volt-cache-control" content="no-store"', $response->content());
+        self::assertStringContainsString('data-volt-preserve="draft-fragment"', $response->content());
+        self::assertStringContainsString('data-volt-preserve="live-shell"', $response->content());
+        self::assertStringContainsString('documento impide reutilizar el nodo anterior', $response->content());
+    }
+
     public function test_request_lab_screen_exposes_explicit_abort_and_stale_controls(): void
     {
         $response = $this->handleSkeletonRequest('/runtimeRequestLab');
@@ -111,6 +151,50 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('Stale navigation', $response->content());
         self::assertStringContainsString('volt:request-abort', $response->content());
         self::assertStringContainsString('/runtimeRequestLabSlow', $response->content());
+    }
+
+    public function test_runtime_persist_origin_screen_exposes_persist_targets_and_status_panel(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimePersist');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Persist MVP', $response->content());
+        self::assertStringContainsString('<meta name="volt-fragment-control" content="preserve"', $response->content());
+        self::assertStringContainsString('window.__voltPersistDemoState = window.__voltPersistDemoState || {', $response->content());
+        self::assertStringContainsString('window.__voltPersistDemoState.lastNavigatedDetail =', $response->content());
+        self::assertStringContainsString('data-volt-persist="persist-sidebar"', $response->content());
+        self::assertStringContainsString('volt:persist="persist-player"', $response->content());
+        self::assertStringContainsString('data-volt-persist-status', $response->content());
+        self::assertStringContainsString('/runtimePersistBridge', $response->content());
+        self::assertStringContainsString('/runtimePersistAlt', $response->content());
+    }
+
+    public function test_runtime_persist_bridge_screen_documents_registry_survival_without_targets(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimePersistBridge');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Persist Bridge', $response->content());
+        self::assertStringContainsString('<meta name="volt-fragment-control" content="preserve"', $response->content());
+        self::assertStringContainsString('window.__voltPersistDemoState = window.__voltPersistDemoState || {', $response->content());
+        self::assertStringContainsString('window.__voltPersistDemoState.lastNavigatedDetail =', $response->content());
+        self::assertStringContainsString('persistentFragmentRegistrySize', $response->content());
+        self::assertStringContainsString('persistedFragments', $response->content());
+        self::assertStringContainsString('/runtimePersistAlt', $response->content());
+    }
+
+    public function test_runtime_persist_destination_screen_exposes_reinjection_targets(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimePersistAlt');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Persist Destination', $response->content());
+        self::assertStringContainsString('<meta name="volt-fragment-control" content="preserve"', $response->content());
+        self::assertStringContainsString('window.__voltPersistDemoState.lastNavigatedDetail =', $response->content());
+        self::assertStringContainsString('data-volt-persist="persist-sidebar"', $response->content());
+        self::assertStringContainsString('data-volt-persist="persist-player"', $response->content());
+        self::assertStringContainsString('persistedFragments &gt; 0', $response->content());
+        self::assertStringContainsString('Registry size', $response->content());
     }
 
     public function test_traditional_controller_view_can_embed_an_interactive_island(): void
@@ -405,6 +489,82 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('return "script:" + (node.getAttribute("type") || "") + ":" + src;', $runtimeAsset->content());
         self::assertStringContainsString('async function reconcileDocumentHead(nextHead) {', $runtimeAsset->content());
         self::assertStringContainsString('syncManagedHeadNode(existing, entry.node);', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_exposes_preserved_fragment_capture_restore_and_discard_contract(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationDocumentSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '42-navigation-document.js'
+        );
+        $navigationStateSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '13-state-sync-navigation.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($navigationDocumentSource);
+        self::assertIsString($navigationStateSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('function preservedFragmentAttribute(element) {', $navigationDocumentSource);
+        self::assertStringContainsString('"data-volt-preserve",', $navigationDocumentSource);
+        self::assertStringContainsString('"volt-preserve",', $navigationDocumentSource);
+        self::assertStringContainsString('"volt:preserve",', $navigationDocumentSource);
+        self::assertStringContainsString('function capturePreservedFragments(root, meta) {', $navigationDocumentSource);
+        self::assertStringContainsString('function restorePreservedFragments(root, fragments, meta) {', $navigationDocumentSource);
+        self::assertStringContainsString('"volt:fragment-preserve",', $navigationDocumentSource);
+        self::assertStringContainsString('"volt:fragment-discard",', $navigationDocumentSource);
+        self::assertStringContainsString('function fragmentControlForDocument(doc) {', $navigationStateSource);
+        self::assertStringContainsString('control.mode = "reset";', $navigationStateSource);
+        self::assertStringContainsString('const declaredMeta = firstDocumentMetaValue(', $navigationStateSource);
+        self::assertStringContainsString('function preservedFragmentAttribute(element) {', $runtimeAsset->content());
+        self::assertStringContainsString('"volt:fragment-preserve",', $runtimeAsset->content());
+        self::assertStringContainsString('"volt:fragment-discard",', $runtimeAsset->content());
+        self::assertStringContainsString('function fragmentControlForDocument(doc) {', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_exposes_persistent_fragment_capture_and_restore_contract(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $navigationDocumentSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '42-navigation-document.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($navigationDocumentSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('function persistedFragmentAttribute(element) {', $navigationDocumentSource);
+        self::assertStringContainsString('"data-volt-persist",', $navigationDocumentSource);
+        self::assertStringContainsString('"volt-persist",', $navigationDocumentSource);
+        self::assertStringContainsString('"volt:persist",', $navigationDocumentSource);
+        self::assertStringContainsString('function persistedFragmentKey(element) {', $navigationDocumentSource);
+        self::assertStringContainsString('runtime.persistentFragments.set(key, fragment);', $navigationDocumentSource);
+        self::assertStringContainsString('const targets = persistentFragmentTargets(root);', $navigationDocumentSource);
+        self::assertStringContainsString('runtime.persistentFragments.delete(key);', $navigationDocumentSource);
+        self::assertStringContainsString('persistentRegistrySize: runtime.persistentFragments.size,', $navigationDocumentSource);
+        self::assertStringContainsString('function persistedFragmentAttribute(element) {', $runtimeAsset->content());
+        self::assertStringContainsString('"volt:persist",', $runtimeAsset->content());
+        self::assertStringContainsString('runtime.persistentFragments.set(key, fragment);', $runtimeAsset->content());
+        self::assertStringContainsString('persistentRegistrySize: runtime.persistentFragments.size,', $runtimeAsset->content());
     }
 
     public function test_runtime_source_falls_back_to_full_reload_when_navigation_returns_http_errors(): void
