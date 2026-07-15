@@ -6161,7 +6161,13 @@
       }
 
       if (rel === "stylesheet") {
-        return null;
+        return {
+          key: "style:" + href,
+          rel: "preload",
+          href: href,
+          as: "style",
+          crossOrigin: node.getAttribute("crossorigin") || null,
+        };
       }
 
       if (rel === "modulepreload") {
@@ -6169,6 +6175,22 @@
           key: "module:" + href,
           rel: "modulepreload",
           href: href,
+          crossOrigin: node.getAttribute("crossorigin") || null,
+        };
+      }
+
+      if (rel === "preload") {
+        const as = (node.getAttribute("as") || "").toLowerCase();
+
+        if (!as) {
+          return null;
+        }
+
+        return {
+          key: "preload:" + as + ":" + href,
+          rel: "preload",
+          href: href,
+          as: as,
           crossOrigin: node.getAttribute("crossorigin") || null,
         };
       }

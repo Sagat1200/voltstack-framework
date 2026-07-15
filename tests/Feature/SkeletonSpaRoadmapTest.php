@@ -101,6 +101,19 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString("volt:navigation-cache-invalidate", $response->content());
     }
 
+    public function test_cache_example_screen_includes_extra_built_assets_only_for_that_route(): void
+    {
+        $home = $this->handleSkeletonRequest('/');
+        $cacheExample = $this->handleSkeletonRequest('/cacheExample');
+
+        self::assertSame(200, $home->statusCode(), $home->content());
+        self::assertSame(200, $cacheExample->statusCode(), $cacheExample->content());
+        self::assertSame(1, substr_count($home->content(), '<script type="module" src="/build/assets/'));
+        self::assertSame(1, substr_count($home->content(), '<link rel="stylesheet" href="/build/assets/'));
+        self::assertGreaterThanOrEqual(2, substr_count($cacheExample->content(), '<script type="module" src="/build/assets/'));
+        self::assertGreaterThanOrEqual(2, substr_count($cacheExample->content(), '<link rel="stylesheet" href="/build/assets/'));
+    }
+
     public function test_fragment_cache_screen_exposes_preserve_targets_and_fragment_monitors(): void
     {
         $response = $this->handleSkeletonRequest('/fragmentCache');
@@ -139,6 +152,24 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('data-volt-preserve="draft-fragment"', $response->content());
         self::assertStringContainsString('data-volt-preserve="live-shell"', $response->content());
         self::assertStringContainsString('documento impide reutilizar el nodo anterior', $response->content());
+    }
+
+    public function test_fragment_cache_manual_validation_routes_expose_control_and_discard_expectations(): void
+    {
+        $origin = $this->handleSkeletonRequest('/fragmentCache');
+        $compatibleTarget = $this->handleSkeletonRequest('/formExample');
+        $resetTarget = $this->handleSkeletonRequest('/fragmentCacheReset');
+
+        self::assertSame(200, $origin->statusCode(), $origin->content());
+        self::assertSame(200, $compatibleTarget->statusCode(), $compatibleTarget->content());
+        self::assertSame(200, $resetTarget->statusCode(), $resetTarget->content());
+
+        self::assertStringContainsString('Este contenido deberia resetearse.', $origin->content());
+        self::assertStringContainsString('Probar descarte en /fragmentCacheReset', $origin->content());
+        self::assertStringContainsString('Este contenido deberia resetearse.', $compatibleTarget->content());
+        self::assertStringContainsString('Volver a fragment cache', $compatibleTarget->content());
+        self::assertStringContainsString('document-policy', $resetTarget->content());
+        self::assertStringContainsString('impide reutilizar el nodo anterior', $resetTarget->content());
     }
 
     public function test_request_lab_screen_exposes_explicit_abort_and_stale_controls(): void
@@ -407,6 +438,32 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('? doc.querySelector(selector)', $navigationSource);
         self::assertStringContainsString('typeof doc.querySelector === "function"', $runtimeAsset->content());
         self::assertStringContainsString('? doc.querySelector(selector)', $runtimeAsset->content());
+    }
+
+    public function test_runtime_source_can_preload_stylesheets_and_modules_from_prefetched_documents(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $cacheSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '20-navigation-cache.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($cacheSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('key: "style:" + href,', $cacheSource);
+        self::assertStringContainsString('rel: "preload",', $cacheSource);
+        self::assertStringContainsString('as: "style",', $cacheSource);
+        self::assertStringContainsString('key: "style:" + href,', $runtimeAsset->content());
+        self::assertStringContainsString('rel: "preload",', $runtimeAsset->content());
+        self::assertStringContainsString('as: "style",', $runtimeAsset->content());
     }
 
     public function test_runtime_source_only_falls_back_for_layout_changes_when_both_documents_declare_layouts(): void
