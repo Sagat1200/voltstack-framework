@@ -208,6 +208,65 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('/runtimeRequestLabSlow', $response->content());
     }
 
+    public function test_runtime_events_screen_exposes_hook_inspector_cards_and_recent_log(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeEvents');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Hooks en vivo del frontend reactivo', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:before-patch"', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:after-patch"', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:before-effect"', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:after-effect"', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:before-navigate"', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:navigated"', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:before-enter"', $response->content());
+        self::assertStringContainsString('data-volt-hook-card="volt:after-enter"', $response->content());
+        self::assertStringContainsString('data-volt-hook-log', $response->content());
+    }
+
+    public function test_runtime_events_screen_exposes_efficiency_panels_and_runtime_navigation_links(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeEvents');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('data-runtime-efficiency-demo', $response->content());
+        self::assertStringContainsString('window.Volt.telemetry.summary()', $response->content());
+        self::assertStringContainsString('window.Volt.components.summary()', $response->content());
+        self::assertStringContainsString('data-runtime-check="efficiency-navigation-performance"', $response->content());
+        self::assertStringContainsString('data-runtime-check="efficiency-runtime-asset"', $response->content());
+        self::assertStringContainsString('data-runtime-check="efficiency-runtime-overview"', $response->content());
+        self::assertStringContainsString('data-runtime-check="efficiency-summary-json"', $response->content());
+        self::assertStringContainsString('data-runtime-check="efficiency-components-detail"', $response->content());
+        self::assertStringContainsString('Resetear telemetria', $response->content());
+        self::assertStringContainsString('Refrescar roots', $response->content());
+        self::assertStringContainsString('Telemetry navigation', $response->content());
+        self::assertStringContainsString('Telemetry action', $response->content());
+        self::assertStringContainsString('Telemetry patch', $response->content());
+        self::assertStringContainsString('Latest patch entry', $response->content());
+        self::assertStringContainsString('/runtimeAdvancedDirectives', $response->content());
+        self::assertStringContainsString('/runtimeState', $response->content());
+        self::assertStringContainsString('/runtimeModelSync', $response->content());
+    }
+
+    public function test_runtime_events_screen_exposes_efficiency_status_and_latest_snapshots(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeEvents');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('data-volt-efficiency-status', $response->content());
+        self::assertStringContainsString('boot', $response->content());
+        self::assertStringContainsString('data-volt-efficiency-last-updated', $response->content());
+        self::assertStringContainsString('(pendiente)', $response->content());
+        self::assertStringContainsString('window.Volt.telemetry.latest()', $response->content());
+        self::assertStringContainsString('data-volt-efficiency-latest="navigation"', $response->content());
+        self::assertStringContainsString('data-volt-efficiency-latest="action"', $response->content());
+        self::assertStringContainsString('data-volt-efficiency-latest="patch"', $response->content());
+        self::assertGreaterThanOrEqual(3, substr_count($response->content(), '(sin datos)'));
+        self::assertStringContainsString('Runtime summary snapshot', $response->content());
+        self::assertStringContainsString('Active components summary', $response->content());
+    }
+
     public function test_runtime_state_routes_document_client_scope_reset_and_shared_scope_survival(): void
     {
         $origin = $this->handleSkeletonRequest('/runtimeState');
@@ -508,6 +567,15 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('navigationViewportTrackedElements: new Set(),', $runtimeAsset->content());
         self::assertStringContainsString('window.Volt.components = createPublicComponentsApi();', $runtimeAsset->content());
         self::assertStringContainsString('window.Volt.telemetry = createPublicTelemetryApi();', $runtimeAsset->content());
+        self::assertStringContainsString('function createPublicTelemetryApi() {', $runtimeAsset->content());
+        self::assertStringContainsString('latest: function (options) {', $runtimeAsset->content());
+        self::assertStringContainsString('summary: telemetrySummary,', $runtimeAsset->content());
+        self::assertStringContainsString('snapshot: function (options) {', $runtimeAsset->content());
+        self::assertStringContainsString('reset: resetRuntimeTelemetry,', $runtimeAsset->content());
+        self::assertStringContainsString('function createPublicComponentsApi() {', $runtimeAsset->content());
+        self::assertStringContainsString('summary: activeComponentsSummary,', $runtimeAsset->content());
+        self::assertStringContainsString('snapshot: activeComponentsSnapshot,', $runtimeAsset->content());
+        self::assertStringContainsString('refresh: function (reason) {', $runtimeAsset->content());
     }
 
     public function test_skeleton_html_resolves_built_manifest_assets_when_hot_reload_is_not_active(): void
