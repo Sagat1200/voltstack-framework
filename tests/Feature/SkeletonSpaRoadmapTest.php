@@ -279,6 +279,14 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('data-volt-state-example', $origin->content());
         self::assertStringContainsString('window.Volt.state', $origin->content());
         self::assertStringContainsString('captureSelectiveSync', $origin->content());
+        self::assertStringContainsString('Paso 1. Guardar en el store runtime', $origin->content());
+        self::assertStringContainsString('Paso 2. Confirmar el preview live', $origin->content());
+        self::assertStringContainsString('Paso 3. Enviar lo ya guardado', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-sync-client-store-preview"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-sync-shared-store-preview"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-sync-shared-counter-preview"', $origin->content());
+        self::assertStringContainsString("volt:text=\"client:draft.note ?? '(vacio)'\"", $origin->content());
+        self::assertStringContainsString('Enviar al backend lo ya guardado en el store', $origin->content());
         self::assertStringContainsString('shared:serverSync.syncedAt', $origin->content());
         self::assertStringContainsString('volt:show="client:ui.showClientPanel"', $origin->content());
         self::assertStringContainsString('volt:if="shared:ui.mountSharedPanel"', $origin->content());
