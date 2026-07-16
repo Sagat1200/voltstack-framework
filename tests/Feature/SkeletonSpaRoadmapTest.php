@@ -83,11 +83,35 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('Sistema de Analisis de Runtime SPA Full Reactive', $response->content());
         self::assertStringContainsString('href="/counterExample"', $response->content());
         self::assertStringContainsString('href="/formExample"', $response->content());
+        self::assertStringContainsString('href="/cacheExample"', $response->content());
+        self::assertStringContainsString('href="/fragmentCache"', $response->content());
         self::assertStringContainsString('href="/runtimeState"', $response->content());
+        self::assertStringContainsString('href="/runtimePersist"', $response->content());
+        self::assertStringContainsString('href="/runtimeRequestLab"', $response->content());
         self::assertStringContainsString('data-volt-document="spa"', $response->content());
         self::assertStringContainsString('data-volt-navigation-mode="auto"', $response->content());
         self::assertStringContainsString('data-volt-layout="spa"', $response->content());
         self::assertSame(1, substr_count($response->content(), 'data-volt-runtime="true"'));
+    }
+
+    public function test_key_spa_lab_demo_routes_remain_live_for_the_visual_index(): void
+    {
+        $routes = [
+            '/cacheExample',
+            '/fragmentCache',
+            '/navigationPolicy',
+            '/navigationTransition',
+            '/runtimeAdvancedDirectives',
+            '/runtimeRequestLab',
+            '/runtimePersist',
+            '/runtimeState',
+        ];
+
+        foreach ($routes as $route) {
+            $response = $this->handleSkeletonRequest($route);
+
+            self::assertSame(200, $response->statusCode(), sprintf('Route %s did not return 200.', $route));
+        }
     }
 
     public function test_cache_example_screen_renders_declared_navigation_and_invalidation_sections(): void
@@ -182,6 +206,92 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('Stale navigation', $response->content());
         self::assertStringContainsString('volt:request-abort', $response->content());
         self::assertStringContainsString('/runtimeRequestLabSlow', $response->content());
+    }
+
+    public function test_runtime_state_routes_document_client_scope_reset_and_shared_scope_survival(): void
+    {
+        $origin = $this->handleSkeletonRequest('/runtimeState');
+        $destination = $this->handleSkeletonRequest('/runtimeStateAlt');
+
+        self::assertSame(200, $origin->statusCode(), $origin->content());
+        self::assertSame(200, $destination->statusCode(), $destination->content());
+        self::assertStringContainsString('<meta name="volt-navigation-mode" content="auto"', $origin->content());
+        self::assertStringContainsString('State Demo', $origin->content());
+        self::assertStringContainsString('data-volt-state-example', $origin->content());
+        self::assertStringContainsString('window.Volt.state', $origin->content());
+        self::assertStringContainsString('captureSelectiveSync', $origin->content());
+        self::assertStringContainsString('shared:serverSync.syncedAt', $origin->content());
+        self::assertStringContainsString('volt:show="client:ui.showClientPanel"', $origin->content());
+        self::assertStringContainsString('volt:if="shared:ui.mountSharedPanel"', $origin->content());
+        self::assertStringContainsString('/runtimeStateAlt', $origin->content());
+        self::assertStringContainsString('State Destination', $destination->content());
+        self::assertStringContainsString('client snapshot', $destination->content());
+        self::assertStringContainsString('shared snapshot', $destination->content());
+        self::assertStringContainsString('Client scope', $destination->content());
+        self::assertStringContainsString('/runtimeState', $destination->content());
+    }
+
+    public function test_runtime_advanced_directives_screen_exposes_stable_markers_for_contract_checks(): void
+    {
+        $response = $this->handleSkeletonRequest('/runtimeAdvancedDirectives');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('Advanced Directives Demo', $response->content());
+        self::assertStringContainsString('data-runtime-check="text-fallback-result"', $response->content());
+        self::assertStringContainsString('data-runtime-check="show-compound-panel"', $response->content());
+        self::assertStringContainsString('data-runtime-check="if-compound-panel"', $response->content());
+        self::assertStringContainsString('data-runtime-check="class-multi-card"', $response->content());
+        self::assertStringContainsString('data-runtime-check="attr-multi-button"', $response->content());
+        self::assertStringContainsString('data-runtime-check="style-multi-card"', $response->content());
+        self::assertStringContainsString("client:draft.note ?? shared:draft.note ?? 'Sin nota disponible'", $response->content());
+        self::assertStringContainsString('/runtimeState', $response->content());
+    }
+
+    public function test_request_lab_retry_once_source_documents_safe_get_retry_contract(): void
+    {
+        $pagePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'spa-lab'
+            . DIRECTORY_SEPARATOR . 'app'
+            . DIRECTORY_SEPARATOR . 'Pages'
+            . DIRECTORY_SEPARATOR . 'Request'
+            . DIRECTORY_SEPARATOR . 'RequestLabRetryOncePage.php';
+        $response = $this->handleSkeletonRequest('/runtimeRequestLab');
+
+        $pageSource = file_get_contents($pagePath);
+
+        self::assertIsString($pageSource);
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString("storage_path('framework/cache/runtime-request-lab-retry-once.flag')", $pageSource);
+        self::assertStringContainsString("throw new RuntimeException('Runtime QA forced transient navigation error.')", $pageSource);
+        self::assertStringContainsString("@unlink(\$markerPath);", $pageSource);
+        self::assertStringContainsString("request-retry-", $pageSource);
+        self::assertStringContainsString("/runtimeRequestLabRetryOnce", $response->content());
+    }
+
+    public function test_request_lab_retry_once_target_can_render_when_marker_is_primed(): void
+    {
+        $markerPath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'storage'
+            . DIRECTORY_SEPARATOR . 'framework'
+            . DIRECTORY_SEPARATOR . 'cache'
+            . DIRECTORY_SEPARATOR . 'runtime-request-lab-retry-once.flag';
+
+        file_put_contents($markerPath, (string) time());
+
+        $response = $this->handleSkeletonRequest('/runtimeRequestLabRetryOnce');
+
+        self::assertSame(200, $response->statusCode(), $response->content());
+        self::assertStringContainsString('<meta name="volt-navigation-mode" content="auto"', $response->content());
+        self::assertStringContainsString('Request Lab Retry Once', $response->content());
+        self::assertStringContainsString('falla una vez con error servidor', $response->content());
+        self::assertStringContainsString('request-retry-', $response->content());
+        self::assertStringContainsString('/runtimeRequestLab', $response->content());
+
+        if (is_file($markerPath)) {
+            @unlink($markerPath);
+        }
     }
 
     public function test_runtime_persist_origin_screen_exposes_persist_targets_and_status_panel(): void
