@@ -204,7 +204,44 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('Abort previous action', $response->content());
         self::assertStringContainsString('Abort previous navigation', $response->content());
         self::assertStringContainsString('Stale navigation', $response->content());
+        self::assertStringContainsString('Actions POST', $response->content());
+        self::assertStringContainsString('data-runtime-check="navigation-retry-policy-card"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-retry-policy-value"', $response->content());
+        self::assertStringContainsString('data-runtime-check="navigation-retry-policy-value"', $response->content());
+        self::assertStringContainsString('Retry navigation once', $response->content());
+        self::assertStringContainsString('Conectividad del navegador', $response->content());
+        self::assertStringContainsString('Panel unificado de resiliencia', $response->content());
         self::assertStringContainsString('volt:request-abort', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-endpoint-status"', $response->content());
+        self::assertStringContainsString('data-runtime-check="network-status-label"', $response->content());
+        self::assertStringContainsString('data-runtime-check="request-last-event"', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.retrySummaryStorageKey = \'volt.requestLab.lastNavigationRetry\';', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.navigationLifecycleStorageKey = \'volt.requestLab.lastNavigationLifecycle\';', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.resilienceSummaryStorageKey = \'volt.requestLab.lastResilienceSummary\';', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.resilienceHistoryStorageKey = \'volt.requestLab.resilienceHistory\';', $response->content());
+        self::assertStringContainsString('data-volt-head-key="runtime-request-lab-spa-bridge"', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLabSpaBridgeInstalled', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.renderResiliencePanel = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.recordResilienceIncident = function(eventName, meta, outcome, target) {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.clearResiliencePanel = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.renderRetrySummaryCard = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.renderNavigationLifecycleSummaryCard = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.runAbortNavigationScenario = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.readRetrySummary = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.readNavigationLifecycleSummary = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.renderNavigationLifecycleSummaryCard();', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.runRetryNavigationScenario = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.handleNavigationLifecycleEvent = function(event) {', $response->content());
+        self::assertStringContainsString('sessionStorage.setItem(', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-current-scenario"', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-scenario-network-error"', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-scenario-timeout"', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-scenario-protocol-error"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-event"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-message"', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.setBrokenActionEndpoint', $response->content());
+        self::assertStringContainsString("window.addEventListener('volt:request-stale', window.__spaLabRequestLab.handleNavigationLifecycleEvent);", $response->content());
+        self::assertStringContainsString("window.addEventListener('offline', window.__spaLabRequestLab.syncNetworkStatus);", $response->content());
         self::assertStringContainsString('/runtimeRequestLabSlow', $response->content());
     }
 
@@ -214,6 +251,19 @@ final class SkeletonSpaRoadmapTest extends TestCase
 
         self::assertSame(200, $response->statusCode(), $response->content());
         self::assertStringContainsString('Hooks en vivo del frontend reactivo', $response->content());
+        self::assertStringContainsString('Ir a RequestLab', $response->content());
+        self::assertStringContainsString('data-runtime-check="events-session-incidents-badge"', $response->content());
+        self::assertStringContainsString('data-runtime-check="events-session-incidents-detail"', $response->content());
+        self::assertStringContainsString('Resumen persistido de navegacion', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-event"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-outcome"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-target"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-final-url"', $response->content());
+        self::assertStringContainsString('Panel unificado de resiliencia', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-current-scenario"', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-scenario-network-error"', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-scenario-timeout"', $response->content());
+        self::assertStringContainsString('data-runtime-check="resilience-scenario-protocol-error"', $response->content());
         self::assertStringContainsString('data-volt-hook-card="volt:before-patch"', $response->content());
         self::assertStringContainsString('data-volt-hook-card="volt:after-patch"', $response->content());
         self::assertStringContainsString('data-volt-hook-card="volt:before-effect"', $response->content());
@@ -352,6 +402,12 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertSame(200, $response->statusCode(), $response->content());
         self::assertStringContainsString('<meta name="volt-navigation-mode" content="auto"', $response->content());
         self::assertStringContainsString('Request Lab Retry Once', $response->content());
+        self::assertStringContainsString('Resumen visible del retry', $response->content());
+        self::assertStringContainsString('data-runtime-check="retry-summary-event"', $response->content());
+        self::assertStringContainsString('data-runtime-check="retry-summary-attempt"', $response->content());
+        self::assertStringContainsString('data-runtime-check="retry-summary-status"', $response->content());
+        self::assertStringContainsString("var storageKey = 'volt.requestLab.lastNavigationRetry';", $response->content());
+        self::assertStringContainsString('finalUrl = ', $response->content());
         self::assertStringContainsString('falla una vez con error servidor', $response->content());
         self::assertStringContainsString('request-retry-', $response->content());
         self::assertStringContainsString('/runtimeRequestLab', $response->content());
@@ -1037,6 +1093,33 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('if (payload && payload.error && typeof payload.error === "object") {', $visitSource);
         self::assertStringContainsString('if (payload && payload.error && typeof payload.error === "object") {', $navigationCacheSource);
         self::assertStringContainsString('error: payload.error,', $visitSource);
+    }
+
+    public function test_runtime_source_retries_retryable_http_navigation_payload_errors_before_surface_them(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $visitSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '44-navigation-visit.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($visitSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('const retryStatus =', $visitSource);
+        self::assertStringContainsString('retryAttempt: attempt + 1,', $visitSource);
+        self::assertStringContainsString('shouldRetryNavigationRequest(', $visitSource);
+        self::assertStringContainsString('"volt:request-retry",', $visitSource);
+        self::assertStringContainsString('continue;', $visitSource);
+        self::assertStringContainsString('retryAttempt: attempt + 1,', $runtimeAsset->content());
+        self::assertStringContainsString('"volt:request-retry",', $runtimeAsset->content());
     }
 
     public function test_runtime_source_exposes_target_as_an_explicit_navigation_payload_field(): void

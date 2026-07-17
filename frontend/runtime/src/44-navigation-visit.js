@@ -203,7 +203,7 @@
 
           while (true) {
             try {
-              return await withRequestTimeout(
+              const payload = await withRequestTimeout(
                 requestNavigationPayload(
                   normalizedUrl,
                   controller ? controller.signal : undefined,
@@ -220,6 +220,68 @@
                     "Navigation request timed out after " + timeoutMs + "ms.",
                 },
               );
+
+              if (payload && payload.error && typeof payload.error === "object") {
+                const payloadFinalUrl =
+                  payload && payload.finalUrl
+                    ? payload.finalUrl
+                    : payload && payload.redirect
+                      ? payload.redirect
+                      : normalizedUrl;
+                const retryStatus =
+                  typeof payload.error.code === "number"
+                    ? payload.error.code
+                    : null;
+                const retryDetail = requestErrorDetail(
+                  "navigation",
+                  requestMeta,
+                  "http-error",
+                  typeof payload.error.message === "string" &&
+                    payload.error.message !== ""
+                    ? payload.error.message
+                    : "Navigation request failed.",
+                  {
+                    url: normalizedUrl,
+                    finalUrl: payloadFinalUrl,
+                    status: retryStatus,
+                    error: payload.error,
+                    retryAttempt: attempt + 1,
+                  },
+                );
+
+                if (
+                  shouldRetryNavigationRequest(
+                    retryDetail,
+                    retryPolicy,
+                    attempt,
+                  )
+                ) {
+                  retryCount = attempt + 1;
+                  emitRuntimeHook(
+                    "volt:request-retry",
+                    requestHookDetail("navigation", requestMeta, {
+                      url: normalizedUrl,
+                      finalUrl: payloadFinalUrl,
+                      retryAttempt: retryCount,
+                      retryAttempts: retryPolicy.attempts,
+                      retryDelayMs: retryPolicy.delayMs,
+                      errorKind: retryDetail.errorKind,
+                      message: retryDetail.message,
+                      status: retryStatus,
+                    }),
+                    document,
+                  );
+
+                  await waitForRetryDelay(
+                    retryPolicy.delayMs,
+                    controller ? controller.signal : null,
+                  );
+                  attempt += 1;
+                  continue;
+                }
+              }
+
+              return payload;
             } catch (error) {
               if (isAbortError(error)) {
                 throw error;
