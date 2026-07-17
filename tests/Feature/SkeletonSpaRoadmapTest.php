@@ -85,6 +85,7 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('href="/formExample"', $response->content());
         self::assertStringContainsString('href="/cacheExample"', $response->content());
         self::assertStringContainsString('href="/fragmentCache"', $response->content());
+        self::assertStringContainsString('href="/runtimeFocus"', $response->content());
         self::assertStringContainsString('href="/runtimeState"', $response->content());
         self::assertStringContainsString('href="/runtimePersist"', $response->content());
         self::assertStringContainsString('href="/runtimeRequestLab"', $response->content());
@@ -102,6 +103,7 @@ final class SkeletonSpaRoadmapTest extends TestCase
             '/navigationPolicy',
             '/navigationTransition',
             '/runtimeAdvancedDirectives',
+            '/runtimeFocus',
             '/runtimeRequestLab',
             '/runtimePersist',
             '/runtimeState',
@@ -245,6 +247,37 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('/runtimeRequestLabSlow', $response->content());
     }
 
+    public function test_runtime_focus_screens_expose_focus_selection_and_scroll_contract_markers(): void
+    {
+        $origin = $this->handleSkeletonRequest('/runtimeFocus');
+        $alt = $this->handleSkeletonRequest('/runtimeFocusAlt');
+
+        self::assertSame(200, $origin->statusCode(), $origin->content());
+        self::assertSame(200, $alt->statusCode(), $alt->content());
+        self::assertStringContainsString('Contrato de patch, seleccion y scroll', $origin->content());
+        self::assertStringContainsString('volt-click="refreshPatchProbe"', $origin->content());
+        self::assertStringContainsString('data-volt-target="focus-patch-button"', $origin->content());
+        self::assertStringContainsString('data-volt-target="focus-scroll-box"', $origin->content());
+        self::assertStringContainsString('data-volt-preserve-scroll', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-patch-sequence"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-patch-summary"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-patch-request-marker"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-active-element"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-selection-range"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-selection-direction"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-selection-scroll-top"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-scroll-box-top"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-scroll-box-left"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-inspector-reason"', $origin->content());
+        self::assertStringContainsString('window.__voltRuntimeFocusDemoInstalled', $origin->content());
+        self::assertStringContainsString('href="/runtimeFocusAlt"', $origin->content());
+
+        self::assertStringContainsString('volt:focus="shared:focus.returnAction"', $alt->content());
+        self::assertStringContainsString('volt:autofocus.when="shared:focus.showErrors"', $alt->content());
+        self::assertStringContainsString('window.__voltRuntimeFocusDemoInstalled', $alt->content());
+        self::assertStringContainsString('href="/runtimeFocus"', $alt->content());
+    }
+
     public function test_runtime_events_screen_exposes_hook_inspector_cards_and_recent_log(): void
     {
         $response = $this->handleSkeletonRequest('/runtimeEvents');
@@ -335,6 +368,24 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('data-runtime-check="state-sync-client-store-preview"', $origin->content());
         self::assertStringContainsString('data-runtime-check="state-sync-shared-store-preview"', $origin->content());
         self::assertStringContainsString('data-runtime-check="state-sync-shared-counter-preview"', $origin->content());
+        self::assertStringContainsString('Estados runtime: <code>dirty</code>, <code>success</code>, <code>error</code>', $origin->content());
+        self::assertStringContainsString('volt:dirty.target="statusProbeTitle"', $origin->content());
+        self::assertStringContainsString('volt:dirty.debounce="200ms"', $origin->content());
+        self::assertStringContainsString('volt:success="saveStatusProbe"', $origin->content());
+        self::assertStringContainsString('volt:success.target="state-status-form"', $origin->content());
+        self::assertStringContainsString('volt:error="failStatusProbe"', $origin->content());
+        self::assertStringContainsString('volt:error.target="state-status-error-button"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-request-status"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-dirty-target"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-success-action"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-success-target"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-error-action"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-error-target"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-error-message"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-last-request-event"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="state-status-saved-message"', $origin->content());
+        self::assertStringContainsString('Guardar y disparar success', $origin->content());
+        self::assertStringContainsString('Forzar error controlado', $origin->content());
         self::assertStringContainsString("volt:text=\"client:draft.note ?? '(vacio)'\"", $origin->content());
         self::assertStringContainsString('Enviar al backend lo ya guardado en el store', $origin->content());
         self::assertStringContainsString('shared:serverSync.syncedAt', $origin->content());
