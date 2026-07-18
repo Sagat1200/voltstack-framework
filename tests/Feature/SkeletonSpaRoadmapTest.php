@@ -218,6 +218,10 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('data-runtime-check="action-endpoint-status"', $response->content());
         self::assertStringContainsString('data-runtime-check="network-status-label"', $response->content());
         self::assertStringContainsString('data-runtime-check="request-last-event"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-retry-contract"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-retry-network"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-retry-timeout"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-retry-protocol"', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.retrySummaryStorageKey = \'volt.requestLab.lastNavigationRetry\';', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.navigationLifecycleStorageKey = \'volt.requestLab.lastNavigationLifecycle\';', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.resilienceSummaryStorageKey = \'volt.requestLab.lastResilienceSummary\';', $response->content());
@@ -242,11 +246,20 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('data-runtime-check="resilience-scenario-timeout"', $response->content());
         self::assertStringContainsString('data-runtime-check="resilience-scenario-protocol-error"', $response->content());
         self::assertStringContainsString('data-runtime-check="nav-lifecycle-event"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-classification"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-lifecycle-contract"', $response->content());
         self::assertStringContainsString('data-runtime-check="nav-lifecycle-message"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-contract-abort-card"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-contract-abort-summary"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-contract-stale-card"', $response->content());
+        self::assertStringContainsString('data-runtime-check="nav-contract-stale-summary"', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.setBrokenActionEndpoint', $response->content());
         self::assertStringContainsString("window.addEventListener('volt:request-stale', window.__spaLabRequestLab.handleNavigationLifecycleEvent);", $response->content());
         self::assertStringContainsString("window.addEventListener('offline', window.__spaLabRequestLab.syncNetworkStatus);", $response->content());
         self::assertStringContainsString('/runtimeRequestLabSlow', $response->content());
+        self::assertStringContainsString("summary.eventName === 'volt:request-abort'", $response->content());
+        self::assertStringContainsString("summary.eventName === 'volt:request-stale'", $response->content());
+        self::assertStringContainsString("summary.eventName === 'volt:request-retry'", $response->content());
     }
 
     public function test_runtime_focus_screens_expose_focus_selection_and_scroll_contract_markers(): void
@@ -271,11 +284,20 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('data-runtime-check="focus-scroll-box-top"', $origin->content());
         self::assertStringContainsString('data-runtime-check="focus-scroll-box-left"', $origin->content());
         self::assertStringContainsString('data-runtime-check="focus-inspector-reason"', $origin->content());
+        self::assertStringContainsString('Contrato de navegacion con preserve scroll', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-nav-reset-link"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-nav-preserve-link"', $origin->content());
+        self::assertStringContainsString('data-runtime-check="focus-navigation-preserve-scroll-notes"', $origin->content());
+        self::assertStringContainsString('volt:preserve-scroll', $origin->content());
         self::assertStringContainsString('window.__voltRuntimeFocusDemoInstalled', $origin->content());
         self::assertStringContainsString('href="/runtimeFocusAlt"', $origin->content());
 
         self::assertStringContainsString('volt:focus="shared:focus.returnAction"', $alt->content());
         self::assertStringContainsString('volt:autofocus.when="shared:focus.showErrors"', $alt->content());
+        self::assertStringContainsString('Longitud controlada para preserve scroll', $alt->content());
+        self::assertStringContainsString('data-runtime-check="focus-alt-reset-scroll-link"', $alt->content());
+        self::assertStringContainsString('data-runtime-check="focus-alt-preserve-scroll-link"', $alt->content());
+        self::assertStringContainsString('volt:preserve-scroll', $alt->content());
         self::assertStringContainsString('window.__voltRuntimeFocusDemoInstalled', $alt->content());
         self::assertStringContainsString('href="/runtimeFocus"', $alt->content());
     }
@@ -1144,6 +1166,42 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('"X-Volt-Navigate": "true"', $navigationSource);
         self::assertStringContainsString('method: "POST"', $actionSource);
         self::assertStringContainsString('"/_volt/action"', $actionSource);
+    }
+
+    public function test_runtime_source_only_preserves_document_scroll_when_navigation_requests_it(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $bootSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '50-events-and-boot.js'
+        );
+        $visitSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'frontend'
+            . DIRECTORY_SEPARATOR . 'runtime'
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . '44-navigation-visit.js'
+        );
+        $runtimeAsset = $this->handleSkeletonRequest('/_volt/runtime.js');
+
+        self::assertIsString($bootSource);
+        self::assertIsString($visitSource);
+        self::assertSame(200, $runtimeAsset->statusCode(), $runtimeAsset->content());
+        self::assertStringContainsString('navigationTrigger.hasAttribute("volt-preserve-scroll") ||', $bootSource);
+        self::assertStringContainsString('navigationTrigger.hasAttribute("volt:preserve-scroll");', $bootSource);
+        self::assertStringContainsString('preserveScroll: preserveScroll,', $bootSource);
+        self::assertStringContainsString('if (settings.preserveScroll !== true) {', $visitSource);
+        self::assertStringContainsString('window.scrollTo(0, 0);', $visitSource);
+        self::assertStringContainsString('preserveScroll: preserveScroll,', $runtimeAsset->content());
+        self::assertStringContainsString('if (settings.preserveScroll !== true) {', $runtimeAsset->content());
+        self::assertStringContainsString('window.scrollTo(0, 0);', $runtimeAsset->content());
     }
 
     public function test_runtime_source_exposes_redirect_as_an_explicit_navigation_payload_field(): void
