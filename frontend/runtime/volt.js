@@ -13,6 +13,25 @@
   const runtime = {
     navigationRequestId: 0,
     navigationController: null,
+    queuedNavigationVisit: null,
+    busyState: {
+      active: false,
+      kind: "idle",
+      phase: "idle",
+      source: "idle",
+      requestId: null,
+      component: null,
+      action: null,
+      target: null,
+      updatedAt: null,
+    },
+    busyUi: {
+      shell: null,
+      indicator: null,
+      label: null,
+      liveRegion: null,
+      linksDisabled: false,
+    },
     navigationCache: new Map(),
     navigationInFlight: new Map(),
     frontendRouteManifest: {
@@ -62,7 +81,7 @@
     telemetryMaxEntries: 60,
     telemetrySequence: 0,
   };
-  const VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION = 1;
+  const VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION = 2;
 
   const NAVIGATION_CACHE_TTL = 5000;
   const NAVIGATION_CACHE_MAX_ENTRIES = 10;
@@ -244,6 +263,406 @@
     }
 
     return null;
+  }
+
+  function busyUiDirectiveValue(element) {
+    if (!element || typeof element.getAttribute !== "function") {
+      return null;
+    }
+
+    return (
+      element.getAttribute("data-volt-busy-ui") ||
+      element.getAttribute("volt-busy-ui") ||
+      element.getAttribute("volt:busy-ui") ||
+      null
+    );
+  }
+
+  function runtimeBusyUiEnabled() {
+    const bodyValue = document.body ? busyUiDirectiveValue(document.body) : null;
+
+    if (typeof bodyValue === "string" && bodyValue.trim() !== "") {
+      return !/^(off|false|none|0)$/i.test(bodyValue.trim());
+    }
+
+    const meta = document.head
+      ? document.head.querySelector('meta[name="volt-busy-ui"], meta[name="volt:busy-ui"]')
+      : null;
+    const metaValue =
+      meta && typeof meta.getAttribute === "function"
+        ? meta.getAttribute("content") || ""
+        : "";
+
+    if (metaValue.trim() !== "") {
+      return !/^(off|false|none|0)$/i.test(metaValue.trim());
+    }
+
+    return true;
+  }
+
+  function activeLoadingRoots() {
+    return Array.from(
+      document.querySelectorAll('[data-volt-root="true"][data-volt-loading="true"]'),
+    );
+  }
+
+  function activeLoadingRootSummary(root) {
+    if (!root || typeof root.getAttribute !== "function") {
+      return {
+        requestId: null,
+        component: null,
+        action: null,
+        target: null,
+      };
+    }
+
+    return {
+      requestId: root.getAttribute("data-volt-request-id") || null,
+      component: root.getAttribute("data-volt-component") || null,
+      action: root.getAttribute("data-volt-loading-action") || null,
+      target: root.getAttribute("data-volt-loading-target") || null,
+    };
+  }
+
+  function activeActionRequestState() {
+    const entries = Array.from(runtime.componentRequestStates.entries());
+
+    for (let index = 0; index < entries.length; index += 1) {
+      const component = entries[index][0];
+      const state = entries[index][1];
+
+      if (state && state.controller) {
+        return {
+          component: component,
+          requestId:
+            typeof state.requestId === "number" ? String(state.requestId) : null,
+        };
+      }
+    }
+
+    return {
+      component: null,
+      requestId: null,
+    };
+  }
+
+  function cloneBusyState(state) {
+    const source = state && typeof state === "object" ? state : runtime.busyState;
+
+    return {
+      active: source.active === true,
+      kind: typeof source.kind === "string" ? source.kind : "idle",
+      phase: typeof source.phase === "string" ? source.phase : "idle",
+      source: typeof source.source === "string" ? source.source : "idle",
+      requestId:
+        source.requestId === null || typeof source.requestId === "undefined"
+          ? null
+          : String(source.requestId),
+      component: typeof source.component === "string" ? source.component : null,
+      action: typeof source.action === "string" ? source.action : null,
+      target: typeof source.target === "string" ? source.target : null,
+      updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : null,
+    };
+  }
+
+  function busyStateEquals(left, right) {
+    const first = cloneBusyState(left);
+    const second = cloneBusyState(right);
+
+    return (
+      first.active === second.active &&
+      first.kind === second.kind &&
+      first.phase === second.phase &&
+      first.source === second.source &&
+      first.requestId === second.requestId &&
+      first.component === second.component &&
+      first.action === second.action &&
+      first.target === second.target
+    );
+  }
+
+  function applyBusyStateAttributes(element, state) {
+    if (!element || typeof element.setAttribute !== "function") {
+      return;
+    }
+
+    element.setAttribute("data-volt-busy", state.active ? "true" : "false");
+    element.setAttribute("data-volt-busy-kind", state.kind);
+    element.setAttribute("data-volt-busy-phase", state.phase);
+    element.setAttribute("data-volt-busy-source", state.source);
+    element.setAttribute("aria-busy", state.active ? "true" : "false");
+
+    if (state.requestId !== null) {
+      element.setAttribute("data-volt-busy-request-id", state.requestId);
+    } else {
+      element.removeAttribute("data-volt-busy-request-id");
+    }
+
+    if (state.component) {
+      element.setAttribute("data-volt-busy-component", state.component);
+    } else {
+      element.removeAttribute("data-volt-busy-component");
+    }
+
+    if (state.action) {
+      element.setAttribute("data-volt-busy-action", state.action);
+    } else {
+      element.removeAttribute("data-volt-busy-action");
+    }
+
+    if (state.target) {
+      element.setAttribute("data-volt-busy-target", state.target);
+    } else {
+      element.removeAttribute("data-volt-busy-target");
+    }
+  }
+
+  function ensureRuntimeBusyUiShell() {
+    if (!document.body || runtimeBusyUiEnabled() !== true) {
+      return null;
+    }
+
+    let shell = document.body.querySelector("[data-volt-runtime-busy-shell]");
+
+    if (!shell) {
+      shell = document.createElement("div");
+      shell.setAttribute("data-volt-runtime-busy-shell", "true");
+      shell.setAttribute("aria-hidden", "true");
+      shell.style.position = "fixed";
+      shell.style.inset = "0 auto auto 0";
+      shell.style.width = "100%";
+      shell.style.pointerEvents = "none";
+      shell.style.zIndex = "2147483000";
+      shell.style.opacity = "0";
+      shell.style.transition = "opacity 120ms ease";
+
+      const indicator = document.createElement("div");
+      indicator.setAttribute("data-volt-runtime-busy-indicator", "true");
+      indicator.style.height = "3px";
+      indicator.style.width = "100%";
+      indicator.style.transformOrigin = "left center";
+      indicator.style.transform = "scaleX(0)";
+      indicator.style.transition =
+        "transform 160ms ease, opacity 120ms ease, background-color 160ms ease";
+      indicator.style.background = "linear-gradient(90deg, #22d3ee 0%, #38bdf8 100%)";
+      indicator.style.opacity = "0";
+      indicator.style.boxShadow = "0 0 18px rgba(56, 189, 248, 0.42)";
+      shell.appendChild(indicator);
+      document.body.appendChild(shell);
+    }
+
+    let liveRegion = document.body.querySelector("[data-volt-runtime-busy-live]");
+
+    if (!liveRegion) {
+      liveRegion = document.createElement("div");
+      liveRegion.setAttribute("data-volt-runtime-busy-live", "true");
+      liveRegion.setAttribute("role", "status");
+      liveRegion.setAttribute("aria-live", "polite");
+      liveRegion.style.position = "absolute";
+      liveRegion.style.width = "1px";
+      liveRegion.style.height = "1px";
+      liveRegion.style.margin = "-1px";
+      liveRegion.style.padding = "0";
+      liveRegion.style.overflow = "hidden";
+      liveRegion.style.clip = "rect(0 0 0 0)";
+      liveRegion.style.whiteSpace = "nowrap";
+      liveRegion.style.border = "0";
+      document.body.appendChild(liveRegion);
+    }
+
+    runtime.busyUi.shell = shell;
+    runtime.busyUi.indicator = shell.querySelector("[data-volt-runtime-busy-indicator]");
+    runtime.busyUi.liveRegion = liveRegion;
+    return shell;
+  }
+
+  function syncRuntimeBusyLinks(active) {
+    const links = Array.from(
+      document.querySelectorAll("a[volt-navigate], a[volt\\:navigate], a[data-volt-navigate]"),
+    );
+
+    links.forEach(function (link) {
+      if (!(link instanceof HTMLElement)) {
+        return;
+      }
+
+      if (active) {
+        if (
+          !link.hasAttribute("data-volt-busy-prev-tabindex") &&
+          link.hasAttribute("tabindex")
+        ) {
+          link.setAttribute(
+            "data-volt-busy-prev-tabindex",
+            link.getAttribute("tabindex") || "",
+          );
+        }
+
+        if (
+          !link.hasAttribute("data-volt-busy-prev-aria-disabled") &&
+          link.hasAttribute("aria-disabled")
+        ) {
+          link.setAttribute(
+            "data-volt-busy-prev-aria-disabled",
+            link.getAttribute("aria-disabled") || "",
+          );
+        }
+
+        link.setAttribute("aria-disabled", "true");
+        link.setAttribute("tabindex", "-1");
+        link.setAttribute("data-volt-busy-link-disabled", "true");
+        link.style.pointerEvents = "none";
+        return;
+      }
+
+      if (link.hasAttribute("data-volt-busy-prev-tabindex")) {
+        const previousTabIndex = link.getAttribute("data-volt-busy-prev-tabindex");
+
+        if (previousTabIndex === "") {
+          link.removeAttribute("tabindex");
+        } else {
+          link.setAttribute("tabindex", previousTabIndex);
+        }
+
+        link.removeAttribute("data-volt-busy-prev-tabindex");
+      } else if (link.getAttribute("data-volt-busy-link-disabled") === "true") {
+        link.removeAttribute("tabindex");
+      }
+
+      if (link.hasAttribute("data-volt-busy-prev-aria-disabled")) {
+        const previousAriaDisabled = link.getAttribute(
+          "data-volt-busy-prev-aria-disabled",
+        );
+
+        if (previousAriaDisabled === "") {
+          link.removeAttribute("aria-disabled");
+        } else {
+          link.setAttribute("aria-disabled", previousAriaDisabled);
+        }
+
+        link.removeAttribute("data-volt-busy-prev-aria-disabled");
+      } else if (link.getAttribute("data-volt-busy-link-disabled") === "true") {
+        link.removeAttribute("aria-disabled");
+      }
+
+      link.removeAttribute("data-volt-busy-link-disabled");
+      link.style.pointerEvents = "";
+    });
+
+    runtime.busyUi.linksDisabled = active === true;
+  }
+
+  function syncRuntimeBusyUi(state) {
+    const nextState = cloneBusyState(state);
+    const uiEnabled = runtimeBusyUiEnabled();
+    const shell = uiEnabled ? ensureRuntimeBusyUiShell() : null;
+    const indicator = runtime.busyUi.indicator;
+    const liveRegion = runtime.busyUi.liveRegion;
+
+    if (document.body) {
+      document.body.style.cursor = nextState.active ? "progress" : "";
+    }
+
+    syncRuntimeBusyLinks(nextState.active);
+
+    if (!shell || !indicator) {
+      return;
+    }
+
+    shell.style.opacity = nextState.active ? "1" : "0";
+    indicator.style.opacity = nextState.active ? "1" : "0";
+    indicator.style.transform = nextState.active ? "scaleX(1)" : "scaleX(0)";
+    indicator.style.background =
+      nextState.kind === "action"
+        ? "linear-gradient(90deg, #a78bfa 0%, #c084fc 100%)"
+        : nextState.kind === "mixed"
+          ? "linear-gradient(90deg, #22d3ee 0%, #c084fc 100%)"
+          : "linear-gradient(90deg, #22d3ee 0%, #38bdf8 100%)";
+
+    if (liveRegion) {
+      liveRegion.textContent = nextState.active
+        ? "Volt busy " + nextState.kind + " en fase " + nextState.phase + "."
+        : "Volt busy idle.";
+    }
+  }
+
+  function resolveGlobalBusyState(meta) {
+    const detail = meta && typeof meta === "object" ? meta : {};
+    const previous = cloneBusyState(runtime.busyState);
+    const navigationActive =
+      !!runtime.navigationController ||
+      document.documentElement.getAttribute("data-volt-navigating") === "true";
+    const loadingRoots = activeLoadingRoots();
+    const actionRequestState = activeActionRequestState();
+    const actionActive =
+      loadingRoots.length > 0 || actionRequestState.requestId !== null;
+    const primaryLoadingRoot = activeLoadingRootSummary(loadingRoots[0] || null);
+    const active = navigationActive || actionActive;
+    const kind = active
+      ? navigationActive && actionActive
+        ? "mixed"
+        : navigationActive
+          ? "navigation"
+          : "action"
+      : "idle";
+    const phase =
+      typeof detail.phase === "string" && detail.phase !== ""
+        ? detail.phase
+        : active
+          ? kind === "action"
+            ? "loading"
+            : previous.phase !== "idle"
+              ? previous.phase
+              : "request-start"
+          : "idle";
+    const requestId =
+      detail.requestId !== null && typeof detail.requestId !== "undefined"
+        ? String(detail.requestId)
+        : navigationActive
+          ? String(runtime.navigationRequestId || "")
+          : primaryLoadingRoot.requestId || actionRequestState.requestId;
+    const next = {
+      active: active,
+      kind: kind,
+      phase: phase,
+      source:
+        typeof detail.source === "string" && detail.source !== ""
+          ? detail.source
+          : kind,
+      requestId: requestId || null,
+      component:
+        typeof detail.component === "string" && detail.component !== ""
+          ? detail.component
+          : primaryLoadingRoot.component || actionRequestState.component,
+      action:
+        typeof detail.action === "string" && detail.action !== ""
+          ? detail.action
+          : primaryLoadingRoot.action,
+      target:
+        typeof detail.target === "string" && detail.target !== ""
+          ? detail.target
+          : primaryLoadingRoot.target,
+      updatedAt: new Date().toISOString(),
+    };
+
+    applyBusyStateAttributes(document.documentElement, next);
+    applyBusyStateAttributes(document.body, next);
+    syncRuntimeBusyUi(next);
+
+    if (busyStateEquals(previous, next)) {
+      runtime.busyState = next;
+      return next;
+    }
+
+    runtime.busyState = next;
+    emitRuntimeHook("volt:busy-change", cloneBusyState(next), document);
+
+    if (!previous.active && next.active) {
+      emitRuntimeHook("volt:busy-start", cloneBusyState(next), document);
+    } else if (previous.active && !next.active) {
+      emitRuntimeHook("volt:busy-end", cloneBusyState(next), document);
+    }
+
+    return next;
   }
 
   function dispatchDirectiveNames() {
@@ -1733,6 +2152,20 @@
     };
   }
 
+  function createPublicBusyApi() {
+    return {
+      active: function () {
+        return cloneBusyState(resolveGlobalBusyState()).active;
+      },
+      current: function () {
+        return cloneBusyState(resolveGlobalBusyState());
+      },
+      snapshot: function () {
+        return cloneBusyState(resolveGlobalBusyState());
+      },
+    };
+  }
+
   function createPublicRuntimeContract() {
     return Object.freeze({
       version: VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION,
@@ -1754,6 +2187,10 @@
         telemetry: Object.freeze({
           type: "api",
           factory: "createPublicTelemetryApi",
+        }),
+        busy: Object.freeze({
+          type: "api",
+          factory: "createPublicBusyApi",
         }),
       }),
     });
@@ -9338,29 +9775,27 @@
     if (root.getAttribute("data-volt-loading") === "true") {
       root.setAttribute("data-volt-request-status", "loading");
       root.setAttribute("aria-busy", "true");
-      return;
-    }
-
-    if (root.getAttribute("data-volt-error") === "true") {
+    } else if (root.getAttribute("data-volt-error") === "true") {
       root.setAttribute("data-volt-request-status", "error");
       root.setAttribute("aria-busy", "false");
-      return;
-    }
-
-    if (root.getAttribute("data-volt-success") === "true") {
+    } else if (root.getAttribute("data-volt-success") === "true") {
       root.setAttribute("data-volt-request-status", "success");
       root.setAttribute("aria-busy", "false");
-      return;
-    }
-
-    if (root.getAttribute("data-volt-dirty") === "true") {
+    } else if (root.getAttribute("data-volt-dirty") === "true") {
       root.setAttribute("data-volt-request-status", "dirty");
       root.setAttribute("aria-busy", "false");
-      return;
+    } else {
+      root.setAttribute("data-volt-request-status", "idle");
+      root.setAttribute("aria-busy", "false");
     }
 
-    root.setAttribute("data-volt-request-status", "idle");
-    root.setAttribute("aria-busy", "false");
+    resolveGlobalBusyState({
+      source: "action",
+      component: root.getAttribute("data-volt-component") || null,
+      action: root.getAttribute("data-volt-loading-action") || null,
+      target: root.getAttribute("data-volt-loading-target") || null,
+      requestId: root.getAttribute("data-volt-request-id") || null,
+    });
   }
 
   function setLoadingState(rootOrComponent, active, trigger, meta) {
@@ -9705,6 +10140,12 @@
     if (trigger && "disabled" in trigger) {
       trigger.disabled = active;
     }
+
+    resolveGlobalBusyState({
+      source: "navigation",
+      phase: active ? "request-start" : "request-finish",
+      requestId: active ? runtime.navigationRequestId : null,
+    });
   }
 
   function replaceBodyAttributes(nextBody) {
@@ -10501,6 +10942,9 @@
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
       applyHydrationFallbackToBody(payloadHydrate);
+      resolveGlobalBusyState({
+        source: "navigation",
+      });
       const restoredPersistent = shouldRestorePreservedFragments(
         fragmentControl,
         payloadMeta,
@@ -11127,6 +11571,22 @@
   async function visit(url, options) {
     const settings = options || {};
     const normalizedUrl = normalizeNavigationUrl(url);
+    if (
+      settings.queueIfBusy === true &&
+      runtime.navigationController
+    ) {
+      runtime.queuedNavigationVisit = {
+        url: normalizedUrl,
+        options: Object.assign({}, settings, {
+          queueIfBusy: false,
+        }),
+      };
+      return {
+        queued: true,
+        url: normalizedUrl,
+      };
+    }
+
     const cacheControl = navigationVisitCacheControl(settings);
     const requestedNavigationMode =
       settings.navigationMode && typeof settings.navigationMode === "object"
@@ -11179,6 +11639,11 @@
     }
 
     setNavigationState(true, settings.trigger || null);
+    resolveGlobalBusyState({
+      source: "navigation",
+      phase: "request-start",
+      requestId: requestId,
+    });
     emitRuntimeHook(
       "volt:request-start",
       requestHookDetail("navigation", requestMeta, {
@@ -11578,6 +12043,11 @@
       );
       resolvedPageTransition = pageTransition.name;
 
+      resolveGlobalBusyState({
+        source: "navigation",
+        phase: "before-navigate",
+        requestId: requestId,
+      });
       emitRuntimeHook(
         "volt:before-navigate",
         {
@@ -11664,6 +12134,11 @@
 
       transitionClientStateScope(finalUrl, "navigation");
 
+      resolveGlobalBusyState({
+        source: "navigation",
+        phase: "navigated",
+        requestId: requestId,
+      });
       emitRuntimeHook(
         "volt:navigated",
         {
@@ -11786,6 +12261,12 @@
         setNavigationState(false, settings.trigger || null);
       }
 
+      resolveGlobalBusyState({
+        source: "navigation",
+        phase: "request-finish",
+        requestId: runtime.navigationRequestId === requestId ? null : requestId,
+      });
+
       const finishDetail = requestHookDetail("navigation", requestMeta, {
         target: navigationTarget,
         route: resolvedRoute,
@@ -11833,6 +12314,23 @@
         }),
         document,
       );
+
+      if (runtime.navigationRequestId === requestId && runtime.queuedNavigationVisit) {
+        const queuedVisit = runtime.queuedNavigationVisit;
+        runtime.queuedNavigationVisit = null;
+
+        if (
+          queuedVisit &&
+          queuedVisit.url &&
+          normalizeNavigationUrl(queuedVisit.url) !== normalizeNavigationUrl(window.location.href)
+        ) {
+          window.setTimeout(function () {
+            visit(queuedVisit.url, queuedVisit.options || {}).catch(function (error) {
+              console.error("VoltStack navigation error:", error);
+            });
+          }, 0);
+        }
+      }
     }
   }
 
@@ -11885,6 +12383,16 @@
       state.requestId = requestId;
       state.controller = controller;
     }
+
+    resolveGlobalBusyState({
+      source: "action",
+      phase: "request-start",
+      requestId: requestId,
+      component: component,
+      action: action,
+      target:
+        requestMeta && requestMeta.trigger ? requestMeta.trigger.target || null : null,
+    });
 
     if (previousController) {
       abortControllerWithMeta(previousController, {
@@ -12122,6 +12630,16 @@
         setLoadingState(component, false, trigger, requestMeta);
       }
 
+      resolveGlobalBusyState({
+        source: "action",
+        phase: "request-finish",
+        requestId: null,
+        component: component,
+        action: action,
+        target:
+          requestMeta && requestMeta.trigger ? requestMeta.trigger.target || null : null,
+      });
+
       const finishDetail = requestHookDetail("action", requestMeta, {
         outcome: outcome,
         errorKind: errorKind,
@@ -12269,6 +12787,7 @@
 
     visit(url.toString(), {
       trigger: navigationTrigger,
+      queueIfBusy: true,
       preserveScroll: preserveScroll,
       historyMode: replace ? "replace" : "push",
       navigationMode: navigationMode,
@@ -12473,11 +12992,17 @@
   window.Volt.prefetch = function (url, options) {
     return prefetchPage(url, options || {});
   };
+  window.Volt.busy = createPublicBusyApi();
   window.Volt.state = createPublicStateApi();
   window.Volt.components = createPublicComponentsApi();
   window.Volt.telemetry = createPublicTelemetryApi();
 
   function bootRuntimeDocumentFeatures() {
+    resolveGlobalBusyState({
+      source: "boot",
+      phase: "idle",
+      requestId: null,
+    });
     syncAllRuntimeStateDirectives();
     refreshActiveComponentsRegistry("boot");
     registerViewportPrefetchTargets(document);

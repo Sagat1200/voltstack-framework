@@ -619,29 +619,27 @@
     if (root.getAttribute("data-volt-loading") === "true") {
       root.setAttribute("data-volt-request-status", "loading");
       root.setAttribute("aria-busy", "true");
-      return;
-    }
-
-    if (root.getAttribute("data-volt-error") === "true") {
+    } else if (root.getAttribute("data-volt-error") === "true") {
       root.setAttribute("data-volt-request-status", "error");
       root.setAttribute("aria-busy", "false");
-      return;
-    }
-
-    if (root.getAttribute("data-volt-success") === "true") {
+    } else if (root.getAttribute("data-volt-success") === "true") {
       root.setAttribute("data-volt-request-status", "success");
       root.setAttribute("aria-busy", "false");
-      return;
-    }
-
-    if (root.getAttribute("data-volt-dirty") === "true") {
+    } else if (root.getAttribute("data-volt-dirty") === "true") {
       root.setAttribute("data-volt-request-status", "dirty");
       root.setAttribute("aria-busy", "false");
-      return;
+    } else {
+      root.setAttribute("data-volt-request-status", "idle");
+      root.setAttribute("aria-busy", "false");
     }
 
-    root.setAttribute("data-volt-request-status", "idle");
-    root.setAttribute("aria-busy", "false");
+    resolveGlobalBusyState({
+      source: "action",
+      component: root.getAttribute("data-volt-component") || null,
+      action: root.getAttribute("data-volt-loading-action") || null,
+      target: root.getAttribute("data-volt-loading-target") || null,
+      requestId: root.getAttribute("data-volt-request-id") || null,
+    });
   }
 
   function setLoadingState(rootOrComponent, active, trigger, meta) {

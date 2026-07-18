@@ -65,6 +65,22 @@
   async function visit(url, options) {
     const settings = options || {};
     const normalizedUrl = normalizeNavigationUrl(url);
+    if (
+      settings.queueIfBusy === true &&
+      runtime.navigationController
+    ) {
+      runtime.queuedNavigationVisit = {
+        url: normalizedUrl,
+        options: Object.assign({}, settings, {
+          queueIfBusy: false,
+        }),
+      };
+      return {
+        queued: true,
+        url: normalizedUrl,
+      };
+    }
+
     const cacheControl = navigationVisitCacheControl(settings);
     const requestedNavigationMode =
       settings.navigationMode && typeof settings.navigationMode === "object"
@@ -117,6 +133,11 @@
     }
 
     setNavigationState(true, settings.trigger || null);
+    resolveGlobalBusyState({
+      source: "navigation",
+      phase: "request-start",
+      requestId: requestId,
+    });
     emitRuntimeHook(
       "volt:request-start",
       requestHookDetail("navigation", requestMeta, {
@@ -516,6 +537,11 @@
       );
       resolvedPageTransition = pageTransition.name;
 
+      resolveGlobalBusyState({
+        source: "navigation",
+        phase: "before-navigate",
+        requestId: requestId,
+      });
       emitRuntimeHook(
         "volt:before-navigate",
         {
@@ -602,6 +628,11 @@
 
       transitionClientStateScope(finalUrl, "navigation");
 
+      resolveGlobalBusyState({
+        source: "navigation",
+        phase: "navigated",
+        requestId: requestId,
+      });
       emitRuntimeHook(
         "volt:navigated",
         {
@@ -724,6 +755,12 @@
         setNavigationState(false, settings.trigger || null);
       }
 
+      resolveGlobalBusyState({
+        source: "navigation",
+        phase: "request-finish",
+        requestId: runtime.navigationRequestId === requestId ? null : requestId,
+      });
+
       const finishDetail = requestHookDetail("navigation", requestMeta, {
         target: navigationTarget,
         route: resolvedRoute,
@@ -771,6 +808,23 @@
         }),
         document,
       );
+
+      if (runtime.navigationRequestId === requestId && runtime.queuedNavigationVisit) {
+        const queuedVisit = runtime.queuedNavigationVisit;
+        runtime.queuedNavigationVisit = null;
+
+        if (
+          queuedVisit &&
+          queuedVisit.url &&
+          normalizeNavigationUrl(queuedVisit.url) !== normalizeNavigationUrl(window.location.href)
+        ) {
+          window.setTimeout(function () {
+            visit(queuedVisit.url, queuedVisit.options || {}).catch(function (error) {
+              console.error("VoltStack navigation error:", error);
+            });
+          }, 0);
+        }
+      }
     }
   }
 

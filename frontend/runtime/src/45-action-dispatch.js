@@ -48,6 +48,16 @@
       state.controller = controller;
     }
 
+    resolveGlobalBusyState({
+      source: "action",
+      phase: "request-start",
+      requestId: requestId,
+      component: component,
+      action: action,
+      target:
+        requestMeta && requestMeta.trigger ? requestMeta.trigger.target || null : null,
+    });
+
     if (previousController) {
       abortControllerWithMeta(previousController, {
         kind: "aborted",
@@ -283,6 +293,16 @@
         clearLoadingDelay(resolveRuntimeRoot(root, component) || root);
         setLoadingState(component, false, trigger, requestMeta);
       }
+
+      resolveGlobalBusyState({
+        source: "action",
+        phase: "request-finish",
+        requestId: null,
+        component: component,
+        action: action,
+        target:
+          requestMeta && requestMeta.trigger ? requestMeta.trigger.target || null : null,
+      });
 
       const finishDetail = requestHookDetail("action", requestMeta, {
         outcome: outcome,

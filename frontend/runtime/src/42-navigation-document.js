@@ -1,4 +1,4 @@
-﻿  function sameOrigin(url) {
+  function sameOrigin(url) {
     return url.origin === window.location.origin;
   }
 
@@ -68,6 +68,12 @@
     if (trigger && "disabled" in trigger) {
       trigger.disabled = active;
     }
+
+    resolveGlobalBusyState({
+      source: "navigation",
+      phase: active ? "request-start" : "request-finish",
+      requestId: active ? runtime.navigationRequestId : null,
+    });
   }
 
   function replaceBodyAttributes(nextBody) {
@@ -864,6 +870,9 @@
       replaceBodyAttributes(doc.body);
       document.body.innerHTML = doc.body.innerHTML;
       applyHydrationFallbackToBody(payloadHydrate);
+      resolveGlobalBusyState({
+        source: "navigation",
+      });
       const restoredPersistent = shouldRestorePreservedFragments(
         fragmentControl,
         payloadMeta,

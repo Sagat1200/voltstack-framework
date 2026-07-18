@@ -112,6 +112,7 @@
 
     visit(url.toString(), {
       trigger: navigationTrigger,
+      queueIfBusy: true,
       preserveScroll: preserveScroll,
       historyMode: replace ? "replace" : "push",
       navigationMode: navigationMode,
@@ -316,11 +317,17 @@
   window.Volt.prefetch = function (url, options) {
     return prefetchPage(url, options || {});
   };
+  window.Volt.busy = createPublicBusyApi();
   window.Volt.state = createPublicStateApi();
   window.Volt.components = createPublicComponentsApi();
   window.Volt.telemetry = createPublicTelemetryApi();
 
   function bootRuntimeDocumentFeatures() {
+    resolveGlobalBusyState({
+      source: "boot",
+      phase: "idle",
+      requestId: null,
+    });
     syncAllRuntimeStateDirectives();
     refreshActiveComponentsRegistry("boot");
     registerViewportPrefetchTargets(document);
