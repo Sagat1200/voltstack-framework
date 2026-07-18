@@ -30,4 +30,18 @@ return [
         class_path('app/View/Components'),
         view_path('resources/views'),
     ],
+
+    /*
+    |---------------------------------------------------------------------------
+    | Volt Navigate Progress Bar
+    |---------------------------------------------------------------------------
+    |
+    | Here you can specify whether to show a progress bar when navigating between 
+    | SPA links.
+    |
+    */
+    'volt_navigate' => [
+        'progress_bar' => true,
+        'progress_bar_color' => '#2299dd',
+    ],
 ];
