@@ -80,6 +80,8 @@
     telemetryEntries: [],
     telemetryMaxEntries: 60,
     telemetrySequence: 0,
+    bootInvocationCount: 0,
+    bootMetrics: null,
   };
   const VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION = 2;
 
@@ -1401,6 +1403,10 @@
     return cloneStateValue(summary);
   }
 
+  function runtimeBootSnapshot() {
+    return runtime.bootMetrics ? cloneStateValue(runtime.bootMetrics) : null;
+  }
+
   function recordRuntimeTelemetry(kind, detail) {
     const entry = Object.assign(
       {
@@ -2209,6 +2215,7 @@
         return entries.length > 0 ? entries[0] : null;
       },
       summary: telemetrySummary,
+      boot: runtimeBootSnapshot,
       snapshot: function (options) {
         return {
           entries: filteredTelemetryEntries(options),
@@ -12998,15 +13005,50 @@
   window.Volt.telemetry = createPublicTelemetryApi();
 
   function bootRuntimeDocumentFeatures() {
+    const measureNow =
+      typeof performance !== "undefined" &&
+      typeof performance.now === "function"
+        ? () => performance.now()
+        : () => Date.now();
+    const bootStartedAt = measureNow();
+    runtime.bootInvocationCount += 1;
+    const busyStartedAt = measureNow();
     resolveGlobalBusyState({
       source: "boot",
       phase: "idle",
       requestId: null,
     });
+    const busyDurationMs = measureNow() - busyStartedAt;
+    const syncStartedAt = measureNow();
     syncAllRuntimeStateDirectives();
+    const syncDurationMs = measureNow() - syncStartedAt;
+    const refreshStartedAt = measureNow();
     refreshActiveComponentsRegistry("boot");
+    const refreshDurationMs = measureNow() - refreshStartedAt;
+    const viewportPrefetchStartedAt = measureNow();
     registerViewportPrefetchTargets(document);
+    const viewportPrefetchDurationMs = measureNow() - viewportPrefetchStartedAt;
+    const heuristicPrefetchStartedAt = measureNow();
     scheduleHeuristicPrefetch(document);
+    const heuristicPrefetchDurationMs = measureNow() - heuristicPrefetchStartedAt;
+    const totalDurationMs = measureNow() - bootStartedAt;
+    const rootCount = document.querySelectorAll('[data-volt-root="true"]').length;
+    runtime.bootMetrics = {
+      invocationCount: runtime.bootInvocationCount,
+      readyState: document.readyState,
+      busyDurationMs: Number(busyDurationMs.toFixed(2)),
+      syncDurationMs: Number(syncDurationMs.toFixed(2)),
+      refreshDurationMs: Number(refreshDurationMs.toFixed(2)),
+      viewportPrefetchDurationMs: Number(
+        viewportPrefetchDurationMs.toFixed(2)
+      ),
+      heuristicPrefetchDurationMs: Number(
+        heuristicPrefetchDurationMs.toFixed(2)
+      ),
+      totalDurationMs: Number(totalDurationMs.toFixed(2)),
+      rootCount: rootCount,
+      recordedAt: new Date().toISOString(),
+    };
   }
 
   if (document.readyState === "loading") {

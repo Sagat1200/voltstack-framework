@@ -77,6 +77,8 @@
     telemetryEntries: [],
     telemetryMaxEntries: 60,
     telemetrySequence: 0,
+    bootInvocationCount: 0,
+    bootMetrics: null,
   };
   const VOLT_RUNTIME_PUBLIC_CONTRACT_VERSION = 2;
 
@@ -1398,6 +1400,10 @@
     return cloneStateValue(summary);
   }
 
+  function runtimeBootSnapshot() {
+    return runtime.bootMetrics ? cloneStateValue(runtime.bootMetrics) : null;
+  }
+
   function recordRuntimeTelemetry(kind, detail) {
     const entry = Object.assign(
       {
@@ -2206,6 +2212,7 @@
         return entries.length > 0 ? entries[0] : null;
       },
       summary: telemetrySummary,
+      boot: runtimeBootSnapshot,
       snapshot: function (options) {
         return {
           entries: filteredTelemetryEntries(options),

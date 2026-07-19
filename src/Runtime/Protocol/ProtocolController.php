@@ -15,14 +15,26 @@ use VoltStack\Runtime\Component\ComponentManager;
 final class ProtocolController extends Controller
 {
     private const INTERNAL_SYNC_ACTION = '__volt_sync__';
+    private const EFFECTS_THAT_AVOID_HTML_FALLBACK = [
+        'text.update',
+        'html.replace',
+        'dom.append',
+        'dom.insert',
+        'dom.remove',
+        'dom.move',
+        'attribute.set',
+        'attribute.remove',
+        'class.toggle',
+        'style.set',
+        'navigate',
+    ];
 
     public function __construct(
         private readonly ComponentManager $components,
         private readonly Validator $validator,
         private readonly CsrfTokenManager $csrf,
         private readonly ActionEffectBuilder $effects,
-    ) {
-    }
+    ) {}
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -58,14 +70,38 @@ final class ProtocolController extends Controller
 
         $snapshot = $this->components->dehydrate($component, $interactionMeta);
         $html = $this->components->renderRoot($component, $snapshot);
-
-        return $this->json((new ActionResponse(
+        $effects = $this->effects->build($actionResult, $previousHtml, $html);
+        $response = (new ActionResponse(
             $payload->component(),
-            $html,
+            $this->shouldIncludeHtmlFallback($effects) ? $html : null,
             $snapshot,
-            $this->effects->build($actionResult, $previousHtml, $html),
+            $effects,
             $interactionMeta,
-        ))->toArray());
+        ))->toArray();
+
+        return $this->json($response);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $effects
+     */
+    private function shouldIncludeHtmlFallback(array $effects): bool
+    {
+        if ($effects === []) {
+            return true;
+        }
+
+        foreach ($effects as $effect) {
+            if (! is_string($effect['type'] ?? null)) {
+                return true;
+            }
+
+            if (! in_array($effect['type'], self::EFFECTS_THAT_AVOID_HTML_FALLBACK, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function ensureCsrfToken(Request $request): void

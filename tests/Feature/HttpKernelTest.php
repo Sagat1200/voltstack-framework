@@ -2171,6 +2171,101 @@ final class HttpKernelTest extends TestCase
         self::assertStringNotContainsString('data-volt-navigation-mode="auto"', $response->content());
     }
 
+    public function test_it_assigns_stable_keys_to_inline_head_assets_without_identity_markers(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-inline-head-assets', fn() => <<<'HTML'
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="module">
+        window.documentHeadAssetBridge = true;
+    </script>
+    <style>
+        .document-head-asset-demo { color: rgb(15 23 42); }
+    </style>
+</head>
+<body><main>Inline head assets</main></body>
+</html>
+HTML);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-inline-head-assets'));
+
+        self::assertMatchesRegularExpression(
+            '/<script type="module"\s+data-volt-head-key="auto-script:[a-f0-9]{40}">/i',
+            $response->content(),
+        );
+        self::assertMatchesRegularExpression(
+            '/<style\s+data-volt-head-key="auto-style:[a-f0-9]{40}">/i',
+            $response->content(),
+        );
+    }
+
+    public function test_it_preserves_existing_head_asset_identity_markers_when_bootstrapping_html(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-inline-head-assets-managed', fn() => <<<'HTML'
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="module" data-volt-head-key="managed-script-bridge">
+        window.documentHeadManagedBridge = true;
+    </script>
+    <style id="managed-style">
+        .document-head-asset-managed { color: rgb(15 23 42); }
+    </style>
+</head>
+<body><main>Managed inline head assets</main></body>
+</html>
+HTML);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create('/document-inline-head-assets-managed'));
+
+        self::assertStringContainsString('data-volt-head-key="managed-script-bridge"', $response->content());
+        self::assertSame(1, substr_count($response->content(), 'data-volt-head-key="managed-script-bridge"'));
+        self::assertStringContainsString('<style id="managed-style">', $response->content());
+        self::assertStringNotContainsString('auto-style:', $response->content());
+    }
+
+    public function test_it_applies_head_asset_hardening_before_emitting_volt_navigation_metadata(): void
+    {
+        $router = $this->app->make(Router::class);
+        $router->get('/document-inline-head-assets-navigation', fn() => <<<'HTML'
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        window.documentHeadNavigationBridge = true;
+    </script>
+</head>
+<body><main>Navigation inline head assets</main></body>
+</html>
+HTML)->meta(['name' => 'document.inline.head.assets.navigation']);
+
+        $response = $this->app->make(HttpKernel::class)->handle(Request::create(
+            '/document-inline-head-assets-navigation',
+            'GET',
+            [],
+            [],
+            [],
+            [],
+            [],
+            [
+                'HTTP_X_REQUESTED_WITH' => 'VoltStack',
+                'HTTP_X_VOLT_NAVIGATE' => 'true',
+            ],
+        ));
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode((string) ($response->headers()['X-Volt-Navigation'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertMatchesRegularExpression(
+            '/<script\s+data-volt-head-key="auto-script:[a-f0-9]{40}">/i',
+            $response->content(),
+        );
+        self::assertSame('/document-inline-head-assets-navigation', $payload['navigation']['target'] ?? null);
+        self::assertSame('document.inline.head.assets.navigation', $payload['screen']['route'] ?? null);
+    }
+
     public function test_it_marks_reload_only_documents_without_forcing_auto_navigation_mode(): void
     {
         $router = $this->app->make(Router::class);

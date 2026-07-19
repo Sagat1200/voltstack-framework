@@ -96,6 +96,7 @@ final class HtmlDocumentBootstrapper
         'volt-hydrate-dirty-state',
         'volt:hydrate-dirty-state',
     ];
+    private const HEAD_MANAGED_KEY_ATTRIBUTE = 'data-volt-head-key';
 
     public function shouldBootstrap(Request $request, Response $response): bool
     {
@@ -194,7 +195,7 @@ final class HtmlDocumentBootstrapper
         $content = $this->decoratePageTransitionAttributes($request, $content);
         $content = $this->decorateHydrationAttributes($request, $content);
 
-        return $content;
+        return $this->decorateManagedHeadKeys($content);
     }
 
     private function hasRuntime(string $content): bool
@@ -235,6 +236,77 @@ final class HtmlDocumentBootstrapper
 
             return substr($tag, 0, -1) . ' ' . $attributeNames[0] . '="' . $value . '">';
         }, $content, 1);
+    }
+
+    private function decorateManagedHeadKeys(string $content): string
+    {
+        if (stripos($content, '<head') === false) {
+            return $content;
+        }
+
+        return (string) preg_replace_callback('/(<head\b[^>]*>)(.*?)(<\/head>)/is', function (array $matches): string {
+            $headContents = $matches[2] ?? '';
+            $headContents = $this->decorateInlineHeadNodes($headContents, 'script');
+            $headContents = $this->decorateInlineHeadNodes($headContents, 'style');
+
+            return ($matches[1] ?? '<head>') . $headContents . ($matches[3] ?? '</head>');
+        }, $content, 1);
+    }
+
+    private function decorateInlineHeadNodes(string $content, string $tag): string
+    {
+        $pattern = sprintf(
+            '/<%1$s\b(?P<attributes>[^>]*)>(?P<content>.*?)<\/%1$s>/is',
+            preg_quote($tag, '/'),
+        );
+
+        return (string) preg_replace_callback($pattern, function (array $matches) use ($tag): string {
+            $attributes = $matches['attributes'] ?? '';
+            $nodeContent = $matches['content'] ?? '';
+
+            if ($this->inlineHeadNodeAlreadyManaged($tag, $attributes)) {
+                return $matches[0];
+            }
+
+            $managedKey = $this->managedHeadKeyForInlineNode($tag, $attributes, $nodeContent);
+
+            return sprintf(
+                '<%s%s %s="%s">%s</%s>',
+                $tag,
+                $attributes,
+                self::HEAD_MANAGED_KEY_ATTRIBUTE,
+                $managedKey,
+                $nodeContent,
+                $tag,
+            );
+        }, $content);
+    }
+
+    private function inlineHeadNodeAlreadyManaged(string $tag, string $attributes): bool
+    {
+        if (preg_match('/\b' . preg_quote(self::HEAD_MANAGED_KEY_ATTRIBUTE, '/') . '\s*=/i', $attributes) === 1) {
+            return true;
+        }
+
+        return match ($tag) {
+            'script' => preg_match('/\bsrc\s*=/i', $attributes) === 1,
+            'style' => preg_match('/\bid\s*=/i', $attributes) === 1,
+            default => true,
+        };
+    }
+
+    private function managedHeadKeyForInlineNode(string $tag, string $attributes, string $content): string
+    {
+        return sprintf(
+            'auto-%s:%s',
+            $tag,
+            sha1($tag . '|' . $this->normalizedHeadNodeAttributes($attributes) . '|' . $content),
+        );
+    }
+
+    private function normalizedHeadNodeAttributes(string $attributes): string
+    {
+        return trim((string) preg_replace('/\s+/', ' ', $attributes));
     }
 
     private function declaresNavigationModeMeta(string $content): bool

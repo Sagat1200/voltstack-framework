@@ -222,6 +222,11 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('data-runtime-check="action-retry-network"', $response->content());
         self::assertStringContainsString('data-runtime-check="action-retry-timeout"', $response->content());
         self::assertStringContainsString('data-runtime-check="action-retry-protocol"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-outcome-contract"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-outcome-scope"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-outcome-retry"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-outcome-next-step"', $response->content());
+        self::assertStringContainsString('data-runtime-check="action-outcome-summary"', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.retrySummaryStorageKey = \'volt.requestLab.lastNavigationRetry\';', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.navigationLifecycleStorageKey = \'volt.requestLab.lastNavigationLifecycle\';', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.resilienceSummaryStorageKey = \'volt.requestLab.lastResilienceSummary\';', $response->content());
@@ -234,6 +239,7 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('window.__spaLabRequestLab.clearResiliencePanel = function() {', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.renderRetrySummaryCard = function() {', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.renderNavigationLifecycleSummaryCard = function() {', $response->content());
+        self::assertStringContainsString('window.__spaLabRequestLab.renderActionOutcomeContract = function(payload) {', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.runAbortNavigationScenario = function() {', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.readRetrySummary = function() {', $response->content());
         self::assertStringContainsString('window.__spaLabRequestLab.readNavigationLifecycleSummary = function() {', $response->content());
@@ -260,6 +266,11 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString("summary.eventName === 'volt:request-abort'", $response->content());
         self::assertStringContainsString("summary.eventName === 'volt:request-stale'", $response->content());
         self::assertStringContainsString("summary.eventName === 'volt:request-retry'", $response->content());
+        self::assertStringContainsString("if (meta.type === 'action') {", $response->content());
+        self::assertStringContainsString("outcome === 'network-error'", $response->content());
+        self::assertStringContainsString("outcome === 'timeout'", $response->content());
+        self::assertStringContainsString("outcome === 'protocol-error'", $response->content());
+        self::assertStringContainsString("retry: '0 automatico'", $response->content());
     }
 
     public function test_runtime_focus_screens_expose_focus_selection_and_scroll_contract_markers(): void
@@ -923,6 +934,50 @@ final class SkeletonSpaRoadmapTest extends TestCase
         self::assertStringContainsString('syncManagedHeadNode(existing, entry.node);', $runtimeAsset->content());
     }
 
+    public function test_html_document_bootstrapper_source_hardens_inline_head_assets_with_stable_keys(): void
+    {
+        $frameworkBasePath = self::$skeletonBasePath
+            . DIRECTORY_SEPARATOR . 'vendor'
+            . DIRECTORY_SEPARATOR . 'voltstack'
+            . DIRECTORY_SEPARATOR . 'framework';
+
+        $bootstrapperSource = file_get_contents(
+            $frameworkBasePath
+            . DIRECTORY_SEPARATOR . 'src'
+            . DIRECTORY_SEPARATOR . 'Quantum'
+            . DIRECTORY_SEPARATOR . 'Http'
+            . DIRECTORY_SEPARATOR . 'HtmlDocumentBootstrapper.php'
+        );
+
+        self::assertIsString($bootstrapperSource);
+        self::assertStringContainsString('private const HEAD_MANAGED_KEY_ATTRIBUTE = \'data-volt-head-key\';', $bootstrapperSource);
+        self::assertStringContainsString('return $this->decorateManagedHeadKeys($content);', $bootstrapperSource);
+        self::assertStringContainsString('private function decorateManagedHeadKeys(string $content): string', $bootstrapperSource);
+        self::assertStringContainsString('private function decorateInlineHeadNodes(string $content, string $tag): string', $bootstrapperSource);
+        self::assertStringContainsString('private function managedHeadKeyForInlineNode(string $tag, string $attributes, string $content): string', $bootstrapperSource);
+        self::assertStringContainsString('\'auto-%s:%s\'', $bootstrapperSource);
+        self::assertStringContainsString('sha1($tag . \'|\' . $this->normalizedHeadNodeAttributes($attributes) . \'|\' . $content)', $bootstrapperSource);
+    }
+
+    public function test_spa_routes_do_not_emit_unmanaged_inline_head_assets(): void
+    {
+        $routes = [
+            '/',
+            '/spaReactive',
+            '/cacheExample',
+            '/runtimeEvents',
+            '/runtimeFocus',
+            '/runtimeRequestLab',
+        ];
+
+        foreach ($routes as $route) {
+            $response = $this->handleSkeletonRequest($route);
+
+            self::assertSame(200, $response->statusCode(), sprintf('Route %s did not return 200.', $route));
+            $this->assertHeadInlineAssetsAreKeyed($response->content(), $route);
+        }
+    }
+
     public function test_runtime_source_exposes_preserved_fragment_capture_restore_and_discard_contract(): void
     {
         $frameworkBasePath = self::$skeletonBasePath
@@ -1387,6 +1442,35 @@ final class SkeletonSpaRoadmapTest extends TestCase
         $decoded = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
 
         return $decoded;
+    }
+
+    private function assertHeadInlineAssetsAreKeyed(string $html, string $route): void
+    {
+        $head = $this->extractHeadMarkup($html);
+
+        self::assertSame(
+            0,
+            preg_match_all('/<script\b(?:(?!\bsrc=|\bdata-volt-head-key=)[^>])*>/i', $head),
+            sprintf('Route %s emitted an inline <script> in <head> without src or data-volt-head-key.', $route),
+        );
+        self::assertSame(
+            0,
+            preg_match_all('/<style\b(?:(?!\bid=|\bdata-volt-head-key=)[^>])*>/i', $head),
+            sprintf('Route %s emitted an inline <style> in <head> without id or data-volt-head-key.', $route),
+        );
+    }
+
+    private function extractHeadMarkup(string $html): string
+    {
+        $matches = [];
+
+        self::assertSame(
+            1,
+            preg_match('/<head\b[^>]*>(.*?)<\/head>/is', $html, $matches),
+            'Expected a single <head> section in the rendered HTML.',
+        );
+
+        return $matches[1] ?? '';
     }
 
     private static function locateSkeletonBasePath(): string

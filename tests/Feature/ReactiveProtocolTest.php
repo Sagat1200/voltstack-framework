@@ -493,7 +493,7 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('text.update', $payload['effects'][0]['type']);
         self::assertSame('sync-title', $payload['effects'][0]['target']);
         self::assertSame('Mirror: Synced from runtime', $payload['effects'][0]['value']);
-        self::assertStringContainsString('Synced from runtime', $payload['html']);
+        self::assertNull($payload['html']);
     }
 
     public function test_it_combines_selectively_synced_params_and_updates_before_running_an_action(): void
@@ -650,6 +650,7 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('text.update', $payload['effects'][1]['type']);
         self::assertSame('counter-value', $payload['effects'][1]['target']);
         self::assertSame('1', $payload['effects'][1]['value']);
+        self::assertNull($payload['html']);
     }
 
     public function test_it_returns_targeted_effects_for_full_document_html_changes(): void
@@ -740,6 +741,7 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('text.update', $payload['effects'][3]['type']);
         self::assertSame('status-text', $payload['effects'][3]['target']);
         self::assertSame('Active', $payload['effects'][3]['value']);
+        self::assertNull($payload['html']);
     }
 
     public function test_it_allows_the_backend_to_attach_transition_options_to_generated_effects(): void
@@ -847,6 +849,8 @@ final class ReactiveProtocolTest extends TestCase
         self::assertSame('title-input', $payload['effects'][3]['target']);
         self::assertSame('demo.saved', $payload['effects'][3]['event']);
         self::assertSame(['count' => 1], $payload['effects'][3]['detail']);
+        self::assertIsString($payload['html']);
+        self::assertStringContainsString('Saved', $payload['html']);
     }
 
     public function test_it_allows_runtime_state_policies_to_be_emitted_from_a_policies_callback(): void

@@ -14,7 +14,7 @@ final class ActionResponse
      */
     public function __construct(
         private readonly string $component,
-        private readonly string $html,
+        private readonly ?string $html,
         private readonly Snapshot $snapshot,
         private readonly array $effects = [],
         private readonly array $meta = [],
